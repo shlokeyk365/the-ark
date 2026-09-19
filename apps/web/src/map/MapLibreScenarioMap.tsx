@@ -392,6 +392,11 @@ export function MapLibreScenarioMap({
      * is raised. Without this the panel would spin forever, so fall back to the
      * schematic instead.
      */
+    const markReady = () => {
+      window.clearTimeout(watchdog);
+      setReady(true);
+    };
+
     const watchdog = window.setTimeout(() => {
       if (!map.isStyleLoaded()) {
         failureRef.current(
@@ -402,9 +407,14 @@ export function MapLibreScenarioMap({
       }
     }, LOAD_TIMEOUT_MS);
 
+    // `load` waits until every visible source has completed. That includes the
+    // optional terrain DEM, whose public host must never decide whether the
+    // same-origin PMTiles basemap is allowed to appear. `style.load` means the
+    // vector style and its sources are ready to render; tiles continue to
+    // stream in afterward as normal.
+    map.on("style.load", markReady);
     map.on("load", () => {
-      window.clearTimeout(watchdog);
-      setReady(true);
+      markReady();
 
       // A zero-sized drawing buffer renders nothing and raises no error, so
       // recover from it and surface it rather than showing an empty panel.
