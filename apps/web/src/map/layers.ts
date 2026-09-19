@@ -66,7 +66,6 @@ export const FORECAST_FLOOD_OPACITY = 0.1;
 
 const TEXT_HALO = "rgba(4, 9, 16, 0.92)";
 const FONT_MEDIUM = ["Noto Sans Medium"];
-const FONT_REGULAR = ["Noto Sans Regular"];
 
 /* ------------------------------------------------------------ emphasis */
 
@@ -909,8 +908,8 @@ export const LAYERS: LayerSpecification[] = [
     minzoom: 14,
     layout: {
       "text-field": ["get", "band_label"],
-      "text-font": FONT_REGULAR,
-      "text-size": 9.5,
+      "text-font": FONT_MEDIUM,
+      "text-size": 10,
       "text-letter-spacing": 0.05,
       "text-optional": true,
     },
@@ -918,7 +917,7 @@ export const LAYERS: LayerSpecification[] = [
       "text-color": "#bfe4ff",
       "text-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 14.8, 0.8],
       "text-halo-color": TEXT_HALO,
-      "text-halo-width": 1.5,
+      "text-halo-width": 1.8,
     },
   },
 
@@ -984,7 +983,7 @@ export const LAYERS: LayerSpecification[] = [
         ],
       ],
       "text-font": FONT_MEDIUM,
-      "text-size": ["interpolate", ["linear"], ["zoom"], 12, 10, 16, 12.5],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 12, 10.5, 16, 13],
       "text-offset": [0, 1.3],
       "text-anchor": "top",
       "text-optional": true,
@@ -1002,7 +1001,7 @@ export const LAYERS: LayerSpecification[] = [
       ],
       "text-opacity": dimmed(1),
       "text-halo-color": TEXT_HALO,
-      "text-halo-width": 1.8,
+      "text-halo-width": 2.1,
     },
   },
 
@@ -1027,7 +1026,7 @@ export const LAYERS: LayerSpecification[] = [
         ],
       ],
       "text-font": FONT_MEDIUM,
-      "text-size": ["interpolate", ["linear"], ["zoom"], 12.5, 10, 16, 12.5],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 12.5, 10.5, 16, 13],
       "text-offset": [0, 1.2],
       "text-anchor": "top",
       "text-optional": true,
@@ -1043,7 +1042,7 @@ export const LAYERS: LayerSpecification[] = [
       ],
       "text-opacity": dimmed(1),
       "text-halo-color": TEXT_HALO,
-      "text-halo-width": 1.8,
+      "text-halo-width": 2.1,
     },
   },
 
@@ -1080,7 +1079,7 @@ export const LAYERS: LayerSpecification[] = [
         ],
       ],
       "text-font": FONT_MEDIUM,
-      "text-size": ["interpolate", ["linear"], ["zoom"], 11, 10.5, 16, 13.5],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 11, 11, 16, 14],
       "text-offset": [0, 1.1],
       "text-anchor": "top",
       "text-optional": true,
@@ -1098,7 +1097,7 @@ export const LAYERS: LayerSpecification[] = [
       ],
       "text-opacity": dimmed(1),
       "text-halo-color": TEXT_HALO,
-      "text-halo-width": 1.9,
+      "text-halo-width": 2.2,
     },
   },
 

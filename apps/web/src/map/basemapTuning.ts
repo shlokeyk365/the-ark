@@ -135,21 +135,35 @@ function tuneLayer(layer: LayerSpecification): LayerSpecification | null {
 
     case "roads_labels_minor":
       next.minzoom = 15;
-      next.paint["text-opacity"] = fadeIn(15, 16, 0.7);
+      next.layout["text-font"] = ["Noto Sans Medium"];
+      next.paint["text-color"] = "#9eacba";
+      next.paint["text-opacity"] = fadeIn(15, 16, 0.82);
+      next.paint["text-halo-color"] = "rgba(4, 9, 16, 0.96)";
+      next.paint["text-halo-width"] = 1.6;
       return next;
     case "roads_labels_major":
-      next.paint["text-opacity"] = 0.72;
+      next.layout["text-font"] = ["Noto Sans Medium"];
+      next.paint["text-color"] = "#b8c5d1";
+      next.paint["text-opacity"] = 0.88;
+      next.paint["text-halo-color"] = "rgba(4, 9, 16, 0.97)";
+      next.paint["text-halo-width"] = 1.8;
       return next;
 
     // Place names are the context an operator actually reads off the basemap.
     case "places_locality":
     case "places_subplace":
+      next.layout["text-font"] = ["Noto Sans Medium"];
+      next.paint["text-color"] = "#d4dde6";
       next.paint["text-halo-color"] = "rgba(4, 9, 16, 0.95)";
-      next.paint["text-halo-width"] = 1.8;
+      next.paint["text-halo-width"] = 2.2;
+      next.paint["text-halo-blur"] = 0.2;
       return next;
     case "places_region":
     case "places_country":
-      next.paint["text-opacity"] = 0.5;
+      next.layout["text-font"] = ["Noto Sans Medium"];
+      next.paint["text-opacity"] = 0.58;
+      next.paint["text-halo-color"] = "rgba(4, 9, 16, 0.94)";
+      next.paint["text-halo-width"] = 1.8;
       return next;
 
     case "water_waterway_label":
