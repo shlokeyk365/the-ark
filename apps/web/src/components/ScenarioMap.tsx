@@ -62,6 +62,7 @@ export function ScenarioMap({
       <div className="map-fallback-wrap">
         <SchematicMap
           bootstrap={bootstrap}
+          horizonState={horizonState}
           selectedPlan={selectedPlan}
           worldState={worldState}
         />

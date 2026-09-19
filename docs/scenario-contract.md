@@ -133,22 +133,19 @@ are hackathon assumptions requiring emergency-management validation.
 The prediction layer cannot close roads, alter flood depth, change routing, or
 modify plan results. Those continue to come from the deterministic world state.
 
-## Current visualization and planned flood inundation polygons
+## Flood depth polygons
 
-Status: placeholder animated envelope implemented; hydraulic polygons are not.
-This section is the handoff contract for
-`services/physics`, so the map layer can be swapped without frontend rework.
+`flood-polygons.geojson` provides a curated, synthetic depth surface at the
+0/6/12/24h anchor frames. It is referenced by `scenario.json`, validated during
+scenario load, and served in the bootstrap response as `flood_polygons`.
 
-The scenario currently carries flood depth **per network edge** only. The map's
-inundation layers therefore render a placeholder envelope — the channel
-centreline widened in proportion to the frame's peak modeled depth. It conveys
-extent and growth and nothing more. It is generated in
-`apps/web/src/map/scenarioSources.ts` and marked
-`provenance: "modeled_envelope_placeholder"` on every feature.
+The collection is a **rendering and situational-awareness input**. Routing,
+closures, isolation, and plan scoring continue to derive from the frame's
+`edge_conditions`; polygon geometry is never used as a safety constraint. The
+frontend cross-fades the surrounding polygon keyframes at the intermediate
+3/9/15/18/21h frames.
 
-When the solver can publish a surface, add `flood-polygons.geojson` to
-`data/scenarios/kantipur-river/` and reference it from `scenario.json`'s
-`fixture_files`. Expected shape:
+Shape:
 
 ```json
 {
@@ -163,9 +160,12 @@ When the solver can publish a surface, add `flood-polygons.geojson` to
       "id": "ktp-flood-ktp-frame-plus-12h-0",
       "properties": {
         "frame_id": "ktp-frame-plus-12h",
-        "depth_band_m_min": 0.3,
-        "depth_band_m_max": 0.6,
-        "provenance": "modeled_input"
+        "simulation_time_hours": 12,
+        "depth_min_m": 0.3,
+        "depth_max_m": 0.5,
+        "band_label": "0.30–0.50 m",
+        "surface_kind": "curated_synthetic_surface",
+        "source_type": "modeled_input"
       },
       "geometry": { "type": "Polygon", "coordinates": [[[85.31, 27.69], "..."]] }
     }
@@ -173,20 +173,17 @@ When the solver can publish a surface, add `flood-polygons.geojson` to
 }
 ```
 
-Requirements:
+Validation guarantees:
 
-- One or more polygons per `frame_id`, banded by depth so the map can shade by
-  severity rather than drawing a single flat extent.
-- Every `frame_id` must exist in `flood-frames.json`; validation should reject
-  polygons that reference an unknown frame.
-- Polygons are a **rendering and situational-awareness input**. Edge closure and
-  travel penalties continue to derive from `edge_conditions`, not from polygon
-  containment, unless the routing contract is changed deliberately.
-- Serve the collection through the bootstrap response next to
-  `context_boundaries`, and the frontend replaces the placeholder source data
-  with it.
+- Every referenced `frame_id` exists in `flood-frames.json`, and its declared
+  simulation time matches that frame.
+- The first and last timeline frames have surface keyframes.
+- Bands begin at zero, are contiguous, and cover each keyframe's peak edge
+  depth.
+- Rings are closed and remain within Nepal coordinate bounds.
+- Classification remains synthetic/modelled and `operational_use` remains
+  `false`.
 
-Animation of the inundation layers (dash offset on the channel, growth
-transitions between frames) belongs to the same phase and should use MapLibre
-runtime styling — `setPaintProperty` on a `requestAnimationFrame` loop — so the
-geometry stays declarative. See <https://maplibre.org/maplibre-gl-js/docs/>.
+The frontend uses a shared depth ramp, overlays the final horizon as a faint
+dashed extent, exposes provenance on hover, and labels the surface as curated
+synthetic data rather than a hydraulic solve or operational forecast.

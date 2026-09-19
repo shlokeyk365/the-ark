@@ -32,6 +32,7 @@ class ScenarioService:
         self.assets = self._load("assets.geojson")
         self.network = self._load("road-network.geojson")
         self.flood_frames = self._load("flood-frames.json")
+        self.flood_polygons = self._load("flood-polygons.geojson")
         self.response_plans = self._load("response-plans.json")
         self.event_stream = self._load("event-stream.json")
         self.impact_prior = self._load("model-impact-prior.json")
@@ -43,6 +44,7 @@ class ScenarioService:
             self.assets,
             self.network,
             self.flood_frames,
+            self.flood_polygons,
             self.response_plans,
             self.event_stream,
             self.context_boundaries,
@@ -380,6 +382,7 @@ class ScenarioService:
             ],
             "assets": self.assets,
             "road_network": self.network,
+            "flood_polygons": self.flood_polygons,
             "context_boundaries": self.context_boundaries,
             "available_frames": [
                 {

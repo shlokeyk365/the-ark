@@ -1,5 +1,18 @@
 # Nakkhu River scenario data sources
 
+## Curated flood depth surface
+
+`flood-polygons.geojson` is original synthetic demo geometry authored for this
+repository. It is not copied from an observed flood, remote-sensing product, or
+hydraulic model. The bands provide deterministic visual keyframes at
+0/6/12/24h and are explicitly marked `modeled_synthetic_demo`,
+`curated_synthetic_surface`, and `operational_use: false`. The frontend
+cross-fades adjacent keyframes for the intervening three-hour timeline frames.
+
+The polygons are not inputs to road closure, routing, isolation, or response
+plan scoring. Those results continue to use the asset-level depths in
+`flood-frames.json`.
+
 ## Historical-event impact prior
 
 `model-impact-prior.json` is the frozen Nakkhu 2024 input/output artifact from

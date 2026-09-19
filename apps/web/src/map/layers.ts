@@ -39,6 +39,29 @@ export const COLORS = {
   severe: "#a768f0",
 } as const;
 
+export const CURRENT_FLOOD_OPACITY = 0.44;
+export const FORECAST_FLOOD_OPACITY = 0.08;
+
+/** Shared modeled-depth ramp. Forecast state is distinguished by opacity and outline. */
+const floodDepthColor = [
+  "step",
+  ["get", "depth_max_m"],
+  "#8adfff",
+  0.1,
+  "#43bdf4",
+  0.2,
+  "#167fd1",
+  0.3,
+  "#09509f",
+] as never;
+
+export const floodOpacity = (baseOpacity: number) =>
+  [
+    "*",
+    baseOpacity,
+    ["coalesce", ["get", "frame_weight"], 1],
+  ] as never;
+
 const isBridge = ["==", ["get", "edge_type"], "bridge"];
 
 /** Road width in screen pixels, wider for bridges, scaled by zoom. */
@@ -77,7 +100,12 @@ export const LAYERS: LayerSpecification[] = [
     id: "ark-flood-forecast-fill",
     type: "fill",
     source: SOURCE.floodForecast,
-    paint: { "fill-color": COLORS.forecast, "fill-opacity": 0.09 },
+    layout: { "fill-sort-key": ["get", "depth_min_m"] as never },
+    paint: {
+      "fill-color": floodDepthColor,
+      "fill-opacity": floodOpacity(FORECAST_FLOOD_OPACITY),
+      "fill-opacity-transition": { duration: 320, delay: 0 },
+    },
   },
   {
     id: "ark-flood-forecast-line",
@@ -86,7 +114,7 @@ export const LAYERS: LayerSpecification[] = [
     paint: {
       "line-color": COLORS.forecast,
       "line-width": 1.1,
-      "line-opacity": 0.48,
+      "line-opacity": floodOpacity(0.48),
       "line-dasharray": [3, 2],
     },
   },
@@ -95,10 +123,11 @@ export const LAYERS: LayerSpecification[] = [
     id: "ark-flood-now-fill",
     type: "fill",
     source: SOURCE.floodNow,
+    layout: { "fill-sort-key": ["get", "depth_min_m"] as never },
     paint: {
-      "fill-color": COLORS.water,
-      "fill-opacity": 0.38,
-      "fill-outline-color": "#62d2ff",
+      "fill-color": floodDepthColor,
+      "fill-opacity": floodOpacity(CURRENT_FLOOD_OPACITY),
+      "fill-opacity-transition": { duration: 320, delay: 0 },
     },
   },
   {
@@ -106,10 +135,10 @@ export const LAYERS: LayerSpecification[] = [
     type: "line",
     source: SOURCE.floodNow,
     paint: {
-      "line-color": "#a9ebff",
-      "line-width": 2,
-      "line-opacity": 0.78,
-      "line-blur": 0.5,
+      "line-color": floodDepthColor,
+      "line-width": 1.2,
+      "line-opacity": floodOpacity(0.88),
+      "line-opacity-transition": { duration: 320, delay: 0 },
     },
   },
   {
@@ -486,7 +515,7 @@ export interface LayerControl {
 export const LAYER_CONTROLS: LayerControl[] = [
   {
     key: "floodNow",
-    label: "Flood inundation (now)",
+    label: "Modeled depth bands",
     swatch: "flood-now",
     layerIds: [
       "ark-flood-now-fill",
@@ -498,7 +527,7 @@ export const LAYER_CONTROLS: LayerControl[] = [
   },
   {
     key: "floodForecast",
-    label: "Predicted inundation",
+    label: "24h forecast extent",
     swatch: "flood-forecast",
     layerIds: ["ark-flood-forecast-fill", "ark-flood-forecast-line"],
   },
@@ -572,4 +601,9 @@ export const HOVERABLE_ROAD_LAYERS = [
   "ark-roads-open",
   "ark-roads-restricted",
   "ark-roads-closed",
+];
+
+export const HOVERABLE_FLOOD_LAYERS = [
+  "ark-flood-now-fill",
+  "ark-flood-forecast-fill",
 ];
