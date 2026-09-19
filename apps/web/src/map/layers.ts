@@ -36,6 +36,7 @@ export const SOURCE = {
   assets: "ark-assets",
   bridges: "ark-bridges",
   hazards: "ark-hazards",
+  predictions: "ark-predictions",
 } as const;
 
 export const COLORS = {
@@ -53,6 +54,11 @@ export const COLORS = {
   injected: "#f5b54a",
   context: "#9dc4e8",
   casing: "#040a12",
+  /* Impact-prediction targets, from the CatBoost prior. */
+  casualty: "#f24d63",
+  housing: "#f0a52a",
+  transport: "#ffd05a",
+  severe: "#a768f0",
 } as const;
 
 export const CURRENT_FLOOD_OPACITY = 0.72;
@@ -776,6 +782,123 @@ export const LAYERS: LayerSpecification[] = [
     paint: { "icon-opacity": dimmed(1) },
   },
 
+  /* ======================================================== predictions */
+
+  /*
+   * Impact-prediction pings. These are model output about what a location may
+   * suffer, not observed state, so they ride above the operational symbols but
+   * keep their own colour family — target, not status — to avoid being read as
+   * a closure or a hazard.
+   */
+  {
+    id: "ark-prediction-pulse",
+    type: "circle",
+    source: SOURCE.predictions,
+    paint: {
+      "circle-radius": 18,
+      "circle-color": [
+        "match",
+        ["get", "target"],
+        "casualty_or_missing",
+        COLORS.casualty,
+        "housing_damage",
+        COLORS.housing,
+        "transport_disruption",
+        COLORS.transport,
+        COLORS.severe,
+      ],
+      "circle-opacity": [
+        "case",
+        ["==", ["get", "state"], "active"],
+        dimmed(0.22),
+        dimmed(0.1),
+      ],
+      "circle-stroke-color": [
+        "match",
+        ["get", "target"],
+        "casualty_or_missing",
+        COLORS.casualty,
+        "housing_damage",
+        COLORS.housing,
+        "transport_disruption",
+        COLORS.transport,
+        COLORS.severe,
+      ],
+      "circle-stroke-width": 1.5,
+      "circle-stroke-opacity": dimmed(0.6),
+    },
+  },
+  {
+    id: "ark-prediction-ping",
+    type: "circle",
+    source: SOURCE.predictions,
+    paint: {
+      "circle-radius": [
+        "interpolate",
+        ["linear"],
+        ["get", "priority_score"],
+        0,
+        5,
+        100,
+        12,
+      ],
+      "circle-color": [
+        "match",
+        ["get", "target"],
+        "casualty_or_missing",
+        COLORS.casualty,
+        "housing_damage",
+        COLORS.housing,
+        "transport_disruption",
+        COLORS.transport,
+        COLORS.severe,
+      ],
+      "circle-opacity": [
+        "case",
+        ["==", ["get", "state"], "active"],
+        dimmed(1),
+        dimmed(0.68),
+      ],
+      "circle-stroke-color": "#f7fbff",
+      "circle-stroke-width": [
+        "case",
+        ["==", ["get", "priority_level"], "critical"],
+        2.8,
+        1.5,
+      ],
+    },
+  },
+  {
+    id: "ark-prediction-label",
+    type: "symbol",
+    source: SOURCE.predictions,
+    minzoom: 12,
+    layout: {
+      "text-field": [
+        "concat",
+        "#",
+        ["to-string", ["get", "priority_rank"]],
+        " ",
+        ["get", "short_label"],
+        " ",
+        ["get", "percent_label"],
+      ],
+      "text-font": FONT_MEDIUM,
+      "text-size": ["interpolate", ["linear"], ["zoom"], 11, 9.5, 16, 12.5],
+      "text-offset": [0, 1.8],
+      "text-anchor": "top",
+      "text-allow-overlap": false,
+      "text-optional": true,
+      "text-padding": 4,
+    },
+    paint: {
+      "text-color": "#ffffff",
+      "text-opacity": dimmed(1),
+      "text-halo-color": TEXT_HALO,
+      "text-halo-width": 2,
+    },
+  },
+
   /* ============================================================= labels */
 
   // Band label on the water itself, close zoom only.
@@ -1015,6 +1138,7 @@ export type LayerKey =
   | "bridges"
   | "gauges"
   | "alerts"
+  | "predictions"
   | "labels";
 
 export interface LayerControl {
@@ -1107,6 +1231,12 @@ export const LAYER_CONTROLS: LayerControl[] = [
     ],
   },
   {
+    key: "predictions",
+    label: "Impact predictions",
+    swatch: "predictions",
+    layerIds: ["ark-prediction-pulse", "ark-prediction-ping", "ark-prediction-label"],
+  },
+  {
     key: "labels",
     label: "Community labels",
     swatch: "labels",
@@ -1140,10 +1270,13 @@ export const ASSET_LAYERS = ["community-icons", "shelter-icons", "hospital-icons
 
 export const HAZARD_LAYERS = ["hazard-icons-critical", "hazard-icons"];
 
+export const PREDICTION_LAYERS = ["ark-prediction-ping", "ark-prediction-pulse"];
+
 export const FLOOD_LAYERS = ["flood-current-fill", "flood-modeled-fill"];
 
 /** Everything clickable, topmost first — click resolution walks this order. */
 export const PICKABLE_LAYERS = [
+  ...PREDICTION_LAYERS,
   ...HAZARD_LAYERS,
   ...ASSET_LAYERS,
   ...EDGE_SYMBOL_LAYERS,

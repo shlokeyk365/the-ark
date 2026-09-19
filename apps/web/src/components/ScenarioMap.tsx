@@ -22,6 +22,8 @@ interface ScenarioMapProps {
   worldState: WorldStateSnapshot;
   horizonState: WorldStateSnapshot | undefined;
   selectedPlan: PlanResult | undefined;
+  focusedRouteEdgeIds?: string[];
+  /* Incident focus, shared with the rails and the asset panel. */
   selection: MapSelection | null;
   onSelect: (selection: MapSelection | null) => void;
 }
@@ -49,6 +51,7 @@ export function ScenarioMap({
   worldState,
   horizonState,
   selectedPlan,
+  focusedRouteEdgeIds,
   selection,
   onSelect,
 }: ScenarioMapProps) {
@@ -67,6 +70,7 @@ export function ScenarioMap({
       <div className="map-fallback-wrap">
         <SchematicMap
           bootstrap={bootstrap}
+          focusedRouteEdgeIds={focusedRouteEdgeIds}
           horizonState={horizonState}
           selectedPlan={selectedPlan}
           worldState={worldState}
@@ -82,7 +86,7 @@ export function ScenarioMap({
                   <>
                     {" · Run "}
                     <code>npm run basemap</code>
-                    {" to fetch the Kantipur PMTiles archive."}
+                    {" to fetch the Nakkhu scenario PMTiles archive."}
                   </>
                 ) : null}
               </span>
@@ -100,6 +104,7 @@ export function ScenarioMap({
     <Suspense fallback={<BasemapLoading />}>
       <MapLibreScenarioMap
         bootstrap={bootstrap}
+        focusedRouteEdgeIds={focusedRouteEdgeIds}
         horizonState={horizonState}
         onFailure={onFailure}
         onSelect={onSelect}

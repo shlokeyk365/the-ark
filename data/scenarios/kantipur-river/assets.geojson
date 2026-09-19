@@ -1,6 +1,6 @@
 {
   "type": "FeatureCollection",
-  "name": "Kantipur River scenario assets",
+  "name": "Nakkhu River scenario assets",
   "scenario_id": "kantipur-river-v1",
   "data_classification": "modeled_synthetic_demo",
   "operational_use": false,
@@ -11,7 +11,7 @@
       "properties": {
         "id": "ktp-com-01",
         "asset_type": "community",
-        "name": "Westbank Heights",
+        "name": "Kantipur Colony North",
         "node_id": "ktp-node-com-01",
         "bank": "north",
         "zone": "west",
@@ -33,7 +33,7 @@
       "properties": {
         "id": "ktp-com-02",
         "asset_type": "community",
-        "name": "North Market",
+        "name": "Nakhipot Market",
         "node_id": "ktp-node-com-02",
         "bank": "north",
         "zone": "central",
@@ -55,7 +55,7 @@
       "properties": {
         "id": "ktp-com-03",
         "asset_type": "community",
-        "name": "Eastbank Ward",
+        "name": "Nakhipot East",
         "node_id": "ktp-node-com-03",
         "bank": "north",
         "zone": "east",
@@ -77,7 +77,7 @@
       "properties": {
         "id": "ktp-com-04",
         "asset_type": "community",
-        "name": "Southbank Ward",
+        "name": "Kantipur Colony Lowlands",
         "node_id": "ktp-node-com-04",
         "bank": "south",
         "zone": "west",
@@ -99,7 +99,7 @@
       "properties": {
         "id": "ktp-com-05",
         "asset_type": "community",
-        "name": "Riverbend Settlement",
+        "name": "Nakkhu Riverbend",
         "node_id": "ktp-node-com-05",
         "bank": "south",
         "zone": "east_bend",
@@ -121,7 +121,7 @@
       "properties": {
         "id": "ktp-hospital-01",
         "asset_type": "hospital",
-        "name": "Kantipur General Hospital",
+        "name": "Lalitpur Emergency Hospital",
         "node_id": "ktp-node-hospital-01",
         "bank": "north",
         "zone": "central",
@@ -142,7 +142,7 @@
       "properties": {
         "id": "ktp-shelter-01",
         "asset_type": "shelter",
-        "name": "West Ridge Shelter",
+        "name": "Kantipur Ridge Shelter",
         "node_id": "ktp-node-shelter-01",
         "bank": "south",
         "zone": "west",
@@ -164,7 +164,7 @@
       "properties": {
         "id": "ktp-shelter-02",
         "asset_type": "shelter",
-        "name": "East Civic Shelter",
+        "name": "Nakhipot Civic Shelter",
         "node_id": "ktp-node-shelter-02",
         "bank": "north",
         "zone": "east",
@@ -186,7 +186,7 @@
       "properties": {
         "id": "ktp-bridge-01",
         "asset_type": "bridge",
-        "name": "West Market Bridge",
+        "name": "Nakhipot Access Bridge",
         "edge_id": "ktp-bridge-01",
         "relative_exposure": "medium"
       },
@@ -230,7 +230,7 @@
       "properties": {
         "id": "ktp-bridge-02",
         "asset_type": "bridge",
-        "name": "East River Bridge",
+        "name": "Nakkhu East Bridge",
         "edge_id": "ktp-bridge-02",
         "relative_exposure": "high"
       },

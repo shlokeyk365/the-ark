@@ -1,9 +1,15 @@
 {
   "name": "the-ark",
   "private": true,
+  "workspaces": [
+    "apps/web",
+    "packages/shared-types"
+  ],
   "scripts": {
+    "dev": "npm --workspace apps/web run dev",
     "dev:api": "python3 -m uvicorn apps.api.main:app --reload --port ${API_PORT:-8000}",
     "dev:web": "npm --prefix apps/web run dev",
+    "build": "npm --workspace apps/web run build",
     "build:web": "npm --prefix apps/web run build",
     "typecheck:web": "npm --prefix apps/web run typecheck",
     "test": "PYTHONPATH=services/physics/src PYTHONPYCACHEPREFIX=/private/tmp/pycache-the-ark python3 -m pytest -q",

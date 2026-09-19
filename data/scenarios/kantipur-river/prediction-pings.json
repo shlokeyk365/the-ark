@@ -1,0 +1,150 @@
+{
+  "schema_version": "1.0.0",
+  "scenario_id": "kantipur-river-v1",
+  "event_id": "nakkhu-2024",
+  "location": "Kantipur Colony and Nakhipot, Lalitpur Ward 14, Nepal",
+  "model": {
+    "model_name": "CatBoost flood impact model",
+    "model_version": "f6f3dcd",
+    "status": "research_only",
+    "training_events": 4869,
+    "feature_policy": "City, district, and basin identity excluded from predictors",
+    "evaluation": {
+      "unseen_district_roc_auc": 0.6987,
+      "four_split_macro_roc_auc": 0.676,
+      "mean_rmse": 0.4166
+    }
+  },
+  "pings": [
+    {
+      "ping_id": "nakkhu-risk-casualty",
+      "target": "casualty_or_missing",
+      "label": "Kantipur Colony rescue risk",
+      "short_label": "RESCUE",
+      "coordinates": [85.31348, 27.64646],
+      "anchor_asset_id": "ktp-com-04",
+      "exposure_asset_id": "ktp-com-04",
+      "anchor_edge_id": "ktp-road-08",
+      "activation_hours": 6,
+      "reason": "The Kantipur Colony lowlands sit beside the rapidly rising Nakkhu River, while the nearby connector road progressively floods and narrows the rescue window.",
+      "recommended_action": "Stage a rope or boat team near Kantipur Colony before access degrades."
+    },
+    {
+      "ping_id": "nakkhu-risk-housing",
+      "target": "housing_damage",
+      "label": "Lowlands housing damage",
+      "short_label": "HOUSING",
+      "coordinates": [85.3215, 27.6575],
+      "anchor_asset_id": "ktp-com-04",
+      "exposure_asset_id": "ktp-com-04",
+      "anchor_edge_id": "ktp-road-08",
+      "activation_hours": 6,
+      "reason": "Low-lying homes near the southern access road are exposed as modeled water depth increases around Kantipur Colony.",
+      "recommended_action": "Issue targeted evacuation guidance for low-lying homes."
+    },
+    {
+      "ping_id": "nakkhu-risk-transport",
+      "target": "transport_disruption",
+      "label": "Nakhipot bridge disruption",
+      "short_label": "ROAD",
+      "coordinates": [85.317, 27.675],
+      "anchor_asset_id": "ktp-bridge-01",
+      "exposure_asset_id": "ktp-com-02",
+      "anchor_edge_id": "ktp-bridge-01",
+      "activation_hours": 12,
+      "reason": "Modeled water depth rises on the west access bridge, increasing travel time before the crossing approaches its restriction threshold.",
+      "recommended_action": "Move response vehicles across the bridge before the modeled closure window."
+    },
+    {
+      "ping_id": "nakkhu-risk-severe",
+      "target": "severe_impact",
+      "label": "Nakkhu Riverbend severe impact",
+      "short_label": "SEVERE",
+      "coordinates": [85.342, 27.664],
+      "anchor_asset_id": "ktp-com-05",
+      "exposure_asset_id": "ktp-com-05",
+      "anchor_edge_id": "ktp-road-10",
+      "activation_hours": 12,
+      "reason": "The riverbend combines growing local flood depth with limited outbound road redundancy, concentrating several impact pathways in one area.",
+      "recommended_action": "Prioritize the low-lying riverbend for early warning and rescue coverage."
+    },
+    {
+      "ping_id": "nakkhu-risk-casualty-east-crossing",
+      "target": "casualty_or_missing",
+      "label": "Nakkhu East rescue risk",
+      "short_label": "RESCUE",
+      "coordinates": [85.342, 27.684],
+      "anchor_asset_id": "ktp-bridge-02",
+      "exposure_asset_id": "ktp-com-03",
+      "anchor_edge_id": "ktp-bridge-02",
+      "activation_hours": 6,
+      "reason": "The east bridge is one of the fastest-rising modeled crossings and may divide responders from exposed neighborhoods south of the river.",
+      "recommended_action": "Pre-position a rescue crew on the south side before the east crossing becomes restricted."
+    },
+    {
+      "ping_id": "nakkhu-risk-housing-north",
+      "target": "housing_damage",
+      "label": "Kantipur North housing exposure",
+      "short_label": "HOUSING",
+      "coordinates": [85.307, 27.707],
+      "anchor_asset_id": "ktp-com-01",
+      "exposure_asset_id": "ktp-com-01",
+      "anchor_edge_id": "ktp-road-01",
+      "activation_hours": 12,
+      "reason": "This residential cluster has lower modeled road depth than the riverbank, but continued flood growth can still reduce safe household evacuation options.",
+      "recommended_action": "Send an early household warning and keep the northern access route clear."
+    },
+    {
+      "ping_id": "nakkhu-risk-housing-east",
+      "target": "housing_damage",
+      "label": "Nakhipot East housing exposure",
+      "short_label": "HOUSING",
+      "coordinates": [85.349, 27.7],
+      "anchor_asset_id": "ktp-com-03",
+      "exposure_asset_id": "ktp-com-03",
+      "anchor_edge_id": "ktp-road-05",
+      "activation_hours": 12,
+      "reason": "Flood depth grows along the approach serving Nakhipot East, increasing the chance that residents must evacuate before road conditions worsen.",
+      "recommended_action": "Notify exposed households and direct them toward Nakhipot Civic Shelter."
+    },
+    {
+      "ping_id": "nakkhu-risk-transport-central",
+      "target": "transport_disruption",
+      "label": "Central low-road disruption",
+      "short_label": "ROAD",
+      "coordinates": [85.3295, 27.675],
+      "anchor_asset_id": null,
+      "exposure_asset_id": "ktp-com-04",
+      "anchor_edge_id": "ktp-road-09",
+      "activation_hours": 6,
+      "reason": "The central low road carries the highest modeled depth in the network and becomes restricted earlier than surrounding links.",
+      "recommended_action": "Reroute response traffic north before the central low road becomes impassable."
+    },
+    {
+      "ping_id": "nakkhu-risk-transport-east-bridge",
+      "target": "transport_disruption",
+      "label": "Nakkhu East bridge disruption",
+      "short_label": "ROAD",
+      "coordinates": [85.342, 27.689],
+      "anchor_asset_id": "ktp-bridge-02",
+      "exposure_asset_id": "ktp-com-03",
+      "anchor_edge_id": "ktp-bridge-02",
+      "activation_hours": 6,
+      "reason": "The eastern bridge approaches its travel-penalty threshold quickly, threatening a critical north-south response connection.",
+      "recommended_action": "Move ambulances and high-clearance vehicles across the bridge before restrictions begin."
+    },
+    {
+      "ping_id": "nakkhu-risk-severe-lowlands",
+      "target": "severe_impact",
+      "label": "Kantipur Lowlands severe impact",
+      "short_label": "SEVERE",
+      "coordinates": [85.3155, 27.668],
+      "anchor_asset_id": "ktp-com-04",
+      "exposure_asset_id": "ktp-com-04",
+      "anchor_edge_id": "ktp-road-08",
+      "activation_hours": 12,
+      "reason": "The lowlands combine rising road depth, nearby housing exposure, and a shrinking rescue-access window, increasing compound impact risk.",
+      "recommended_action": "Prioritize door-to-door evacuation checks and maintain a dedicated rescue staging point."
+    }
+  ]
+}

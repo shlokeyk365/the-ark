@@ -177,6 +177,56 @@ class FloodFrameSummary(WireModel):
     rainfall_multiplier: float
 
 
+class ImpactModelEvaluation(WireModel):
+    unseen_district_roc_auc: float
+    four_split_macro_roc_auc: float
+    mean_rmse: float
+
+
+class ImpactModelSummary(WireModel):
+    event_id: str
+    location: str
+    model_name: str
+    model_version: str
+    status: Literal["research_only"]
+    training_events: int
+    feature_policy: str
+    evaluation: ImpactModelEvaluation
+    limitations: List[str]
+
+
+class PredictionSignal(WireModel):
+    ping_id: str
+    target: Literal[
+        "casualty_or_missing",
+        "housing_damage",
+        "transport_disruption",
+        "severe_impact",
+    ]
+    label: str
+    short_label: str
+    base_probability: float
+    base_percent: int
+    probability: float
+    percent: int
+    geometry: PointGeometry
+    anchor_asset_id: Optional[str]
+    anchor_edge_id: str
+    exposure_asset_id: str
+    exposed_people: int
+    local_flood_depth_m: float
+    local_danger_score: float
+    priority_score: int
+    priority_rank: int
+    priority_level: Literal["critical", "high", "elevated", "low"]
+    score_type: Literal["prototype_localized_risk_score"]
+    activation_hours: float
+    state: Literal["forecast", "active"]
+    reason: str
+    recommended_action: str
+    source_type: Literal["scenario_adjusted_model_prior"]
+
+
 class EvacuationAssignment(WireModel):
     community_id: str
     shelter_id: str
@@ -227,6 +277,7 @@ class ScenarioBootstrapResponse(WireModel):
     available_frames: List[FloodFrameSummary]
     events: List[IncidentEvent]
     plans: List[ResponsePlan]
+    impact_model: ImpactModelSummary
 
 
 class DerivedEdgeState(WireModel):
@@ -327,6 +378,7 @@ class WorldStateSnapshot(WireModel):
     edge_states: List[DerivedEdgeState]
     community_access: List[CommunityAccessState]
     hazards: List[Hazard]
+    prediction_signals: List[PredictionSignal]
     plan_results: List[PlanResult]
 
 

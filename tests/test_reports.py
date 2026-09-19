@@ -31,13 +31,15 @@ def test_baseline_run_creates_a_durable_deterministic_report(tmp_path: Path) -> 
     report = run["report"]
     SimulationReport.model_validate(report)
 
-    assert len(run["snapshots"]) == 4
+    # The current scenario publishes every three-hour modeled frame, not only
+    # the original 0h/+6h/+12h/+24h anchor frames.
+    assert len(run["snapshots"]) == 9
     assert report["summary"] == {
         "peak_flood_depth_m": 0.39,
         "peak_isolated_people": 620,
         "peak_isolated_communities": 1,
         "peak_critical_routes_lost": 2,
-        "first_isolation_hours": 24.0,
+        "first_isolation_hours": 21.0,
         "viable_plans_at_horizon": 0,
     }
     assert report["provenance"]["impact_prior_used"] is False
@@ -70,7 +72,7 @@ def test_event_report_explains_accelerated_isolation(tmp_path: Path) -> None:
         report["changes"]
     )
     assert any(
-        "from +24h in the baseline to +12h" in item
+        "from +21h in the baseline to +12h" in item
         for item in report["narrative"]
     )
     assert all(

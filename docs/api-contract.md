@@ -20,11 +20,13 @@ Returns static data needed to initialize the frontend:
 - Asset GeoJSON for communities, shelters, hospital, and bridges.
 - Routing-network GeoJSON with explicit node references and thresholds.
 - Administrative context boundaries for map background only.
-- Curated synthetic flood-depth polygons for each timeline frame, for display
+- Curated synthetic flood-depth polygons for every timeline frame, for display
   and situational awareness only.
 - Ordered timeline frame summaries.
 - Available injected events.
 - Plan A/B/C definitions and assignments.
+- `impact_model`, a research-only model summary with training-event count,
+  grouped-evaluation metrics, feature policy, and limitations.
 
 The bootstrap response intentionally excludes flood edge readings and derived
 results. Those come from a versioned world-state endpoint. `flood_polygons` is
@@ -50,7 +52,20 @@ Provenance and licensing are recorded in
 
 Both return `WorldStateSnapshot`. The payload contains derived edge status,
 community access, routes, hazards, time-to-isolation, and Plan A/B/C results for
-one immutable state version.
+one immutable state version. It also contains `prediction_signals`, ten
+time-adjusted operational POIs spanning the model's four impact targets.
+
+Each prediction signal includes the frozen `base_probability` from the event
+model and a displayed localized score adjusted for the current scenario frame.
+The adjustment combines absolute flood depth on the declared `anchor_edge_id`,
+its closure threshold and current status, route criticality, and the population
+of `exposure_asset_id`. The signal also includes `priority_score`,
+`priority_rank`, `priority_level`, local flood depth, activation state, the
+reason the location was flagged, and a recommended action.
+
+`score_type` is `prototype_localized_risk_score`. Neither that score nor the
+priority rank is a calibrated hourly probability or validated dispatch rule.
+The model still predicts whole-event impacts, not street-level depth.
 
 The frame endpoint accepts a repeatable `events` query parameter so a caller can
 inspect any frame with injected events held active:

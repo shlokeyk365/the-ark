@@ -4,6 +4,14 @@ Status: MVP contract
 
 Schema version: `1.0.0`
 
+## Timeline cadence
+
+The dashboard exposes frames every three hours from now through +24h. The
+now/+6h/+12h/+24h fixtures are the original curated anchors. Intermediate
++3h/+9h/+15h/+18h/+21h edge depths are linear interpolations and carry model
+version `1.0.0-interpolated`; they improve animation cadence but do not add new
+hydrologic evidence.
+
 ## Evaluation model
 
 Each plan is evaluated against the same frozen canonical world-state snapshot.
@@ -61,7 +69,8 @@ All plans use the same definitions and evaluation deadline:
   overloaded, and every successful trip meets the deadline.
 
 Metrics describe the synthetic scenario only. There is no generic AI confidence
-score.
+score. The separately labeled impact probabilities are outputs from the frozen
+historical-event model and are not plan-viability metrics.
 
 ## Frontend payload
 
@@ -76,17 +85,71 @@ The API returns already-derived results:
 The frontend may sort, filter, and visualize these fields but must not recompute
 routing, isolation, capacity, or plan viability.
 
+## Historical impact prediction pings
+
+`model-impact-prior.json` stores the frozen Nakkhu 2024 event input and four
+probabilities produced by the CatBoost model. `prediction-pings.json` supplies
+display anchors, nearby network edges, activation hours, explanation text, and
+recommended actions. Multiple POIs may share one target's event prior; their
+displayed risks differ because they are adjusted by different anchor-edge flood
+depths. The scenario service joins them by target and returns the result as
+`prediction_signals`.
+
+The base percentages stay constant because the trained model is an event-level
+impact classifier. The displayed percentage is a monotonic prototype localized
+risk score. It combines five normalized components: absolute depth relative to
+the scenario-wide maximum, depth relative to the edge closure threshold,
+open/restricted/closed status, route criticality, and exposed population. The
+weights differ by impact target: housing and casualty emphasize population,
+while transport emphasizes thresholds, status, and route criticality.
+
+| Target | Absolute depth | Closure threshold | Edge status | Critical route | Exposed population |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Casualty or missing | 35% | 25% | 15% | 5% | 20% |
+| Housing damage | 35% | 25% | 10% | 0% | 30% |
+| Transport disruption | 30% | 30% | 20% | 15% | 5% |
+| Severe impact | 35% | 25% | 15% | 10% | 15% |
+
+The displayed score is `base_probability * (0.10 + 0.90 * local_danger)`.
+Responder priority is `70% local_danger + 30% base_probability`, ranked across
+all POIs for the current frame. This prevents every location in a category from
+converging to the same value merely because it reached its own local maximum.
+The timeline separately marks a signal `active` at its configured activation
+hour.
+
+Priority levels are `critical` at 70 or above, `high` at 55–69, `elevated` at
+35–54, and `low` below 35. These cutoffs are presentation assumptions, not an
+incident-command standard.
+
+A ping means “surface this evolving scenario risk near the relevant asset”; it
+is not a claim that the exact point or building has that risk. This deterministic
+adjustment is labeled `scenario_adjusted_model_prior` with score type
+`prototype_localized_risk_score`; it must not be described as a new hourly ML
+prediction or a validated live-dispatch rule. Its separation of hazard and
+exposure follows the conceptual framing in
+[UNDRR terminology](https://www.undrr.org/terminology/exposure), but the weights
+are hackathon assumptions requiring emergency-management validation.
+
+The prediction layer cannot close roads, alter flood depth, change routing, or
+modify plan results. Those continue to come from the deterministic world state.
+
 ## Flood depth polygons
 
-`flood-polygons.geojson` provides a curated, synthetic depth surface for every
+`flood-polygons.geojson` provides a curated, synthetic depth surface for **every**
 timeline frame. It is referenced by `scenario.json`, validated during scenario
 load, and served in the bootstrap response as `flood_polygons`.
 
+The surface is generated rather than authored — see
+`data/scenarios/kantipur-river/SOURCES.md` and
+`scripts/generate-flood-surface.mjs`. Terrain supplies the band shapes; the
+canonical `edge_conditions` supply the depths and the growth curve, so the
+polygons cannot disagree with the frame they belong to.
+
 The collection is a **rendering and situational-awareness input**. Routing,
 closures, isolation, and plan scoring continue to derive from the frame's
-`edge_conditions`; the polygon geometry is never used as a safety constraint.
-This boundary keeps the deterministic engine authoritative while allowing the
-map to show a coherent surface.
+`edge_conditions`; polygon geometry is never used as a safety constraint. Because
+every frame now carries its own bands, the frontend no longer cross-fades
+between keyframes at the intermediate 3/9/15/18/21h steps.
 
 Shape:
 
@@ -120,8 +183,11 @@ Validation guarantees:
 
 - One or more polygons per `frame_id`, banded by depth so the map can shade by
   severity rather than drawing a single flat extent.
-- Every frame has a surface, and every referenced `frame_id` exists in
-  `flood-frames.json`.
+- Every referenced `frame_id` exists in `flood-frames.json`, and its declared
+  simulation time matches that frame.
+- **Every** timeline frame has a surface, not only the first and last. A frame
+  without one leaves the map blank at that step, which reads as the water
+  receding rather than as missing data.
 - Bands begin at zero, are contiguous, and cover the frame's peak edge depth.
 - Rings are closed and remain within the scenario's Nepal coordinate bounds.
 - Classification remains synthetic/modelled and `operational_use` remains

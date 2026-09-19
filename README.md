@@ -1,7 +1,7 @@
 # the ark
 
 the ark is a map-centric, real-time disaster-response world model for flood
-emergencies. The MVP is a deterministic, replayable Kantipur River scenario
+emergencies. The MVP is a deterministic, replayable Nakkhu River scenario
 that derives infrastructure status, safe routes, community isolation, hazards,
 and comparable response-plan outcomes from one canonical world state.
 
@@ -10,7 +10,9 @@ The fixture is synthetic demonstration data and is not operational guidance.
 ## Current backend slice
 
 - Five communities, two bridges, one hospital, and two shelters.
-- Flood frames for now, +6h, +12h, and +24h.
+- Nine flood frames at 3-hour intervals from now through +24h. The original
+  now/+6h/+12h/+24h depths remain anchors; intervening frames are explicitly
+  labeled linear interpolations for smoother demonstration playback.
 - Deterministic edge closures and travel penalties.
 - Safe-path, access, and time-to-isolation calculations.
 - Plan A/B/C evaluation against a frozen state.
@@ -19,6 +21,8 @@ The fixture is synthetic demonstration data and is not operational guidance.
 - FastAPI endpoints returning frontend-ready state.
 - Any frame viewable with injected events held active, with time-to-isolation
   recomputed for that event set.
+- A frozen CatBoost impact prior trained on 4,869 historical Nepal flood events,
+  projected across ten research-only operational POIs on the timeline and map.
 - Durable full-horizon simulation runs with one immutable analysis report per
   run, including timeline and event-counterfactual changes.
 - Report archive with JSON, CSV, and printable HTML/PDF exports.
@@ -56,6 +60,13 @@ the local FastAPI process on port `8000`.
 The dashboard loads every modeled frame on start, so scrubbing the timeline and
 frame playback are instant and the sparklines plot real per-frame values. All
 domain results come from the API; the browser derives no routing or plan logic.
+Playback advances one 3-hour frame every 2.4 seconds.
+
+The Reports tab creates explicit full-horizon runs. Browsing or scrubbing a
+frame does not create a report. Every completed run freezes its event set and
+fixture digest, persists all four world-state snapshots in SQLite, and creates
+one report from those stored results. Set `THE_ARK_REPORT_DB_PATH` to override
+the default `data/runtime/the-ark.sqlite3` location.
 
 The Reports tab creates explicit full-horizon runs. Browsing or scrubbing a
 frame does not create a report. Every completed run freezes its event set and
@@ -69,11 +80,15 @@ The map renders on **MapLibre GL JS** over a **Protomaps PMTiles** vector
 basemap, with optional satellite imagery and 3D terrain. There is no access
 token, no account, and no metered tile API.
 
-Fetch the Kantipur basemap once:
+Fetch the Nakkhu/Kantipur Colony basemap once:
 
 ```bash
 npm run basemap
 ```
+
+`npm run dev` also performs this fetch automatically when the archive is
+missing, so a fresh clone starts with the geographic map without an extra setup
+step.
 
 That extracts the scenario's bounding box from the Protomaps daily planet build
 over HTTP range requests — about 20 MB transferred for an 18 MB archive, rather
@@ -98,8 +113,8 @@ that path stays light.
 
 Map layers follow the operator list: flood depth (current), the modeled +24h
 extent, roads and closures, active response routes, alternate plan routes,
-shelters and the hospital, bridges, river gauges, hazards, community labels, and
-administrative context. The basemap itself is a radio choice between the
+shelters and the hospital, bridges, river gauges, hazards, model prediction
+pings, community labels, and administrative context. The basemap itself is a radio choice between the
 operational vector style and satellite imagery, with 3D terrain as a separate
 toggle. River gauges are listed but disabled: the fixture has no gauge
 observations yet, and alternate plan routes are off by default.
@@ -142,6 +157,14 @@ enters incident focus. The camera frames the affected area, everything outside
 the incident dims, and a panel states the affected population, the nearest
 reachable facility, the route time and what has become unreachable. "Exit focus"
 restores the full picture.
+
+Prediction pings are hoverable. Each explanation card separates current
+timeline risk from the shared event prior and shows nearby modeled flood depth,
+exposed population, location-specific responder priority, the reason the POI was
+flagged, and the recommended action. They are drawn in their own colour family —
+keyed to impact target rather than to status — so a model prediction is never
+read as an observed closure. These rankings are research-only and not validated
+for live dispatch.
 
 The administrative boundaries are Kathmandu and Lalitpur Metropolitan City,
 visual context only — see `data/scenarios/kantipur-river/SOURCES.md` for

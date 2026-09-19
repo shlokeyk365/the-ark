@@ -46,6 +46,7 @@ import {
   LAYERS,
   LAYER_CONTROLS,
   PICKABLE_LAYERS,
+  PREDICTION_LAYERS,
   SOURCE,
   type LayerKey,
 } from "./layers";
@@ -65,6 +66,7 @@ import {
   floodNowCollection,
   hazardsCollection,
   nodeLabels,
+  predictionSignalsCollection,
   roadHazardsCollection,
   roadsCollection,
   routeCollection,
@@ -125,6 +127,53 @@ interface HoverInfo {
   status?: string;
   statusTone?: string;
   details: string[];
+}
+
+function predictionPopupContent(properties: Record<string, unknown>): HTMLDivElement {
+  const text = (key: string) => String(properties[key] ?? "");
+  const root = document.createElement("div");
+  root.className = "prediction-popup-card";
+
+  const heading = document.createElement("div");
+  heading.className = "prediction-popup-heading";
+  const title = document.createElement("strong");
+  title.textContent = text("label");
+  const state = document.createElement("span");
+  state.className = `priority-${text("priority_level")}`;
+  state.textContent = `#${text("priority_rank")} ${text("priority_level")}`;
+  heading.append(title, state);
+
+  const risk = document.createElement("div");
+  risk.className = "prediction-popup-risk";
+  const value = document.createElement("strong");
+  value.textContent = `${text("percent")}%`;
+  const valueLabel = document.createElement("span");
+  valueLabel.textContent = "localized risk score";
+  risk.append(value, valueLabel);
+
+  const metrics = document.createElement("div");
+  metrics.className = "prediction-popup-metrics";
+  const prior = document.createElement("span");
+  prior.textContent = `Event prior ${text("base_percent")}%`;
+  const depth = document.createElement("span");
+  const depthValue = Number(properties.local_flood_depth_m ?? 0);
+  depth.textContent = `Nearby depth ${depthValue.toFixed(2)} m`;
+  const exposure = document.createElement("span");
+  exposure.textContent = `${Number(properties.exposed_people ?? 0).toLocaleString()} people nearby`;
+  metrics.append(prior, depth, exposure);
+
+  const whyLabel = document.createElement("small");
+  whyLabel.textContent = "Why this ping";
+  const why = document.createElement("p");
+  why.textContent = text("reason");
+  const actionLabel = document.createElement("small");
+  actionLabel.textContent = "Recommended action";
+  const action = document.createElement("p");
+  action.className = "prediction-popup-action";
+  action.textContent = text("recommended_action");
+
+  root.append(heading, risk, metrics, whyLabel, why, actionLabel, action);
+  return root;
 }
 
 /** Registered once per page; the protocol object is stateless across maps. */
@@ -214,6 +263,8 @@ interface MapLibreScenarioMapProps {
   /** Last frame in the horizon, used for the predicted-inundation layer. */
   horizonState: WorldStateSnapshot | undefined;
   selectedPlan: PlanResult | undefined;
+  /** Route the responder rail has focused, highlighted over the plan's own. */
+  focusedRouteEdgeIds?: string[];
   selection: MapSelection | null;
   onSelect: (selection: MapSelection | null) => void;
   onFailure: (reason: string) => void;
@@ -231,6 +282,7 @@ export function MapLibreScenarioMap({
   worldState,
   horizonState,
   selectedPlan,
+  focusedRouteEdgeIds,
   selection,
   onSelect,
   onFailure,
@@ -238,6 +290,7 @@ export function MapLibreScenarioMap({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const animatorRef = useRef<MapAnimator | null>(null);
+  const predictionPopupRef = useRef<maplibregl.Popup | null>(null);
   const [ready, setReady] = useState(false);
   const [layersOpen, setLayersOpen] = useState(true);
   const [basemapMode, setBasemapMode] = useState<"operational" | "satellite">(
@@ -248,7 +301,14 @@ export function MapLibreScenarioMap({
   const [diagnostics, setDiagnostics] = useState<string[] | null>(null);
   const [layers, setLayers] = useState<Record<LayerKey, boolean>>(DEFAULT_LAYERS);
 
-  const routeEdgeIds = useMemo(() => routeEdgeIdsFor(selectedPlan), [selectedPlan]);
+  // A rail-focused destination overrides the selected plan's own route set.
+  const routeEdgeIds = useMemo(
+    () =>
+      focusedRouteEdgeIds?.length
+        ? new Set(focusedRouteEdgeIds)
+        : routeEdgeIdsFor(selectedPlan),
+    [focusedRouteEdgeIds, selectedPlan],
+  );
   const labels = useMemo(() => nodeLabels(bootstrap), [bootstrap]);
 
   const floodNow = useMemo(
@@ -278,6 +338,7 @@ export function MapLibreScenarioMap({
       [SOURCE.assets]: assetsCollection(bootstrap, worldState),
       [SOURCE.bridges]: bridgesCollection(bootstrap, worldState),
       [SOURCE.hazards]: hazardsCollection(bootstrap, worldState),
+      [SOURCE.predictions]: predictionSignalsCollection(worldState),
     }),
     [bootstrap, floodForecast, floodNow, routeEdgeIds, selectedPlan, worldState],
   );
@@ -571,6 +632,10 @@ export function MapLibreScenarioMap({
       const properties = picked.properties ?? {};
       const layerId = picked.layer.id;
 
+      // Pings describe possible impact, not a world-state object, so there is
+      // nothing for incident focus to resolve them to.
+      if (PREDICTION_LAYERS.includes(layerId)) return;
+
       if (HAZARD_LAYERS.includes(layerId)) {
         selectRef.current({ kind: "hazard", id: String(properties.hazard_id) });
         return;
@@ -588,14 +653,49 @@ export function MapLibreScenarioMap({
       }
     };
 
+    /*
+     * Prediction pings get a popup rather than the inspector strip: they carry
+     * a reason and a recommended action, which is more than a one-line status
+     * bar can hold.
+     */
+    const showPrediction = (event: maplibregl.MapLayerMouseEvent) => {
+      const feature = event.features?.[0];
+      if (!feature) return;
+      predictionPopupRef.current?.remove();
+      predictionPopupRef.current = new maplibregl.Popup({
+        className: "ark-prediction-popup",
+        closeButton: false,
+        closeOnClick: false,
+        offset: 14,
+      })
+        .setLngLat(event.lngLat)
+        .setDOMContent(
+          predictionPopupContent(feature.properties as Record<string, unknown>),
+        )
+        .addTo(map);
+    };
+    const hidePrediction = () => {
+      predictionPopupRef.current?.remove();
+      predictionPopupRef.current = null;
+    };
+
     map.on("mousemove", onMove);
     map.on("mouseout", clearHover);
     map.on("click", onClick);
+    PREDICTION_LAYERS.forEach((layerId) => {
+      map.on("mouseenter", layerId, showPrediction);
+      map.on("mouseleave", layerId, hidePrediction);
+    });
 
     return () => {
       map.off("mousemove", onMove);
       map.off("mouseout", clearHover);
       map.off("click", onClick);
+      PREDICTION_LAYERS.forEach((layerId) => {
+        map.off("mouseenter", layerId, showPrediction);
+        map.off("mouseleave", layerId, hidePrediction);
+      });
+      hidePrediction();
     };
   }, [clearHover, ready]);
 

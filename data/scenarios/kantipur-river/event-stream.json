@@ -8,10 +8,10 @@
       "event_id": "ktp-event-bridge-02-failure",
       "event_type": "bridge_failure",
       "effective_at_hours": 12,
-      "occurred_at": "2026-09-19T00:00:00Z",
+      "occurred_at": "2024-09-28T12:00:00Z",
       "source_type": "operator_injected",
       "reliability": "confirmed",
-      "description": "Inject failure of East River Bridge after the southern corridor has closed.",
+      "description": "Inject failure of Nakkhu East Bridge after the southern corridor has closed.",
       "changes": [
         {
           "change_type": "force_close_edge",

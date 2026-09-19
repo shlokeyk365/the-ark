@@ -573,6 +573,53 @@ export function hazardsCollection(
   };
 }
 
+/* -------------------------------------------------------------- predictions */
+
+/**
+ * Impact-prediction pings, projected for the map.
+ *
+ * `promoteId` addresses features by `properties.id`, so the ping id is repeated
+ * there alongside its own field.
+ */
+export function predictionSignalsCollection(
+  worldState: WorldStateSnapshot,
+): MapFeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: worldState.prediction_signals.map((signal) => ({
+      type: "Feature",
+      id: signal.ping_id,
+      geometry: signal.geometry,
+      properties: {
+        id: signal.ping_id,
+        ping_id: signal.ping_id,
+        target: signal.target,
+        label: signal.label,
+        short_label: signal.short_label,
+        base_probability: signal.base_probability,
+        base_percent: signal.base_percent,
+        probability: signal.probability,
+        percent: signal.percent,
+        percent_label: `${signal.percent}%`,
+        state: signal.state,
+        activation_hours: signal.activation_hours,
+        anchor_edge_id: signal.anchor_edge_id,
+        exposure_asset_id: signal.exposure_asset_id,
+        exposed_people: signal.exposed_people,
+        local_flood_depth_m: signal.local_flood_depth_m,
+        local_danger_score: signal.local_danger_score,
+        priority_score: signal.priority_score,
+        priority_rank: signal.priority_rank,
+        priority_level: signal.priority_level,
+        score_type: signal.score_type,
+        reason: signal.reason,
+        recommended_action: signal.recommended_action,
+        source_type: signal.source_type,
+      },
+    })),
+  };
+}
+
 /* ------------------------------------------------------------------ flood */
 
 const CHANNEL_CENTRELINE: Position[] = [

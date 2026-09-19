@@ -1,6 +1,6 @@
 {
   "type": "FeatureCollection",
-  "name": "Kantipur River routing network",
+  "name": "Nakkhu River routing network",
   "scenario_id": "kantipur-river-v1",
   "data_classification": "modeled_synthetic_demo",
   "operational_use": false,

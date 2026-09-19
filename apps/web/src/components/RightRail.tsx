@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type {
   PlanMetrics,
   PlanResult,
+  PredictionSignal,
   ScenarioBootstrapResponse,
   WorldStateSnapshot,
 } from "@the-ark/shared-types";
@@ -10,6 +11,7 @@ import type {
 import { assetNames, describeAsset, formatHours } from "../derive";
 import type { MapSelection } from "../map/selection";
 import { relativeTime, type LogEntry } from "../session";
+import { ResponderBrief } from "./ResponderBrief";
 import { ShellIcon } from "./ShellIcon";
 
 interface RightRailProps {
@@ -20,53 +22,14 @@ interface RightRailProps {
   /** Pre-event metrics, present only while viewing the recomputed state. */
   comparison: Map<string, PlanMetrics> | undefined;
   log: LogEntry[];
+  focusedDestinationId: string | null;
+  onFocusDestination: (destinationId: string | null, edgeIds: string[]) => void;
+  /* Incident focus, shared with the map and the asset panel. */
   selection: MapSelection | null;
   onSelect: (selection: MapSelection | null) => void;
 }
 
 const PLAN_LETTERS = ["A", "B", "C"];
-
-/**
- * The plan a commander would take on the numbers alone: viable, evacuating the
- * most people, then finishing soonest. Returns nothing when no single plan wins,
- * so the rail never implies a recommendation the metrics do not support.
- */
-function recommendedPlanId(results: PlanResult[]): string | undefined {
-  const viable = results.filter(
-    (result) => result.status === "current" && result.metrics.plan_viable,
-  );
-  if (viable.length < 2) return undefined;
-
-  const ranked = [...viable].sort((a, b) => {
-    const byPeople =
-      b.metrics.people_evacuated_by_deadline - a.metrics.people_evacuated_by_deadline;
-    if (byPeople !== 0) return byPeople;
-    return (
-      (a.metrics.evacuation_completion_minutes ?? Infinity) -
-      (b.metrics.evacuation_completion_minutes ?? Infinity)
-    );
-  });
-
-  const [best, runnerUp] = ranked;
-  const tied =
-    best.metrics.people_evacuated_by_deadline ===
-      runnerUp.metrics.people_evacuated_by_deadline &&
-    best.metrics.evacuation_completion_minutes ===
-      runnerUp.metrics.evacuation_completion_minutes;
-
-  return tied ? undefined : best.plan_id;
-}
-
-/**
- * "2,620 people · 3 communities → 2 shelters" for a plan's assignment set. The
- * headline number leads so it survives truncation in a narrow rail.
- */
-function describePlanShape(result: PlanResult): string {
-  const communities = new Set(result.assignment_results.map((a) => a.community_id));
-  const shelters = new Set(result.assignment_results.map((a) => a.shelter_id));
-  const people = result.assignment_results.reduce((total, a) => total + a.people, 0);
-  return `${people.toLocaleString()} people · ${communities.size} communities → ${shelters.size} shelters`;
-}
 
 function MetricCell({
   icon,
@@ -97,7 +60,7 @@ function MetricCell({
 
   return (
     <span className={`plan-metric ${tone ?? ""}`}>
-      <ShellIcon name={icon} size={12} />
+      <ShellIcon name={icon} size={13} />
       <strong>
         {value}
         {changed ? (
@@ -122,14 +85,12 @@ function PlanCard({
   result,
   index,
   selected,
-  recommended,
   before,
   onSelect,
 }: {
   result: PlanResult;
   index: number;
   selected: boolean;
-  recommended: boolean;
   before: PlanMetrics | undefined;
   onSelect: () => void;
 }) {
@@ -143,33 +104,19 @@ function PlanCard({
 
   return (
     <article className={`plan-card plan-${index + 1} ${selected ? "selected" : ""}`}>
-      <button
-        className="plan-heading"
-        type="button"
-        onClick={onSelect}
-        aria-pressed={selected}
-      >
+      <div className="plan-heading">
         <span className="plan-letter">{PLAN_LETTERS[index] ?? index + 1}</span>
-        <span className="plan-identity">
-          <span className="plan-name-row">
-            <strong>{result.plan_name.replace(/^Plan [A-C] — /, "")}</strong>
-            {recommended ? (
-              <span className="plan-flag">
-                <ShellIcon name="check" size={9} />
-                Recommended
-              </span>
-            ) : null}
-          </span>
-          <span className="plan-shape">{describePlanShape(result)}</span>
-          <span className={`plan-status ${result.status === "stale" ? "stale" : ""}`}>
+        <div>
+          <strong>{result.plan_name.replace(/^Plan [A-C] — /, "")}</strong>
+          <span className={result.status === "stale" ? "stale" : ""}>
             {result.status === "stale" ? "Stale — awaiting recompute" : "Current result"}
           </span>
-        </span>
-        <span className="plan-open">
+        </div>
+        <button type="button" onClick={onSelect} aria-pressed={selected}>
           {selected ? "Viewing" : "Inspect"}
-          <ShellIcon name="chevron" size={11} />
-        </span>
-      </button>
+          <ShellIcon name="chevron" size={12} />
+        </button>
+      </div>
       <div className="plan-metrics">
         <MetricCell
           before={before?.evacuation_completion_minutes ?? undefined}
@@ -216,6 +163,8 @@ export function RightRail({
   onSelectPlan,
   comparison,
   log,
+  focusedDestinationId,
+  onFocusDestination,
   selection,
   onSelect,
 }: RightRailProps) {
@@ -228,14 +177,45 @@ export function RightRail({
   }, []);
 
   const connected = worldState.community_access.filter((access) => !access.isolated).length;
-  const recommended = recommendedPlanId(worldState.plan_results);
+  const predictionSignals = worldState.prediction_signals ?? [];
+  const modelAuc = bootstrap.impact_model?.evaluation?.unseen_district_roc_auc;
+  const signalSummaries = Array.from(
+    predictionSignals.reduce(
+      (groups, signal) => {
+        const current = groups.get(signal.target);
+        if (!current) {
+          groups.set(signal.target, { signal, count: 1 });
+        } else {
+          groups.set(signal.target, {
+            signal:
+              signal.priority_score > current.signal.priority_score
+                ? signal
+                : current.signal,
+            count: current.count + 1,
+          });
+        }
+        return groups;
+      },
+      new Map<string, { signal: PredictionSignal; count: number }>(),
+    ).values(),
+  );
 
   return (
     <aside className="right-rail" aria-label="Response plans, alerts and activity">
+      <ResponderBrief
+        bootstrap={bootstrap}
+        focusedDestinationId={focusedDestinationId}
+        onFocusDestination={onFocusDestination}
+        selectedPlan={worldState.plan_results.find(
+          (result) => result.plan_id === selectedPlanId,
+        )}
+        worldState={worldState}
+      />
+
       <section className="right-section plans-panel panel-shell">
         <div className="section-title-row">
           <h2>
-            Response plans <span>(counterfactuals)</span>
+            Response plan comparison <span>(counterfactuals)</span>
           </h2>
           <span
             className="help-mark"
@@ -257,12 +237,41 @@ export function RightRail({
               index={index}
               key={result.plan_id}
               onSelect={() => onSelectPlan(result.plan_id)}
-              recommended={result.plan_id === recommended}
               result={result}
               selected={result.plan_id === selectedPlanId}
             />
           ))}
         </div>
+      </section>
+
+      <section className="right-section model-signals-panel panel-shell">
+        <div className="section-title-row">
+          <h2>Model prediction pings</h2>
+          <span>{modelAuc === undefined ? "UNAVAILABLE" : `${modelAuc.toFixed(2)} AUC`}</span>
+        </div>
+        {signalSummaries.length > 0 ? <div className="model-signal-grid">
+          {signalSummaries.map(({ signal, count }) => (
+            <article
+              className={`model-signal ${signal.target} ${signal.state}`}
+              key={signal.ping_id}
+              title={signal.recommended_action}
+            >
+              <i />
+              <div>
+                <strong>{signal.percent}%</strong>
+                <span>
+                  #{signal.priority_rank} {signal.priority_level} · {count} locations · prior {signal.base_percent}%
+                </span>
+              </div>
+              <em>{signal.state}</em>
+            </article>
+          ))}
+        </div> : <p className="model-signal-note">UNAVAILABLE — no prediction signals in the current API payload.</p>}
+        <p className="model-signal-note">
+          Local risk combines the event prior with hazard, access, and exposed population.
+          Pings remain area indicators, not building-level forecasts. Prototype only—not validated
+          for live dispatch.
+        </p>
       </section>
 
       <section className="right-section alerts-panel panel-shell">
@@ -273,7 +282,7 @@ export function RightRail({
           </span>
         </div>
         {worldState.hazards.length > 0 ? (
-          <div className="hazard-list alert-list">
+          <div className="hazard-list">
             {worldState.hazards.map((hazard) => {
               const focused =
                 selection?.kind === "hazard" && selection.id === hazard.hazard_id;
@@ -287,24 +296,28 @@ export function RightRail({
                   }
                   type="button"
                 >
-                  <em>{hazard.priority}</em>
+                  <span className="hazard-symbol">
+                    <ShellIcon
+                      name={hazard.hazard_type === "community_isolated" ? "people" : "alert"}
+                      size={15}
+                    />
+                  </span>
                   <div>
                     <strong>{describeAsset(names, bootstrap, hazard.asset_id)}</strong>
                     <span>{hazard.description ?? hazard.hazard_type.replaceAll("_", " ")}</span>
+                    <span className="hazard-origin">
+                      {hazard.source_event_id ? "operator-injected" : "modeled"} ·{" "}
+                      {hazard.source_frame_id.replace("ktp-frame-", "")}
+                    </span>
                   </div>
-                  <span className="hazard-origin">
-                    {hazard.source_event_id ? "injected" : "modeled"}
-                    <i>{hazard.source_frame_id.replace("ktp-frame-", "")}</i>
-                  </span>
+                  <em>{hazard.priority}</em>
                 </button>
               );
             })}
           </div>
         ) : (
           <div className="quiet-state right-quiet">
-            <span className="quiet-mark">
-              <ShellIcon name="shield" size={20} />
-            </span>
+            <ShellIcon name="shield" size={24} />
             <strong>No active alerts at this frame</strong>
             <span>The modeled network is fully traversable.</span>
           </div>
@@ -314,35 +327,34 @@ export function RightRail({
       <section className="right-section access-panel panel-shell">
         <div className="section-title-row">
           <h2>Community access</h2>
-          <span className="access-tally">
-            <i className={connected === worldState.community_access.length ? "" : "warn"} />
+          <span>
             {connected}/{worldState.community_access.length} connected
           </span>
         </div>
-        <div className="access-grid">
+        <div className="access-list">
           {worldState.community_access.map((access) => (
             <div
-              className={`access-cell ${access.isolated ? "is-isolated" : ""}`}
+              className={`access-row ${access.isolated ? "is-isolated" : ""}`}
               key={access.community_id}
             >
-              <span className="access-head">
-                <i className={access.isolated ? "isolated" : "connected"} />
+              <i className={access.isolated ? "isolated" : "connected"} />
+              <div>
                 <strong>{names.get(access.community_id)}</strong>
-                <span className={`access-eta ${access.isolated ? "now" : ""}`}>
+                <span>
                   {access.isolated
-                    ? "Isolated"
-                    : access.time_to_isolation_hours === null
-                      ? "Holds"
-                      : formatHours(access.time_to_isolation_hours)}
+                    ? "No route to an open shelter or hospital"
+                    : `${access.reachable_shelter_ids.length} shelters · ${
+                        access.hospital_accessible ? "hospital reachable" : "hospital lost"
+                      }`}
                 </span>
-              </span>
-              <span className="access-detail">
+              </div>
+              <em className={access.isolated ? "now" : ""}>
                 {access.isolated
-                  ? "No route to an open shelter or hospital"
-                  : `${access.reachable_shelter_ids.length} shelters · ${
-                      access.hospital_accessible ? "hospital reachable" : "hospital lost"
-                    }`}
-              </span>
+                  ? "isolated"
+                  : access.time_to_isolation_hours === null
+                    ? "—"
+                    : formatHours(access.time_to_isolation_hours)}
+              </em>
             </div>
           ))}
         </div>
@@ -367,7 +379,7 @@ export function RightRail({
                           ? "reset"
                           : "history"
                   }
-                  size={12}
+                  size={13}
                 />
               </span>
               <div>

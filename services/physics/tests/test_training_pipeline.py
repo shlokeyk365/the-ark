@@ -9,6 +9,7 @@ import numpy as np
 from the_arc_physics.bipad import read_bipad_floods
 from the_arc_physics.desinventar import read_desinventar_floods
 from the_arc_physics.episodes import consolidate_event_reports
+from the_arc_physics.ensemble_model import load_flood_model
 from the_arc_physics.features import EventInput, FeatureEncoder
 from the_arc_physics.integration import simulation_impact_prior
 from the_arc_physics.hydrography import BasinFeature, HydrologyIndex, RiverFeature
@@ -327,6 +328,28 @@ class TrainingPipelineTests(unittest.TestCase):
         prior = simulation_impact_prior(model, "nakkhu-2024", event)
         self.assertIn("impactProbabilities", prior)
         self.assertNotIn("actual_labels", json.dumps(prior))
+
+    def test_dashboard_prior_matches_frozen_model_artifact(self):
+        repository = Path(__file__).resolve().parents[3]
+        model = load_flood_model(
+            repository / "data/models/nepal_flood_impact_selected.pkl.gz"
+        )
+        event_payload = json.loads(
+            (
+                repository
+                / "data/scenarios/kantipur-river/nakkhu-model-input.json"
+            ).read_text(encoding="utf-8")
+        )
+        prior = json.loads(
+            (
+                repository
+                / "data/scenarios/kantipur-river/model-impact-prior.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            model.predict(EventInput(**event_payload["modelInput"])),
+            prior["impactProbabilities"],
+        )
 
 
 

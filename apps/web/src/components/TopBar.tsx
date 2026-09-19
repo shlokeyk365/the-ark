@@ -1,13 +1,16 @@
 import { ShellIcon } from "./ShellIcon";
+import type { WorldStateSnapshot } from "@the-ark/shared-types";
 
 interface TopBarProps {
   alertCount?: number;
+  worldState?: WorldStateSnapshot;
   activeView?: "operations" | "reports";
   onNavigate?: (view: "operations" | "reports") => void;
 }
 
 export function TopBar({
   alertCount = 0,
+  worldState,
   activeView = "operations",
   onNavigate,
 }: TopBarProps) {
@@ -15,56 +18,47 @@ export function TopBar({
     <header className="topbar">
       <div className="brand" aria-label="the ark flood operations">
         <span className="brand-mark">
-          <ShellIcon name="waves" size={26} />
+          <ShellIcon name="waves" size={22} />
         </span>
-        <span className="brand-name">the ark</span>
-        <span className="brand-path" aria-hidden="true">
-          <span>MODEL</span>
-          <ShellIcon name="chevron" size={10} />
-          <span>ANTICIPATE</span>
-          <ShellIcon name="chevron" size={10} />
-          <span>PROTECT</span>
-        </span>
+        <span className="brand-name">ARK</span>
+        <span className="brand-divider">/</span>
+        <span className="brand-context">FLOODWORLD</span>
       </div>
 
-      <nav className="primary-nav" aria-label="Primary navigation">
+      <nav className="command-view-tabs" aria-label="Command center views">
         <button
-          className={`nav-item ${activeView === "operations" ? "active" : ""}`}
-          type="button"
           aria-current={activeView === "operations" ? "page" : undefined}
+          className={activeView === "operations" ? "active" : ""}
           onClick={() => onNavigate?.("operations")}
+          type="button"
         >
-          <ShellIcon name="map" size={15} /> Operations
-        </button>
-        <button className="nav-item" type="button" disabled title="Not part of the MVP slice">
-          <ShellIcon name="layers" size={15} /> Scenarios
+          <ShellIcon name="map" size={13} /> Operations
         </button>
         <button
-          className={`nav-item ${activeView === "reports" ? "active" : ""}`}
-          type="button"
           aria-current={activeView === "reports" ? "page" : undefined}
+          className={activeView === "reports" ? "active" : ""}
           onClick={() => onNavigate?.("reports")}
+          type="button"
         >
-          <ShellIcon name="report" size={15} /> Reports
+          <ShellIcon name="report" size={13} /> Reports
         </button>
       </nav>
 
       <div className="command-tools">
-        <label className="search-control">
-          <span className="sr-only">Search scenario assets</span>
-          <ShellIcon name="search" size={14} />
-          <input placeholder="Search assets or communities…" disabled />
-        </label>
-        <button className="icon-button" type="button" aria-label={`${alertCount} active alerts`}>
+        {worldState ? (
+          <span className="operations-readout">
+            <i />
+            <span>{worldState.simulation_time_hours === 0 ? "NOW" : `+${worldState.simulation_time_hours}H`}</span>
+            <span>{worldState.world_state_version}</span>
+          </span>
+        ) : null}
+        <button className="icon-button" type="button" aria-label={`${alertCount} active alerts`} title={`${alertCount} active alerts`}>
           <ShellIcon name="bell" size={17} />
           {alertCount > 0 ? <span className="notification-dot" /> : null}
         </button>
-        <div className="command-avatar" aria-hidden="true">
-          IC
-        </div>
         <div className="command-title">
-          <strong>Incident Command</strong>
-          <span>KANTIPUR EXERCISE</span>
+          <strong>INCIDENT COMMAND</strong>
+          <span>EXERCISE MODE</span>
         </div>
       </div>
     </header>

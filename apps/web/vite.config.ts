@@ -2,9 +2,10 @@ import process from "node:process";
 
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   // MapLibre spawns its own module worker. Vite's dependency pre-bundling
   // rewrites the worker entry in a way that breaks that handshake in dev, so
   // the style never loads. Serving MapLibre's own ESM keeps it intact.

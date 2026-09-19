@@ -49,10 +49,15 @@ def test_fixture_shape_and_capacity_are_coherent() -> None:
     assert sum(asset["population"] for asset in assets if asset["asset_type"] == "community") == 4560
     assert sum(asset["capacity"] for asset in assets if asset["asset_type"] == "shelter") == 3000
     assert len(service.network["features"]) == 12
-    assert [frame["simulation_time_hours"] for frame in service.flood_frames["frames"]] == [0, 6, 12, 24]
-    # The flood surface is generated, not hand-authored, so its feature count
-    # moves with the terrain and the tuning. What has to hold is that every
-    # frame carries a surface and that the surface deepens as the flood does.
+    assert [
+        frame["simulation_time_hours"] for frame in service.flood_frames["frames"]
+    ] == list(range(0, 25, 3))
+
+    # The flood surface is generated from terrain, so its feature count moves
+    # with the tuning. What has to hold is that the surface exists for every
+    # frame the engine can serve — the absence of that is what made the water
+    # blink on and off as the timeline advanced — and that it deepens as the
+    # flood does.
     bands_by_frame: dict[str, set[tuple[float, float]]] = {}
     for feature in service.flood_polygons["features"]:
         properties = feature["properties"]
@@ -77,7 +82,7 @@ def test_baseline_is_reachable_and_has_expected_routes() -> None:
     assert all(not community["isolated"] for community in access.values())
     assert all(community["hospital_accessible"] for community in access.values())
     assert all(community["reachable_shelter_ids"] for community in access.values())
-    assert access["ktp-com-05"]["time_to_isolation_hours"] == 24
+    assert access["ktp-com-05"]["time_to_isolation_hours"] == 21
 
     edge_states = _by_id(baseline["edge_states"], "edge_id")
     adjacency = build_adjacency(service.network, edge_states)
@@ -151,7 +156,7 @@ def test_api_serves_baseline_and_event_recompute() -> None:
     )
     assert event.status_code == 200
     assert event.json()["updated_world_state"]["world_state_version"].startswith(
-        "ktp-world-0003-"
+        "ktp-world-0005-"
     )
 
 
@@ -165,16 +170,14 @@ def test_bootstrap_supplies_frontend_geometry_and_controls() -> None:
     assert len(payload["assets"]["features"]) == 10
     assert len(payload["road_network"]["features"]) == 12
     assert payload["flood_polygons"]["operational_use"] is False
+    # Every frame the timeline can show must carry a depth surface.
     assert {
         feature["properties"]["frame_id"]
         for feature in payload["flood_polygons"]["features"]
-    } == {
-        "ktp-frame-now",
-        "ktp-frame-plus-6h",
-        "ktp-frame-plus-12h",
-        "ktp-frame-plus-24h",
-    }
-    assert [frame["simulation_time_hours"] for frame in payload["available_frames"]] == [0, 6, 12, 24]
+    } == {frame["frame_id"] for frame in payload["available_frames"]}
+    assert [
+        frame["simulation_time_hours"] for frame in payload["available_frames"]
+    ] == list(range(0, 25, 3))
     assert [event["event_id"] for event in payload["events"]] == [
         "ktp-event-bridge-02-failure"
     ]
@@ -183,6 +186,74 @@ def test_bootstrap_supplies_frontend_geometry_and_controls() -> None:
         "ktp-plan-b",
         "ktp-plan-c",
     ]
+    assert payload["impact_model"]["model_name"] == "CatBoost flood impact model"
+    assert payload["impact_model"]["evaluation"]["unseen_district_roc_auc"] == 0.6987
+    assert payload["impact_model"]["training_events"] == 4869
+
+
+def test_model_prediction_pings_increase_with_local_flood_stage() -> None:
+    service = _service()
+    expected = {
+        "casualty_or_missing": 0.489031,
+        "housing_damage": 0.335107,
+        "transport_disruption": 0.130326,
+        "severe_impact": 0.364804,
+    }
+
+    frames = [
+        service.build_world_state(frame_id)["prediction_signals"]
+        for frame_id in (
+            "ktp-frame-now",
+            "ktp-frame-plus-6h",
+            "ktp-frame-plus-12h",
+            "ktp-frame-plus-24h",
+        )
+    ]
+    now, plus_six, plus_twelve, horizon = frames
+
+    assert len(now) == 10
+    assert {signal["target"]: signal["base_probability"] for signal in now} == expected
+    for initial_signal in now:
+        ping_id = initial_signal["ping_id"]
+        values = [
+            next(signal for signal in signals if signal["ping_id"] == ping_id)[
+                "probability"
+            ]
+            for signals in frames
+        ]
+        assert values == sorted(values)
+        assert len(set(values)) == len(values)
+        assert all(value <= expected[initial_signal["target"]] for value in values)
+
+    horizon_by_target = {
+        target: {
+            signal["probability"]
+            for signal in horizon
+            if signal["target"] == target
+        }
+        for target in expected
+    }
+    assert all(len(values) > 1 for values in horizon_by_target.values())
+    assert sorted(signal["priority_rank"] for signal in horizon) == list(range(1, 11))
+    assert min(signal["priority_score"] for signal in horizon) >= 0
+    assert max(signal["priority_score"] for signal in horizon) <= 100
+    assert all(
+        signal["score_type"] == "prototype_localized_risk_score"
+        for signal in horizon
+    )
+    assert next(
+        signal for signal in horizon if signal["ping_id"] == "nakkhu-risk-transport-central"
+    )["priority_rank"] == 1
+
+    assert all(signal["state"] == "forecast" for signal in now)
+    assert sum(signal["state"] == "active" for signal in plus_six) == 5
+    assert all(signal["state"] == "active" for signal in plus_twelve)
+    assert all(signal["state"] == "active" for signal in horizon)
+    assert all(
+        signal["source_type"] == "scenario_adjusted_model_prior"
+        for signal in now
+    )
+    assert all(signal["anchor_edge_id"].startswith("ktp-") for signal in now)
 
 
 def test_wire_models_validate_all_service_responses_and_reject_drift() -> None:
@@ -242,7 +313,7 @@ def test_time_to_isolation_moves_forward_under_an_injected_event() -> None:
     service = _service()
 
     baseline = _by_id(service.baseline()["community_access"], "community_id")
-    assert baseline["ktp-com-05"]["time_to_isolation_hours"] == 24
+    assert baseline["ktp-com-05"]["time_to_isolation_hours"] == 21
     assert baseline["ktp-com-05"]["isolated"] is False
 
     disrupted = _by_id(
@@ -271,7 +342,7 @@ def test_frames_can_be_scrubbed_with_an_event_held_active() -> None:
     assert later.status_code == 200
     payload = later.json()
     WorldStateSnapshot.model_validate(payload)
-    assert payload["world_state_version"] == "ktp-world-0004-bridge-02-failure"
+    assert payload["world_state_version"] == "ktp-world-0009-bridge-02-failure"
     assert payload["active_event_ids"] == [event_id]
     edges = _by_id(payload["edge_states"], "edge_id")
     assert edges["ktp-bridge-02"]["status"] == "closed"
@@ -338,6 +409,8 @@ def test_context_boundaries_flagged_as_domain_input_are_rejected() -> None:
             service.response_plans,
             service.event_stream,
             tampered,
+            service.impact_prior,
+            service.prediction_pings,
         )
 
 
@@ -356,6 +429,8 @@ def test_flood_polygon_contract_rejects_unknown_frames_and_open_rings() -> None:
             service.response_plans,
             service.event_stream,
             service.context_boundaries,
+            service.impact_prior,
+            service.prediction_pings,
         )
 
     open_ring = copy.deepcopy(service.flood_polygons)
@@ -370,4 +445,6 @@ def test_flood_polygon_contract_rejects_unknown_frames_and_open_rings() -> None:
             service.response_plans,
             service.event_stream,
             service.context_boundaries,
+            service.impact_prior,
+            service.prediction_pings,
         )
