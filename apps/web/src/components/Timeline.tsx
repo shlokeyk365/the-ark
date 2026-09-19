@@ -39,11 +39,11 @@ export function Timeline({
   return (
     <section className="timeline-card panel-shell" aria-label="Simulation timeline">
       <div className="timeline-heading">
-        <h2>Simulation timeline</h2>
+        <h2>Flood rise projection</h2>
         <span className="timeline-context">
-          {worldState.rainfall_assumption} · {bootstrap.available_frames.length} modeled
-          frames · 3h steps · {horizon}h horizon
+          Scrub to preview scenario progression
         </span>
+        <span className="timeline-current">Viewing {formatHours(worldState.simulation_time_hours)}</span>
         <span className={`live-state ${eventInForce ? "event" : eventPending ? "pending" : ""}`}>
           <i />
           {eventInForce ? "Disrupted" : eventPending ? "Event pending" : "Baseline"}
@@ -119,6 +119,9 @@ export function Timeline({
           </div>
         ) : null}
       </div>
+      <p className="timeline-footnote">
+        {bootstrap.available_frames.length} modeled frames · {horizon}h horizon · {worldState.rainfall_assumption}
+      </p>
     </section>
   );
 }

@@ -49,14 +49,29 @@ def test_fixture_shape_and_capacity_are_coherent() -> None:
     assert sum(asset["population"] for asset in assets if asset["asset_type"] == "community") == 4560
     assert sum(asset["capacity"] for asset in assets if asset["asset_type"] == "shelter") == 3000
     assert len(service.network["features"]) == 12
-    assert len(service.flood_polygons["features"]) == 11
-    assert {
-        feature["properties"]["simulation_time_hours"]
-        for feature in service.flood_polygons["features"]
-    } == {0, 6, 12, 24}
     assert [
         frame["simulation_time_hours"] for frame in service.flood_frames["frames"]
     ] == list(range(0, 25, 3))
+
+    # The flood surface is generated from terrain, so its feature count moves
+    # with the tuning. What has to hold is that the surface exists for every
+    # frame the engine can serve — the absence of that is what made the water
+    # blink on and off as the timeline advanced — and that it deepens as the
+    # flood does.
+    bands_by_frame: dict[str, set[tuple[float, float]]] = {}
+    for feature in service.flood_polygons["features"]:
+        properties = feature["properties"]
+        bands_by_frame.setdefault(properties["frame_id"], set()).add(
+            (properties["depth_min_m"], properties["depth_max_m"])
+        )
+
+    frame_ids = [frame["frame_id"] for frame in service.flood_frames["frames"]]
+    assert set(bands_by_frame) == set(frame_ids)
+
+    band_counts = [len(bands_by_frame[frame_id]) for frame_id in frame_ids]
+    assert band_counts == sorted(band_counts)
+    assert band_counts[0] >= 1
+    assert band_counts[-1] == 4
 
 
 def test_baseline_is_reachable_and_has_expected_routes() -> None:
@@ -155,7 +170,11 @@ def test_bootstrap_supplies_frontend_geometry_and_controls() -> None:
     assert len(payload["assets"]["features"]) == 10
     assert len(payload["road_network"]["features"]) == 12
     assert payload["flood_polygons"]["operational_use"] is False
-    assert payload["flood_polygons"]["source"]["model_name"] == "kantipur-curated-surface"
+    # Every frame the timeline can show must carry a depth surface.
+    assert {
+        feature["properties"]["frame_id"]
+        for feature in payload["flood_polygons"]["features"]
+    } == {frame["frame_id"] for frame in payload["available_frames"]}
     assert [
         frame["simulation_time_hours"] for frame in payload["available_frames"]
     ] == list(range(0, 25, 3))

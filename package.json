@@ -1,14 +1,31 @@
 {
   "name": "the-ark",
   "private": true,
+  "workspaces": [
+    "apps/web",
+    "packages/shared-types"
+  ],
   "scripts": {
-    "dev:api": "python3 -m uvicorn apps.api.main:app --reload",
+    "dev": "npm --workspace apps/web run dev",
+    "dev:api": "python3 -m uvicorn apps.api.main:app --reload --port ${API_PORT:-8000}",
     "dev:web": "npm --prefix apps/web run dev",
+    "build": "npm --workspace apps/web run build",
     "build:web": "npm --prefix apps/web run build",
     "typecheck:web": "npm --prefix apps/web run typecheck",
     "test": "PYTHONPATH=services/physics/src PYTHONPYCACHEPREFIX=/private/tmp/pycache-the-ark python3 -m pytest -q",
     "test:fixtures": "python3 -m pytest tests/test_kantipur_scenario.py",
     "test:physics": "PYTHONPATH=services/physics/src PYTHONPYCACHEPREFIX=/private/tmp/pycache-the-ark python3 -m pytest -q services/physics/tests",
-    "basemap": "./scripts/fetch-basemap.sh"
+    "basemap": "./scripts/fetch-basemap.sh",
+    "flood:generate": "node scripts/generate-flood-surface.mjs",
+    "flood:restore": "node scripts/generate-flood-surface.mjs --restore",
+    "network:snap": "node scripts/snap-network-to-streets.mjs",
+    "network:restore": "node scripts/snap-network-to-streets.mjs --restore"
+  },
+  "devDependencies": {
+    "@mapbox/vector-tile": "^3.0.0",
+    "d3-contour": "^4.0.2",
+    "pbf": "^5.1.2",
+    "pmtiles": "^4.5.0",
+    "pngjs": "^7.0.0"
   }
 }

@@ -9,6 +9,40 @@ import type {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
+/**
+ * Keep the UI usable while a previously started API process is still serving
+ * the pre-prediction payload. Missing additive fields represent unavailable
+ * data; they must not become fabricated model output or crash the dashboard.
+ */
+function normalizeWorldState(state: WorldStateSnapshot): WorldStateSnapshot {
+  return {
+    ...state,
+    prediction_signals: Array.isArray(state.prediction_signals)
+      ? state.prediction_signals
+      : [],
+  };
+}
+
+function normalizeBootstrap(
+  bootstrap: ScenarioBootstrapResponse,
+): ScenarioBootstrapResponse {
+  return {
+    ...bootstrap,
+    flood_polygons: bootstrap.flood_polygons ?? {
+      type: "FeatureCollection",
+      name: "Unavailable flood polygon surface",
+      scenario_id: bootstrap.scenario_id,
+      data_classification: "modeled_synthetic_demo",
+      operational_use: false,
+      source: {
+        source_type: "modeled_input",
+        description: "UNAVAILABLE — API process does not provide flood polygons",
+      },
+      features: [],
+    },
+  };
+}
+
 async function fetchJson<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
@@ -34,15 +68,20 @@ async function fetchJson<T>(path: string, options: RequestInit = {}): Promise<T>
   return (await response.json()) as T;
 }
 
-export function getBootstrap(signal?: AbortSignal) {
-  return fetchJson<ScenarioBootstrapResponse>(
+export async function getBootstrap(signal?: AbortSignal) {
+  const bootstrap = await fetchJson<ScenarioBootstrapResponse>(
     "/scenarios/kantipur-river/bootstrap",
     { signal },
   );
+  return normalizeBootstrap(bootstrap);
 }
 
-export function getBaseline(signal?: AbortSignal) {
-  return fetchJson<WorldStateSnapshot>("/scenarios/kantipur-river/baseline", { signal });
+export async function getBaseline(signal?: AbortSignal) {
+  const state = await fetchJson<WorldStateSnapshot>(
+    "/scenarios/kantipur-river/baseline",
+    { signal },
+  );
+  return normalizeWorldState(state);
 }
 
 /**
@@ -50,21 +89,26 @@ export function getBaseline(signal?: AbortSignal) {
  * that are not yet effective at the frame are rejected by the API, so callers
  * must filter them first.
  */
-export function getFrame(frameId: string, eventIds: string[] = [], signal?: AbortSignal) {
+export async function getFrame(frameId: string, eventIds: string[] = [], signal?: AbortSignal) {
   const query = new URLSearchParams();
   eventIds.forEach((eventId) => query.append("events", eventId));
   const suffix = query.toString() ? `?${query.toString()}` : "";
-  return fetchJson<WorldStateSnapshot>(
+  const state = await fetchJson<WorldStateSnapshot>(
     `/scenarios/kantipur-river/frames/${encodeURIComponent(frameId)}${suffix}`,
     { signal },
   );
+  return normalizeWorldState(state);
 }
 
-export function applyEvent(eventId: string, signal?: AbortSignal) {
-  return fetchJson<EventRecomputeResponse>(
+export async function applyEvent(eventId: string, signal?: AbortSignal) {
+  const response = await fetchJson<EventRecomputeResponse>(
     `/scenarios/kantipur-river/events/${encodeURIComponent(eventId)}`,
     { method: "POST", signal },
   );
+  return {
+    ...response,
+    updated_world_state: normalizeWorldState(response.updated_world_state),
+  };
 }
 
 export function createSimulationRun(eventIds: string[] = [], signal?: AbortSignal) {

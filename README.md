@@ -68,6 +68,12 @@ fixture digest, persists all four world-state snapshots in SQLite, and creates
 one report from those stored results. Set `THE_ARK_REPORT_DB_PATH` to override
 the default `data/runtime/the-ark.sqlite3` location.
 
+The Reports tab creates explicit full-horizon runs. Browsing or scrubbing a
+frame does not create a report. Every completed run freezes its event set and
+fixture digest, persists all four world-state snapshots in SQLite, and creates
+one report from those stored results. Set `THE_ARK_REPORT_DB_PATH` to override
+the default `data/runtime/the-ark.sqlite3` location.
+
 ### Basemap
 
 The map renders on **MapLibre GL JS** over a **Protomaps PMTiles** vector
@@ -79,6 +85,10 @@ Fetch the Nakkhu/Kantipur Colony basemap once:
 ```bash
 npm run basemap
 ```
+
+`npm run dev` also performs this fetch automatically when the archive is
+missing, so a fresh clone starts with the geographic map without an extra setup
+step.
 
 That extracts the scenario's bounding box from the Protomaps daily planet build
 over HTTP range requests — about 20 MB transferred for an 18 MB archive, rather
@@ -101,28 +111,96 @@ back to a self-contained SVG schematic of the same derived state and says why,
 so the scenario stays inspectable offline and in CI. MapLibre is code-split, so
 that path stays light.
 
-Map layers follow the operator list: modeled depth bands, 24h forecast extent,
-roads, evacuation routes, hospitals and shelters, bridges, river
-gauges, alerts, model prediction pings, community labels, and administrative
-context — plus satellite and 3D terrain toggles. River gauges are listed but
-disabled: the fixture has no gauge observations yet.
+Map layers follow the operator list: flood depth (current), the modeled +24h
+extent, roads and closures, active response routes, alternate plan routes,
+shelters and the hospital, bridges, river gauges, hazards, model prediction
+pings, community labels, and administrative context. The basemap itself is a radio choice between the
+operational vector style and satellite imagery, with 3D terrain as a separate
+toggle. River gauges are listed but disabled: the fixture has no gauge
+observations yet, and alternate plan routes are off by default.
 
-Prediction pings are clickable. Each explanation card separates current
+The visual grammar is consistent across every layer:
+
+- **Shape carries entity type, colour carries status.** Communities are circles,
+  shelters houses, the hospital a cross, hazards triangles, closures a crossed
+  circle. A shelter that cannot be reached is still a house, just muted.
+- **Solid is current, dashed is modeled.** The current flood extent, the active
+  route and confirmed closures are solid; the +24h envelope and alternate plans
+  are dashed. Operator-injected state is amber, so an event the operator caused
+  never reads as an observation.
+- **Hazards are drawn on the thing that is hazardous.** A blocked road is
+  restyled along its own geometry with a heavier casing and a status label; a
+  failed bridge is marked on that span, not on a marker beside it.
+- **Detail arrives with zoom.** Far out you see the flood extent, the network,
+  communities and critical hazards; closer in, facility labels, closures and
+  routes; closest, depth bands, population and per-segment status.
+
+The OpenStreetMap basemap is deliberately restyled for operations: POI and
+address symbols are dropped, minor roads fade back and hold until z13, buildings
+wait for z15, and waterways are brightened rather than suppressed — the flood
+story is a river story. Place names stay legible throughout.
+
+Two things on the map move, and both move because the world state changed.
+Response teams travel the selected plan's routes, staggered so they do not run
+in lockstep, with their destination and ETA shown only for the focused route; a
+route that crosses a failed edge carries no team, because no team is driving it.
+Separately, a hazard that has just escalated to critical pulses for about five
+seconds and then stops — one at a time, never on first load, and cancelled early
+if the operator selects it. Hazard ids carry the world-state version and so
+change every frame; escalation is therefore tracked per asset, which across a
+full nine-frame baseline fires twice. Both effects share one animation frame
+loop that parks itself when idle, and neither runs under
+`prefers-reduced-motion` — teams are placed but held still.
+
+Press **F** to fullscreen the dashboard, or use the toggle in the map toolbar.
+It expands the whole shell rather than the map panel alone, so the tactical
+list, the asset panel and the timeline stay put and only the browser chrome is
+reclaimed. Where the Fullscreen API is refused — an embedded pane, a kiosk
+frame, anywhere a Permissions-Policy withholds it — the shell expands to fill
+the viewport instead, so the shortcut always does something. Escape leaves
+either mode.
+
+Clicking a community, road, bridge or hazard — on the map or in either rail —
+enters incident focus. The camera frames the affected area, everything outside
+the incident dims, and a panel states the affected population, the nearest
+reachable facility, the route time and what has become unreachable. "Exit focus"
+restores the full picture.
+
+Prediction pings are hoverable. Each explanation card separates current
 timeline risk from the shared event prior and shows nearby modeled flood depth,
-exposed population, location-specific responder priority, the reason the POI
-was flagged, and the recommended action. These rankings are research-only and
-not validated for live dispatch.
+exposed population, location-specific responder priority, the reason the POI was
+flagged, and the recommended action. They are drawn in their own colour family —
+keyed to impact target rather than to status — so a model prediction is never
+read as an observed closure. These rankings are research-only and not validated
+for live dispatch.
 
 The administrative boundaries are Kathmandu and Lalitpur Metropolitan City,
 visual context only — see `data/scenarios/kantipur-river/SOURCES.md` for
-provenance and licensing. The flood surface is a curated synthetic depth-band
-fixture, not a hydraulic solve or operational forecast. Its 0/6/12/24h
-keyframes are cross-faded across the three-hour playback frames; route safety
-still comes from canonical per-edge conditions. Each timeline percentage is a
-deterministic adjustment of a frozen event-level impact prior using
-absolute nearby depth, infrastructure thresholds/status, route criticality, and
-synthetic exposed population. Map coordinates remain visualization anchors,
-not building-level forecasts.
+provenance and licensing.
+
+The flood surface is generated from public elevation data rather than drawn.
+`npm run flood:generate` decodes AWS Terrarium DEM tiles over the scenario
+extent, fills depressions, routes D8 flow to find the channel, computes height
+above nearest drainage, and contours the resulting depth field into the four
+contract depth bands. Terrain gives the bands their shape; the canonical
+per-edge depths in `flood-frames.json` give them their depths and their growth
+curve, so every frame carries a surface and the water spreads along the valley
+instead of blinking between hand-drawn stills. It is still a synthetic
+demonstration surface, not a hydraulic solve or operational forecast.
+
+The previous hand-authored surface is kept at
+`flood-polygons.curated-v1.geojson`; `npm run flood:restore` puts it back, and
+both pass the fixture contract and test suite.
+
+The road network is reshaped the same way. `npm run network:snap` reads the
+OpenStreetMap `roads` layer out of the basemap archive and routes each scenario
+edge along real street centrelines, so the network follows the city instead of
+drawing a rectangle over it; bridges take only the ~200 m of their route that
+crosses the water. Topology, travel times and every domain result are unchanged
+— routing never reads geometry. `npm run network:restore` brings the authored
+straight lines back. Route safety still
+comes from the canonical per-edge flood conditions; see
+`docs/scenario-contract.md` for the separation of concerns.
 
 Useful endpoints:
 
