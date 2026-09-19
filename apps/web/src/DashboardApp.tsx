@@ -334,9 +334,7 @@ export function App() {
             bootstrap={bootstrap}
             focusedRouteEdgeIds={focusedDestination?.edgeIds}
             horizonState={horizonState}
-            onSelectAsset={setSelectedAssetId}
             selectedPlan={selectedPlan}
-            selectedAssetId={selectedAssetId}
             worldState={worldState}
           />
           <TopStatusMetrics worldState={worldState} />

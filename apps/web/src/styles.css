@@ -1266,8 +1266,8 @@ input:focus-visible,
 /* map geometry */
 
 .context-boundary {
-  fill: rgba(130, 145, 141, 0.035);
-  stroke: rgba(143, 157, 153, 0.24);
+  fill: rgba(126, 158, 190, 0.05);
+  stroke: rgba(138, 172, 204, 0.3);
   stroke-dasharray: 7 5;
   stroke-width: 1.4;
   vector-effect: non-scaling-stroke;
@@ -1288,14 +1288,14 @@ input:focus-visible,
 
 .river-centreline {
   fill: none;
-  stroke: rgba(180, 195, 198, 0.34);
+  stroke: rgba(150, 220, 255, 0.5);
   stroke-width: 1.2;
   vector-effect: non-scaling-stroke;
 }
 
 .depth-halo {
   fill: none;
-  stroke: #718a94;
+  stroke: #49b6ff;
   stroke-linecap: round;
 }
 
@@ -1309,7 +1309,7 @@ input:focus-visible,
 
 .road-casing {
   fill: none;
-  stroke: rgba(13, 16, 17, 0.82);
+  stroke: rgba(3, 8, 14, 0.9);
   stroke-width: 9;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -1318,7 +1318,7 @@ input:focus-visible,
 
 .road-edge {
   fill: none;
-  stroke: #a3afac;
+  stroke: #9db3c4;
   stroke-width: 3.5;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -1326,15 +1326,15 @@ input:focus-visible,
   transition: stroke 180ms ease, stroke-width 180ms ease;
 }
 
-.road-edge.bridge { stroke-width: 6; stroke: #bec5c1; }
-.road-edge.restricted { stroke: var(--amber); stroke-dasharray: 10 6; }
-.road-edge.closed { stroke: var(--red); stroke-dasharray: 4 6; }
-.road-edge.selected { stroke: var(--cyan-bright); stroke-width: 6; }
+.road-edge.bridge { stroke-width: 6; stroke: #c3d4e2; }
+.road-edge.restricted { stroke: #f0a52a; stroke-dasharray: 10 6; }
+.road-edge.closed { stroke: #f24d63; stroke-dasharray: 4 6; }
+.road-edge.selected { stroke: #2fc98e; stroke-width: 6; }
 .road-edge.selected.bridge { stroke-width: 8; }
 .road-group.hovered .road-edge { stroke-width: 7; }
 
 .closure-badge circle {
-  fill: var(--red);
+  fill: #f24d63;
   stroke: #0a1420;
   stroke-width: 2.5;
 }
@@ -1347,27 +1347,27 @@ input:focus-visible,
 }
 
 .bridge-badge rect {
-  fill: rgba(24, 29, 30, 0.76);
-  stroke: #697673;
+  fill: rgba(10, 20, 32, 0.9);
+  stroke: #46617c;
   stroke-width: 1.2;
 }
 
 .bridge-badge path {
   fill: none;
-  stroke: #b7bfbb;
+  stroke: #b7cbdd;
   stroke-width: 1.3;
   stroke-linecap: round;
 }
 
 .asset-dot {
-  fill: #d5d7d2;
-  stroke: #181c1d;
+  fill: #eef5fc;
+  stroke: #091421;
   stroke-width: 3;
 }
 
-.asset-marker.hospital .asset-dot { fill: #b8797f; }
-.asset-marker.shelter .asset-dot { fill: #8fa694; }
-.asset-marker.community.isolated .asset-dot { fill: var(--red); }
+.asset-marker.hospital .asset-dot { fill: #e8536a; }
+.asset-marker.shelter .asset-dot { fill: #2eb277; }
+.asset-marker.community.isolated .asset-dot { fill: #f24d63; }
 .asset-marker { cursor: pointer; }
 .asset-marker.selected .asset-dot { stroke: #deddd7; stroke-width: 4; }
 .asset-selection-ring {
@@ -1396,18 +1396,18 @@ input:focus-visible,
 }
 
 .asset-label {
-  fill: #deddd7;
+  fill: #f1f7fc;
   font-size: 12px;
   font-weight: 650;
   paint-order: stroke;
-  stroke: rgba(17, 21, 22, 0.9);
+  stroke: rgba(4, 10, 17, 0.92);
   stroke-linejoin: round;
   stroke-width: 4.5px;
 }
 
 .isolation-ring {
   fill: none;
-  stroke: var(--red);
+  stroke: #f24d63;
   stroke-width: 2.5;
   stroke-dasharray: 5 4;
   transform-origin: center;
@@ -2682,18 +2682,20 @@ input:focus-visible,
   box-shadow: none;
 }
 
-.map-card { background: #181d1e; }
+.map-card { background: #0a1420; }
 .map-card::after {
   position: absolute;
   z-index: 1;
   inset: 0;
-  background: rgba(24, 29, 30, 0.14);
+  background:
+    radial-gradient(circle at 52% 45%, transparent 48%, rgba(2, 8, 15, .22) 100%),
+    repeating-linear-gradient(0deg, rgba(104, 196, 255, .014) 0 1px, transparent 1px 4px);
   content: "";
   pointer-events: none;
 }
 .map-canvas,
 .map-canvas .maplibregl-map { width: 100%; height: 100%; }
-.map-canvas .maplibregl-canvas { filter: contrast(0.92) brightness(0.82); }
+.map-canvas .maplibregl-canvas { filter: none; }
 
 .panel-shell,
 .top-status-metrics,
@@ -2973,77 +2975,83 @@ input:focus-visible,
   .map-layers { display: block; }
 }
 
-/* Main-branch flood surfaces and prediction signals, adapted to the Figma palette. */
+/* Responder map surfaces and prediction signals. */
 .flood-depth-band {
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
   cursor: crosshair;
 }
-.flood-depth-band.depth-1 { fill: #a8b9bf; stroke: #a8b9bf; }
-.flood-depth-band.depth-2 { fill: #839ba5; stroke: #839ba5; }
-.flood-depth-band.depth-3 { fill: #667f8b; stroke: #667f8b; }
-.flood-depth-band.depth-4 { fill: #4f6874; stroke: #4f6874; }
-.flood-depth-band.current { fill-opacity: .3; stroke-opacity: .64; }
+.flood-depth-band.depth-1 { fill: #8adfff; stroke: #8adfff; }
+.flood-depth-band.depth-2 { fill: #43bdf4; stroke: #43bdf4; }
+.flood-depth-band.depth-3 { fill: #167fd1; stroke: #167fd1; }
+.flood-depth-band.depth-4 { fill: #09509f; stroke: #09509f; }
+.flood-depth-band.current { fill-opacity: .44; stroke-opacity: .88; }
 .flood-depth-band.forecast {
-  fill-opacity: .07;
-  stroke: #8d969c;
+  fill-opacity: .08;
+  stroke: #8e75f6;
   stroke-dasharray: 5 4;
-  stroke-opacity: .52;
+  stroke-opacity: .66;
 }
 .river-flow {
   fill: none;
-  stroke: rgba(214, 221, 219, .56);
-  stroke-width: 1.5;
-  stroke-dasharray: 2 16;
+  stroke: rgba(221, 247, 255, .95);
+  stroke-width: 2.4;
+  stroke-dasharray: 2 28;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
   animation: river-flow 2.2s linear infinite;
 }
-.river-flow-b { animation-delay: -1.1s; opacity: .45; }
-@keyframes river-flow { to { stroke-dashoffset: -36; } }
+.river-flow-b {
+  stroke: rgba(91, 201, 255, .75);
+  stroke-width: 3.2;
+  stroke-dasharray: 1 46;
+  animation-duration: 3.1s;
+  animation-delay: -1.4s;
+}
+@keyframes river-flow { to { stroke-dashoffset: -60; } }
 
-.prediction-layer { color: #a8967f; }
-.prediction-ping { color: #8a8998; cursor: pointer; }
-.prediction-ping.casualty_or_missing { color: #b8797f; }
-.prediction-ping.housing_damage { color: #a8967f; }
-.prediction-ping.transport_disruption { color: #a9a27f; }
-.prediction-ping.severe_impact { color: #8a8998; }
-.prediction-ping.forecast { opacity: .62; }
+.prediction-layer { color: #f0a52a; }
+.prediction-ping { color: #a768f0; cursor: pointer; }
+.prediction-ping.casualty_or_missing { color: #f24d63; }
+.prediction-ping.housing_damage { color: #f0a52a; }
+.prediction-ping.transport_disruption { color: #ffd05a; }
+.prediction-ping.severe_impact { color: #a768f0; }
+.prediction-ping.forecast { opacity: .68; }
 .prediction-ping.active { opacity: 1; }
 .prediction-ring { fill: none; stroke: currentcolor; vector-effect: non-scaling-stroke; }
-.prediction-ring-outer { stroke-width: 1; opacity: .38; animation: prediction-ripple 1.8s ease-out infinite; }
-.prediction-ring-inner { stroke-width: 1.3; opacity: .56; animation: prediction-ripple 1.8s .55s ease-out infinite; }
-.prediction-core { fill: currentcolor; stroke: #1a1e1f; stroke-width: 2; }
-.prediction-mark { fill: #e1dfd8; font-family: var(--mono); font-size: 9px; font-weight: 700; }
-.prediction-label-card rect { fill: rgba(20,24,25,.72); stroke: rgba(151,157,153,.28); }
-.prediction-label { fill: #d2d1cb; font-family: var(--mono); font-size: 7px; }
-.prediction-percent { fill: #8d928f; font-family: var(--mono); font-size: 7px; }
+.prediction-ring-outer { stroke-width: 1.4; opacity: 0; animation: prediction-ripple 1.8s ease-out infinite; }
+.prediction-ring-inner { stroke-width: 2; opacity: .42; animation: prediction-ripple 1.8s .55s ease-out infinite; }
+.prediction-core { fill: currentcolor; stroke: rgba(255,255,255,.92); stroke-width: 1.8; filter: drop-shadow(0 0 6px currentcolor); }
+.prediction-mark { fill: #fff; font-family: var(--mono); font-size: 13px; font-weight: 900; }
+.prediction-label-card rect { fill: rgba(7,13,21,.94); stroke: currentcolor; stroke-width: 1.2; filter: drop-shadow(0 6px 12px rgba(0,0,0,.42)); }
+.prediction-label { fill: currentcolor; font-family: var(--mono); font-size: 9px; font-weight: 800; letter-spacing: .07em; }
+.prediction-percent { fill: #f6fbff; font-family: var(--mono); font-size: 11px; font-weight: 750; }
 @keyframes prediction-ripple {
-  0% { opacity: .62; transform: scale(.7); }
-  100% { opacity: 0; transform: scale(1.25); }
+  0% { opacity: .78; transform: scale(.56); }
+  100% { opacity: 0; transform: scale(1.28); }
 }
 
 .ark-prediction-popup .maplibregl-popup-content,
 .prediction-popup-card {
-  color: #c9c9c3;
-  background: rgba(20,24,25,.78);
-  border: 1px solid rgba(151,157,153,.26);
+  color: #e2eaf2;
+  background: rgba(5,13,22,.97);
+  border: 1px solid rgba(85,214,255,.55);
   border-radius: 8px;
-  box-shadow: 0 16px 36px rgba(0,0,0,.34);
-  backdrop-filter: blur(14px);
+  box-shadow: 0 16px 42px rgba(0,0,0,.55), 0 0 24px rgba(0,157,255,.1);
+  backdrop-filter: blur(16px);
 }
 .ark-prediction-popup .maplibregl-popup-tip { display: none; }
-.prediction-popup-card { display: grid; gap: 8px; padding: 12px; font-size: 8px; }
+.prediction-popup-card { display: grid; gap: 9px; width: 290px; padding: 14px; font-size: 10px; }
 .prediction-popup-heading { display: flex; gap: 8px; align-items: start; justify-content: space-between; }
-.prediction-popup-heading strong { font-size: 10px; }
-.prediction-popup-heading span { color: #b8797f; font-family: var(--mono); font-size: 7px; text-transform: uppercase; }
+.prediction-popup-heading strong { color: #f2f8fd; font-size: 12px; }
+.prediction-popup-heading span { color: #55d6ff; font-family: var(--mono); font-size: 8px; text-transform: uppercase; }
 .prediction-popup-risk { display: flex; gap: 7px; align-items: baseline; }
-.prediction-popup-risk strong { color: #d5d4ce; font-family: var(--mono); font-size: 20px; }
+.prediction-popup-risk strong { color: #55d6ff; font-family: var(--mono); font-size: 25px; }
 .prediction-popup-risk span,
 .prediction-popup-metrics,
-.prediction-popup-card small { color: #737976; font-family: var(--mono); font-size: 7px; text-transform: uppercase; }
-.prediction-popup-metrics { display: grid; gap: 3px; }
-.prediction-popup-card p { margin: 0; color: #a1a5a1; line-height: 1.45; }
+.prediction-popup-card small { color: #8196aa; font-family: var(--mono); font-size: 8px; text-transform: uppercase; }
+.prediction-popup-metrics { display: grid; gap: 4px; }
+.prediction-popup-card p { margin: 0; color: #b3c6d8; font-size: 10px; line-height: 1.5; }
 .schematic-prediction-popup { position: absolute; z-index: 14; right: 320px; bottom: 160px; width: 270px; }
 .schematic-prediction-close { position: absolute; top: 5px; right: 5px; color: #8a908d; background: none; border: 0; }
 
@@ -3075,6 +3083,244 @@ input:focus-visible,
 .destination-transfer strong { color: #aeb1ac; }
 .destination-map-button { width: 100%; margin-top: 6px; padding: 5px; color: #aeb8b5; font-family: var(--mono); font-size: 6px; background: transparent; border: 1px solid #48504e; border-radius: 5px; }
 .brief-disclaimer { margin: 8px 0 0; color: #5e6461; font-size: 6px; line-height: 1.4; }
+
+/* ------------------------------------------------ operations legibility pass */
+
+/* Keep the dense command-center layout while making its surrounding data
+   readable at normal laptop scale. These overrides intentionally apply only
+   to the operations canvas, not the report workspace. */
+.figma-operations-layout .top-status-title span { font-size: 9px; }
+.figma-operations-layout .top-status-title small { font-size: 7.5px; }
+.figma-operations-layout .top-status-card strong { font-size: 14px; }
+.figma-operations-layout .top-status-card span:not(.top-status-icon),
+.figma-operations-layout .top-status-card small { font-size: 7.5px; line-height: 1.35; }
+
+.figma-operations-layout .tactical-panel-title,
+.figma-operations-layout .tactical-panel-title span,
+.figma-operations-layout .selected-asset-heading > span {
+  color: #deddd7;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.figma-operations-layout .tactical-panel-title small,
+.figma-operations-layout .tactical-section h2,
+.figma-operations-layout .asset-detail-section h2 {
+  color: #969c98;
+  font-size: 9px;
+  line-height: 1.4;
+}
+.figma-operations-layout .tactical-panel-title small { color: #929895; }
+.figma-operations-layout .tactical-section { padding: 12px 0; }
+.figma-operations-layout .tactical-section-body { margin-top: 5px; }
+.figma-operations-layout .tactical-row {
+  min-height: 34px;
+  padding: 7px 5px;
+}
+.figma-operations-layout .tactical-row strong {
+  color: #deddd8;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.figma-operations-layout .tactical-row em { font-size: 9px; line-height: 1.4; }
+.figma-operations-layout .tactical-unavailable {
+  color: #979d99;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.figma-operations-layout .section-title-row h2,
+.figma-operations-layout .timeline-heading h2 {
+  color: #deddd7;
+  font-size: 10px;
+  line-height: 1.35;
+}
+.figma-operations-layout .section-title-row > span:not(.help-mark):not(.alert-count),
+.figma-operations-layout .panel-note {
+  color: #969c98;
+  font-size: 9.5px;
+  line-height: 1.5;
+}
+.figma-operations-layout .plans-list { gap: 9px; }
+.figma-operations-layout .plan-heading { padding: 9px; }
+.figma-operations-layout .plan-heading strong {
+  color: #deddd8;
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+.figma-operations-layout .plan-heading > div span {
+  color: #929895;
+  font-size: 8.5px;
+  line-height: 1.4;
+}
+.figma-operations-layout .plan-heading button { font-size: 8.5px; }
+.figma-operations-layout .plan-metric { padding: 7px 2px; }
+.figma-operations-layout .plan-metric strong { font-size: 10.5px; }
+.figma-operations-layout .plan-metric small {
+  color: #878e8a;
+  font-size: 7.5px;
+  line-height: 1.3;
+}
+.figma-operations-layout .plan-footnote { font-size: 9px; line-height: 1.45; }
+.figma-operations-layout .hazard-item { padding: 10px; }
+.figma-operations-layout .hazard-item strong {
+  color: #deddd8;
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+.figma-operations-layout .hazard-item > div span,
+.figma-operations-layout .hazard-item p {
+  color: #999f9b;
+  font-size: 9.5px;
+  line-height: 1.5;
+}
+
+.figma-operations-layout .selected-asset-heading strong { font-size: 15px; line-height: 1.35; }
+.figma-operations-layout .selected-alert strong,
+.figma-operations-layout .selected-alert span { font-size: 9.5px; line-height: 1.45; }
+.figma-operations-layout .asset-detail-row { padding: 8px 0; }
+.figma-operations-layout .asset-detail-row span {
+  color: #999f9b;
+  font-size: 9.5px;
+}
+.figma-operations-layout .asset-detail-row strong {
+  color: #d0d1cb;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.figma-operations-layout .timeline-context,
+.figma-operations-layout .event-caption { font-size: 8px; }
+.figma-operations-layout .timeline-current,
+.figma-operations-layout .live-state { font-size: 8.5px; }
+.figma-operations-layout .timeline-footnote { font-size: 7.5px; }
+.figma-operations-layout .time-label { font-size: 8px; }
+.figma-operations-layout .state-version { font-size: 8px; }
+.figma-operations-layout .map-layers-toggle,
+.figma-operations-layout .layer-toggle { font-size: 9px; }
+
+.figma-operations-layout .responder-brief-heading h2 {
+  color: #e0dfd9;
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+.figma-operations-layout .section-kicker { color: #969c98; font-size: 8.5px; }
+.figma-operations-layout .brief-plan-chip { font-size: 9px; }
+.figma-operations-layout .brief-summary > span { padding: 8px 6px; }
+.figma-operations-layout .brief-summary strong { font-size: 12px; }
+.figma-operations-layout .brief-summary small {
+  color: #8d938f;
+  font-size: 8px;
+  line-height: 1.35;
+}
+.figma-operations-layout .destination-list { gap: 8px; }
+.figma-operations-layout .destination-card { padding: 9px; }
+.figma-operations-layout .destination-rank { font-size: 10px; }
+.figma-operations-layout .destination-title-row span,
+.figma-operations-layout .destination-title-row em { font-size: 8.5px; }
+.figma-operations-layout .destination-title-row span { color: #909692; }
+.figma-operations-layout .destination-title-row strong {
+  color: #deddd8;
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+.figma-operations-layout .destination-main p {
+  color: #a7aca8;
+  font-size: 9.5px;
+  line-height: 1.55;
+}
+.figma-operations-layout .destination-transfer,
+.figma-operations-layout .destination-metrics,
+.figma-operations-layout .destination-rationale {
+  color: #969c98;
+  gap: 7px;
+  font-size: 8.5px;
+  line-height: 1.45;
+}
+.figma-operations-layout .destination-map-button,
+.figma-operations-layout .brief-disclaimer { font-size: 8.5px; line-height: 1.55; }
+.figma-operations-layout .destination-map-button { padding: 8px; color: #c5ceca; }
+
+/* Prediction summaries were introduced on the responder branch without their
+   accompanying styles. Match the rest of the glass-panel system and retain a
+   strong, repeatable hierarchy for every ping type. */
+.model-signal-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.model-signal {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  min-width: 0;
+  padding: 9px 10px;
+  color: var(--purple);
+  background: rgba(40, 46, 47, .5);
+  border: 1px solid rgba(151, 157, 153, .2);
+  border-left: 2px solid currentColor;
+  border-radius: 7px;
+}
+
+.model-signal > i {
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  border-radius: 50%;
+  box-shadow: 0 0 9px currentColor;
+}
+
+.model-signal > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.model-signal strong {
+  flex: 0 0 auto;
+  color: #d8d7d1;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.model-signal span {
+  color: #9ba19d;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.model-signal em {
+  padding: 3px 5px;
+  color: currentColor;
+  font-family: var(--mono);
+  font-size: 8px;
+  font-style: normal;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 999px;
+}
+
+.model-signal.casualty_or_missing { color: #f24d63; }
+.model-signal.housing_damage { color: #f0a52a; }
+.model-signal.transport_disruption { color: #ffd05a; }
+.model-signal.severe_impact { color: #a768f0; }
+.model-signal.forecast { opacity: .72; }
+
+.model-signal-note {
+  margin: 9px 1px 0;
+  color: #969c98;
+  font-size: 9.5px;
+  line-height: 1.6;
+}
 
 @media (max-width: 900px) {
   .schematic-prediction-popup { right: 18px; bottom: 18px; }

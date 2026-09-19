@@ -60,7 +60,7 @@ import {
   type MapFeatureCollection,
 } from "./scenarioSources";
 
-const FIT_PADDING = { top: 112, right: 328, bottom: 172, left: 328 };
+const FIT_PADDING = { top: 78, right: 230, bottom: 74, left: 70 };
 const LOAD_TIMEOUT_MS = 15000;
 const BUILDING_3D_LAYER_ID = "basemap-buildings-3d";
 
@@ -207,14 +207,7 @@ function buildStyle(): StyleSpecification {
         type: "raster",
         source: SATELLITE_SOURCE_ID,
         layout: { visibility: "none" },
-        paint: {
-          "raster-opacity": 0.78,
-          "raster-saturation": -0.88,
-          "raster-contrast": 0.08,
-          "raster-brightness-min": 0.08,
-          "raster-brightness-max": 0.42,
-          "raster-fade-duration": 250,
-        },
+        paint: { "raster-opacity": 1, "raster-fade-duration": 250 },
       },
       ...basemapLayers,
       {
@@ -272,8 +265,6 @@ interface MapLibreScenarioMapProps {
   horizonState: WorldStateSnapshot | undefined;
   selectedPlan: PlanResult | undefined;
   focusedRouteEdgeIds?: string[];
-  selectedAssetId: string | null;
-  onSelectAsset: (assetId: string) => void;
   onFailure: (reason: string) => void;
 }
 
@@ -297,8 +288,6 @@ export function MapLibreScenarioMap({
   horizonState,
   selectedPlan,
   focusedRouteEdgeIds,
-  selectedAssetId,
-  onSelectAsset,
   onFailure,
 }: MapLibreScenarioMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -307,7 +296,7 @@ export function MapLibreScenarioMap({
   const [ready, setReady] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
   const [satellite, setSatellite] = useState(true);
-  const [terrain3d, setTerrain3d] = useState(false);
+  const [terrain3d, setTerrain3d] = useState(true);
   const [hovered, setHovered] = useState<DerivedEdgeState | null>(null);
   const [hoveredFlood, setHoveredFlood] = useState<FloodHover | null>(null);
   const [diagnostics, setDiagnostics] = useState<string[] | null>(null);
@@ -336,14 +325,14 @@ export function MapLibreScenarioMap({
       [SOURCE.floodForecast]: floodForecast,
       [SOURCE.floodNow]: floodNow,
       [SOURCE.channel]: channelCollection(),
-      [SOURCE.roads]: roadsCollection(bootstrap, worldState, routeEdgeIds, selectedAssetId),
+      [SOURCE.roads]: roadsCollection(bootstrap, worldState, routeEdgeIds),
       [SOURCE.route]: routeCollection(bootstrap, routeEdgeIds),
-      [SOURCE.assets]: assetsCollection(bootstrap, worldState, selectedAssetId),
-      [SOURCE.bridges]: bridgesCollection(bootstrap, worldState, selectedAssetId),
+      [SOURCE.assets]: assetsCollection(bootstrap, worldState),
+      [SOURCE.bridges]: bridgesCollection(bootstrap, worldState),
       [SOURCE.hazards]: hazardsCollection(bootstrap, worldState),
       [SOURCE.predictions]: predictionSignalsCollection(worldState),
     }),
-    [bootstrap, floodForecast, floodNow, routeEdgeIds, selectedAssetId, worldState],
+    [bootstrap, floodForecast, floodNow, routeEdgeIds, worldState],
   );
 
   const edgeStateById = useMemo(
@@ -355,8 +344,6 @@ export function MapLibreScenarioMap({
 
   const failureRef = useRef(onFailure);
   failureRef.current = onFailure;
-  const selectAssetRef = useRef(onSelectAsset);
-  selectAssetRef.current = onSelectAsset;
 
   /* ------------------------------------------------------------ map init */
 
@@ -500,24 +487,12 @@ export function MapLibreScenarioMap({
     map.on("mouseleave", "ark-prediction-ping", leave);
     map.on("click", "ark-prediction-ping", showPrediction);
 
-    const selectFeature = (event: maplibregl.MapLayerMouseEvent) => {
-      const id = event.features?.[0]?.properties?.id;
-      if (typeof id === "string") selectAssetRef.current(id);
-    };
-    const selectableLayerIds = [
-      ...HOVERABLE_ROAD_LAYERS,
-      "ark-assets-circle",
-      "ark-bridges-marker",
-    ];
-    selectableLayerIds.forEach((layerId) => map.on("click", layerId, selectFeature));
-
     return () => {
       window.clearTimeout(watchdog);
       predictionPopupRef.current?.remove();
       predictionPopupRef.current = null;
       setReady(false);
       mapRef.current = null;
-      selectableLayerIds.forEach((layerId) => map.off("click", layerId, selectFeature));
       map.remove();
     };
   }, [bootstrap]);

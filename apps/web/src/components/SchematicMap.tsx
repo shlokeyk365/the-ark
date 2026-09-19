@@ -37,8 +37,6 @@ interface SchematicMapProps {
   horizonState: WorldStateSnapshot | undefined;
   selectedPlan: PlanResult | undefined;
   focusedRouteEdgeIds?: string[];
-  selectedAssetId: string | null;
-  onSelectAsset: (assetId: string) => void;
 }
 
 interface Viewport {
@@ -118,8 +116,6 @@ export function SchematicMap({
   horizonState,
   selectedPlan,
   focusedRouteEdgeIds,
-  selectedAssetId,
-  onSelectAsset,
 }: SchematicMapProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const cardRef = useRef<HTMLElement | null>(null);
@@ -575,9 +571,9 @@ export function SchematicMap({
 
         <defs>
           <linearGradient id="terrain" x1="0" y1="0" x2="0.4" y2="1">
-            <stop offset="0" stopColor="#202729" />
-            <stop offset="0.55" stopColor="#181e20" />
-            <stop offset="1" stopColor="#121718" />
+            <stop offset="0" stopColor="#111d2b" />
+            <stop offset="0.55" stopColor="#0d1825" />
+            <stop offset="1" stopColor="#0a1420" />
           </linearGradient>
           <filter id="soft-blur" x="-30%" y="-30%" width="160%" height="160%">
             <feGaussianBlur stdDeviation="14" />
@@ -593,8 +589,8 @@ export function SchematicMap({
             <path
               d="M60 0H0V60"
               fill="none"
-              stroke="#8c9793"
-              strokeOpacity="0.045"
+              stroke="#6d8aa8"
+              strokeOpacity="0.055"
               strokeWidth="1"
             />
           </pattern>
@@ -607,32 +603,32 @@ export function SchematicMap({
             cy={baseH * 0.12}
             rx="330"
             ry={baseH * 0.24}
-            fill="#2c3435"
-            opacity="0.4"
+            fill="#16283a"
+            opacity="0.5"
           />
           <ellipse
             cx="1075"
             cy={baseH * 0.18}
             rx="300"
             ry={baseH * 0.22}
-            fill="#293132"
-            opacity="0.34"
+            fill="#16283a"
+            opacity="0.42"
           />
           <ellipse
             cx="235"
             cy={baseH * 0.92}
             rx="340"
             ry={baseH * 0.24}
-            fill="#282f30"
-            opacity="0.36"
+            fill="#152436"
+            opacity="0.46"
           />
           <ellipse
             cx="1005"
             cy={baseH * 0.95}
             rx="320"
             ry={baseH * 0.23}
-            fill="#252c2d"
-            opacity="0.32"
+            fill="#152436"
+            opacity="0.4"
           />
         </g>
         <rect x="-600" y="-400" width="2400" height="1560" fill="url(#grid)" />
@@ -703,8 +699,7 @@ export function SchematicMap({
           <g className="road-network">
             {edges.map((edge) => {
               const status = edge.state?.status ?? "open";
-              const onRoute = layers.route && selectedRouteEdges.has(edge.id);
-              const selected = edge.id === selectedAssetId;
+              const selected = layers.route && selectedRouteEdges.has(edge.id);
               return (
                 <g
                   key={edge.id}
@@ -716,14 +711,13 @@ export function SchematicMap({
                   onMouseLeave={() =>
                     setHoveredEdgeId((current) => (current === edge.id ? null : current))
                   }
-                  onClick={() => onSelectAsset(edge.id)}
                 >
                   <polyline className="road-hit" points={edge.points} />
                   <polyline className="road-casing" points={edge.points} />
                   <polyline
-                    className={`road-edge ${status} ${edge.edgeType} ${onRoute ? "selected" : ""} ${selected ? "asset-selected" : ""}`}
+                    className={`road-edge ${status} ${edge.edgeType} ${selected ? "selected" : ""}`}
                     points={edge.points}
-                    filter={onRoute ? "url(#route-glow)" : undefined}
+                    filter={selected ? "url(#route-glow)" : undefined}
                   />
                   {status === "closed" ? (
                     <g
@@ -754,14 +748,9 @@ export function SchematicMap({
             const isolated = isolatedCommunities.has(asset.id);
             const box = labelBoxes.get(asset.id);
             return (
-              <g
-                className={`asset-marker ${asset.kind} ${isolated ? "isolated" : ""} ${selectedAssetId === asset.id ? "selected" : ""}`}
-                key={asset.id}
-                onClick={() => onSelectAsset(asset.id)}
-              >
+              <g className={`asset-marker ${asset.kind} ${isolated ? "isolated" : ""}`} key={asset.id}>
                 <g transform={`translate(${asset.point.x} ${asset.point.y}) scale(${counter})`}>
                   {isolated ? <circle className="isolation-ring" r="23" /> : null}
-                  {selectedAssetId === asset.id ? <circle className="asset-selection-ring" r="22" /> : null}
                   <circle className="asset-dot" r={asset.kind === "community" ? 8.5 : 13} />
                   {assetGlyph(asset.assetType) ? (
                     <text className="asset-glyph" textAnchor="middle" y={5}>

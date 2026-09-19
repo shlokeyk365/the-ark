@@ -22,21 +22,21 @@ export const SOURCE = {
 } as const;
 
 export const COLORS = {
-  open: "#aab8b2",
-  restricted: "#a8967f",
-  closed: "#b8797f",
-  route: "#9aabb9",
-  water: "#657d91",
-  forecast: "#7f8f9d",
-  hospital: "#b8797f",
-  shelter: "#869b8c",
-  community: "#d3d4cf",
-  isolated: "#b8797f",
-  context: "#77828a",
-  casualty: "#b8797f",
-  housing: "#a8967f",
-  transport: "#a9a27f",
-  severe: "#8a8998",
+  open: "#8fa8bc",
+  restricted: "#f0a52a",
+  closed: "#f24d63",
+  route: "#2fc98e",
+  water: "#009dff",
+  forecast: "#806dff",
+  hospital: "#e8536a",
+  shelter: "#2eb277",
+  community: "#eef5fc",
+  isolated: "#f24d63",
+  context: "#9dc4e8",
+  casualty: "#f24d63",
+  housing: "#f0a52a",
+  transport: "#ffd05a",
+  severe: "#a768f0",
 } as const;
 
 export const CURRENT_FLOOD_OPACITY = 0.44;
@@ -46,13 +46,13 @@ export const FORECAST_FLOOD_OPACITY = 0.08;
 const floodDepthColor = [
   "step",
   ["get", "depth_max_m"],
-  "#a8b9bf",
+  "#8adfff",
   0.1,
-  "#839ba5",
+  "#43bdf4",
   0.2,
-  "#667f8b",
+  "#167fd1",
   0.3,
-  "#4f6874",
+  "#09509f",
 ] as never;
 
 export const floodOpacity = (baseOpacity: number) =>
@@ -239,19 +239,6 @@ export const LAYERS: LayerSpecification[] = [
       "line-dasharray": [1, 1.5],
     },
   },
-  {
-    id: "ark-selected-road",
-    type: "line",
-    source: SOURCE.roads,
-    filter: ["==", ["get", "selected"], true],
-    layout: { "line-cap": "round", "line-join": "round" },
-    paint: {
-      "line-color": "#e0ded7",
-      "line-width": roadWidth(7.5, 12) as never,
-      "line-opacity": 0.84,
-      "line-blur": 1.2,
-    },
-  },
 
   {
     id: "ark-route-glow",
@@ -293,18 +280,6 @@ export const LAYERS: LayerSpecification[] = [
       ],
       "circle-stroke-color": "#cddcea",
       "circle-stroke-width": 1.6,
-    },
-  },
-  {
-    id: "ark-selected-bridge",
-    type: "circle",
-    source: SOURCE.bridges,
-    filter: ["==", ["get", "selected"], true],
-    paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 8, 16, 16],
-      "circle-color": "rgba(0,0,0,0)",
-      "circle-stroke-color": "#e4e1d8",
-      "circle-stroke-width": 2,
     },
   },
 
@@ -351,18 +326,6 @@ export const LAYERS: LayerSpecification[] = [
         ],
       ],
       "circle-stroke-color": "#091421",
-      "circle-stroke-width": 2,
-    },
-  },
-  {
-    id: "ark-selected-asset",
-    type: "circle",
-    source: SOURCE.assets,
-    filter: ["==", ["get", "selected"], true],
-    paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 10, 16, 20],
-      "circle-color": "rgba(0,0,0,0)",
-      "circle-stroke-color": "#e4e1d8",
       "circle-stroke-width": 2,
     },
   },
@@ -576,7 +539,6 @@ export const LAYER_CONTROLS: LayerControl[] = [
       "ark-roads-open",
       "ark-roads-restricted",
       "ark-roads-closed",
-      "ark-selected-road",
     ],
   },
   {
@@ -589,13 +551,13 @@ export const LAYER_CONTROLS: LayerControl[] = [
     key: "facilities",
     label: "Hospitals & shelters",
     swatch: "facilities",
-    layerIds: ["ark-assets-circle", "ark-assets-glyph", "ark-assets-halo", "ark-selected-asset"],
+    layerIds: ["ark-assets-circle", "ark-assets-glyph", "ark-assets-halo"],
   },
   {
     key: "bridges",
     label: "Bridges",
     swatch: "bridges",
-    layerIds: ["ark-bridges-marker", "ark-selected-bridge"],
+    layerIds: ["ark-bridges-marker"],
   },
   {
     key: "gauges",

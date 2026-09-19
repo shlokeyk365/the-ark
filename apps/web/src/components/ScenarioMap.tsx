@@ -22,8 +22,6 @@ interface ScenarioMapProps {
   horizonState: WorldStateSnapshot | undefined;
   selectedPlan: PlanResult | undefined;
   focusedRouteEdgeIds?: string[];
-  selectedAssetId: string | null;
-  onSelectAsset: (assetId: string) => void;
 }
 
 function BasemapLoading() {
@@ -50,8 +48,6 @@ export function ScenarioMap({
   horizonState,
   selectedPlan,
   focusedRouteEdgeIds,
-  selectedAssetId,
-  onSelectAsset,
 }: ScenarioMapProps) {
   const [failure, setFailure] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
@@ -70,9 +66,7 @@ export function ScenarioMap({
           bootstrap={bootstrap}
           focusedRouteEdgeIds={focusedRouteEdgeIds}
           horizonState={horizonState}
-          onSelectAsset={onSelectAsset}
           selectedPlan={selectedPlan}
-          selectedAssetId={selectedAssetId}
           worldState={worldState}
         />
         {!dismissed ? (
@@ -106,10 +100,8 @@ export function ScenarioMap({
         bootstrap={bootstrap}
         focusedRouteEdgeIds={focusedRouteEdgeIds}
         horizonState={horizonState}
-        onSelectAsset={onSelectAsset}
         onFailure={onFailure}
         selectedPlan={selectedPlan}
-        selectedAssetId={selectedAssetId}
         worldState={worldState}
       />
     </Suspense>

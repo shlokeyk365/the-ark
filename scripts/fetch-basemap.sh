@@ -10,9 +10,11 @@
 # Usage:  ./scripts/fetch-basemap.sh [YYYYMMDD]
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BBOX="85.20,27.55,85.45,27.82"   # Kantipur scenario + admin context + panning room
 MAXZOOM=15
-OUT="apps/web/public/basemap/kantipur.pmtiles"
+OUT="$REPO_ROOT/apps/web/public/basemap/kantipur.pmtiles"
 PMTILES_VERSION="1.31.2"
 
 # Protomaps keeps roughly two weeks of daily builds.

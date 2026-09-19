@@ -80,6 +80,10 @@ Fetch the Nakkhu/Kantipur Colony basemap once:
 npm run basemap
 ```
 
+`npm run dev` also performs this fetch automatically when the archive is
+missing, so a fresh clone starts with the geographic map without an extra setup
+step.
+
 That extracts the scenario's bounding box from the Protomaps daily planet build
 over HTTP range requests — about 20 MB transferred for an 18 MB archive, rather
 than the 138 GB planet — and writes
