@@ -7,7 +7,7 @@
     {
       "frame_id": "ktp-frame-now",
       "simulation_time_hours": 0,
-      "observed_at": "2026-09-18T12:00:00Z",
+      "observed_at": "2024-09-28T00:00:00Z",
       "rainfall_assumption": "baseline rainfall",
       "rainfall_multiplier": 1.0,
       "source": {
@@ -34,7 +34,7 @@
     {
       "frame_id": "ktp-frame-plus-6h",
       "simulation_time_hours": 6,
-      "observed_at": "2026-09-18T18:00:00Z",
+      "observed_at": "2024-09-28T06:00:00Z",
       "rainfall_assumption": "baseline rainfall",
       "rainfall_multiplier": 1.0,
       "source": {
@@ -61,7 +61,7 @@
     {
       "frame_id": "ktp-frame-plus-12h",
       "simulation_time_hours": 12,
-      "observed_at": "2026-09-19T00:00:00Z",
+      "observed_at": "2024-09-28T12:00:00Z",
       "rainfall_assumption": "baseline rainfall",
       "rainfall_multiplier": 1.0,
       "source": {
@@ -88,7 +88,7 @@
     {
       "frame_id": "ktp-frame-plus-24h",
       "simulation_time_hours": 24,
-      "observed_at": "2026-09-19T12:00:00Z",
+      "observed_at": "2024-09-29T00:00:00Z",
       "rainfall_assumption": "baseline rainfall",
       "rainfall_multiplier": 1.0,
       "source": {

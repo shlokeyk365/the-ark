@@ -61,7 +61,8 @@ All plans use the same definitions and evaluation deadline:
   overloaded, and every successful trip meets the deadline.
 
 Metrics describe the synthetic scenario only. There is no generic AI confidence
-score.
+score. The separately labeled impact probabilities are outputs from the frozen
+historical-event model and are not plan-viability metrics.
 
 ## Frontend payload
 
@@ -76,9 +77,26 @@ The API returns already-derived results:
 The frontend may sort, filter, and visualize these fields but must not recompute
 routing, isolation, capacity, or plan viability.
 
-## Planned: flood inundation polygons
+## Historical impact prediction pings
 
-Status: not implemented. This section is the handoff contract for
+`model-impact-prior.json` stores the frozen Nakkhu 2024 event input and four
+probabilities produced by the CatBoost model. `prediction-pings.json` supplies
+display anchors, activation hours, labels, and recommended actions. The scenario
+service joins them by target and returns the result as `prediction_signals`.
+
+The percentages stay constant across frames because the trained model is an
+event-level impact classifier. The timeline marks each signal `active` once its
+configured activation hour is reached. A ping means “surface this predicted
+event impact near the relevant asset”; it is not a claim that the exact point or
+building has that risk.
+
+The prediction layer cannot close roads, alter flood depth, change routing, or
+modify plan results. Those continue to come from the deterministic world state.
+
+## Current visualization and planned flood inundation polygons
+
+Status: placeholder animated envelope implemented; hydraulic polygons are not.
+This section is the handoff contract for
 `services/physics`, so the map layer can be swapped without frontend rework.
 
 The scenario currently carries flood depth **per network edge** only. The map's

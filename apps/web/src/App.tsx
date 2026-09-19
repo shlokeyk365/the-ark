@@ -51,7 +51,7 @@ function LoadingScreen() {
     <main className="loading-screen" aria-live="polite">
       <div className="loading-mark">ARK</div>
       <div className="loading-copy">
-        <strong>Initializing Kantipur world state</strong>
+        <strong>Initializing Nakkhu River world state</strong>
         <span>Loading assets, context, routes, and counterfactual plans…</span>
       </div>
       <div className="loading-bar">

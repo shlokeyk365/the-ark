@@ -48,7 +48,7 @@ export function TopBar({ alertCount = 0 }: TopBarProps) {
         </div>
         <div className="command-title">
           <strong>Incident Command</strong>
-          <span>KANTIPUR EXERCISE</span>
+          <span>NAKKHU · LALITPUR</span>
         </div>
       </div>
     </header>

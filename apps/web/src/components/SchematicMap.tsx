@@ -59,13 +59,20 @@ const CHANNEL_HALF_WIDTH_KM = 0.22;
 /** Metres of depth to kilometres of modelled lateral spread. */
 const SPREAD_KM_PER_METRE = 2.9;
 
-type LayerKey = "context" | "inundation" | "network" | "route" | "labels";
+type LayerKey =
+  | "context"
+  | "inundation"
+  | "network"
+  | "route"
+  | "predictions"
+  | "labels";
 
 const LAYER_LABELS: { key: LayerKey; label: string }[] = [
   { key: "context", label: "Administrative context" },
   { key: "inundation", label: "Modeled inundation" },
   { key: "network", label: "Roads & bridges" },
   { key: "route", label: "Selected plan route" },
+  { key: "predictions", label: "Model prediction pings" },
   { key: "labels", label: "Asset labels" },
 ];
 
@@ -115,6 +122,7 @@ export function SchematicMap({
     inundation: true,
     network: true,
     route: true,
+    predictions: true,
     labels: true,
   });
 
@@ -161,8 +169,16 @@ export function SchematicMap({
         positions.push(feature.geometry.coordinates);
       }
     });
+    worldState.prediction_signals.forEach((signal) => {
+      positions.push(signal.geometry.coordinates);
+    });
     return buildProjection(positions, baseH);
-  }, [baseH, bootstrap.assets.features, bootstrap.road_network.features]);
+  }, [
+    baseH,
+    bootstrap.assets.features,
+    bootstrap.road_network.features,
+    worldState.prediction_signals,
+  ]);
 
   const edgeStateById = useMemo(
     () => new Map(worldState.edge_states.map((edge) => [edge.edge_id, edge])),
@@ -270,6 +286,15 @@ export function SchematicMap({
     [bootstrap.assets.features, project],
   );
 
+  const predictionSignals = useMemo(
+    () =>
+      worldState.prediction_signals.map((signal) => ({
+        ...signal,
+        point: project(signal.geometry.coordinates),
+      })),
+    [project, worldState.prediction_signals],
+  );
+
   /**
    * The floating map chrome sits above the SVG, so its footprint is reserved
    * before labels are placed. Positions mirror the CSS, converted from screen
@@ -288,7 +313,7 @@ export function SchematicMap({
 
     return [
       box(6, 6, 360, 36), // status chips
-      box(cardWidth - 208, 6, 202, layersOpen ? 205 : 40), // layers panel
+      box(cardWidth - 208, 6, 202, layersOpen ? 230 : 40), // layers panel
       box(cardWidth - 48, cardHeight - 108, 42, 102), // zoom + compass
       box(8, cardHeight - 46, 160, 40), // scale bar
     ];
@@ -419,7 +444,7 @@ export function SchematicMap({
     <section
       className="map-card schematic-card"
       ref={cardRef}
-      aria-label="Kantipur River scenario map (schematic)"
+      aria-label="Nakkhu River scenario map (schematic)"
     >
       <div className="map-toolbar">
         <span className={`state-pill ${eventActive ? "event" : "baseline"}`}>
@@ -482,11 +507,12 @@ export function SchematicMap({
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
       >
-        <title id="map-title">Kantipur River infrastructure status</title>
+        <title id="map-title">Nakkhu River infrastructure and model-risk status</title>
         <desc id="map-description">
           Synthetic road network over Kathmandu and Lalitpur administrative
           context, showing communities, bridges, shelters, a hospital, modeled
-          inundation, current closures, and the selected response plan route.
+          inundation, current closures, the selected response plan route, and
+          event-level impact-model prediction pings.
         </desc>
 
         <defs>
@@ -577,6 +603,8 @@ export function SchematicMap({
             <path className="flood-band" d={channel.inundation} fill="url(#inundation)" />
             <path className="river-water" d={channel.water} fill="url(#water)" />
             <path className="river-centreline" d={channel.centreline} />
+            <path className="river-flow river-flow-a" d={channel.centreline} />
+            <path className="river-flow river-flow-b" d={channel.centreline} />
           </g>
         ) : null}
 
@@ -669,6 +697,48 @@ export function SchematicMap({
             );
           })}
         </g>
+
+        {layers.predictions ? (
+          <g className="prediction-layer">
+            {predictionSignals.map((signal, index) => {
+              const labelLeft = index >= 2;
+              const labelBelow = index === 1;
+              const labelX = labelLeft ? -142 : 20;
+              const labelY = labelBelow ? 19 : -48;
+              return (
+                <g
+                  className={`prediction-ping ${signal.target} ${signal.state}`}
+                  key={signal.ping_id}
+                  role="img"
+                  aria-label={`${signal.label}: ${signal.percent}% predicted risk, ${signal.state}`}
+                >
+                  <g
+                    transform={`translate(${signal.point.x} ${signal.point.y}) scale(${counter})`}
+                  >
+                    <circle className="prediction-ring prediction-ring-outer" r="28" />
+                    <circle className="prediction-ring prediction-ring-inner" r="19" />
+                    <circle className="prediction-core" r="11" />
+                    <text className="prediction-mark" textAnchor="middle" y="4">
+                      !
+                    </text>
+                  </g>
+                  <g
+                    className="prediction-label-card"
+                    transform={`translate(${signal.point.x} ${signal.point.y}) scale(${counter}) translate(${labelX} ${labelY})`}
+                  >
+                    <rect width="122" height="36" rx="6" />
+                    <text className="prediction-label" x="9" y="14">
+                      {signal.short_label}
+                    </text>
+                    <text className="prediction-percent" x="9" y="29">
+                      {signal.percent}% predicted
+                    </text>
+                  </g>
+                </g>
+              );
+            })}
+          </g>
+        ) : null}
       </svg>
 
       {layers.context ? (
@@ -730,6 +800,9 @@ export function SchematicMap({
         ) : (
           <span className="inspector-hint">Hover a road or bridge for derived state</span>
         )}
+      </div>
+      <div className="map-provenance">
+        Water extent is a scenario envelope; pings are frozen event-level model predictions.
       </div>
     </section>
   );

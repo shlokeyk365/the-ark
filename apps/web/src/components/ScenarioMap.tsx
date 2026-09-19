@@ -76,7 +76,7 @@ export function ScenarioMap({
                   <>
                     {" · Run "}
                     <code>npm run basemap</code>
-                    {" to fetch the Kantipur PMTiles archive."}
+                    {" to fetch the Nakkhu scenario PMTiles archive."}
                   </>
                 ) : null}
               </span>

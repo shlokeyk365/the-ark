@@ -200,6 +200,32 @@ export function RightRail({
         </div>
       </section>
 
+      <section className="right-section model-signals-panel panel-shell">
+        <div className="section-title-row">
+          <h2>Model prediction pings</h2>
+          <span>{bootstrap.impact_model.evaluation.unseen_district_roc_auc.toFixed(2)} AUC</span>
+        </div>
+        <div className="model-signal-grid">
+          {worldState.prediction_signals.map((signal) => (
+            <article
+              className={`model-signal ${signal.target} ${signal.state}`}
+              key={signal.ping_id}
+              title={signal.recommended_action}
+            >
+              <i />
+              <div>
+                <strong>{signal.percent}%</strong>
+                <span>{signal.label}</span>
+              </div>
+              <em>{signal.state}</em>
+            </article>
+          ))}
+        </div>
+        <p className="model-signal-note">
+          Event-level predictions · map pings are localized indicators, not building-level forecasts.
+        </p>
+      </section>
+
       <section className="right-section alerts-panel panel-shell">
         <div className="section-title-row">
           <h2>Prioritized alerts</h2>

@@ -48,6 +48,7 @@ import {
   floodForecastCollection,
   floodNowCollection,
   hazardsCollection,
+  predictionSignalsCollection,
   roadsCollection,
   routeCollection,
   routeEdgeIdsFor,
@@ -148,6 +149,7 @@ const DEFAULT_LAYERS: Record<LayerKey, boolean> = {
   bridges: true,
   gauges: false,
   alerts: true,
+  predictions: true,
   labels: true,
 };
 
@@ -181,6 +183,7 @@ export function MapLibreScenarioMap({
       [SOURCE.assets]: assetsCollection(bootstrap, worldState),
       [SOURCE.bridges]: bridgesCollection(bootstrap, worldState),
       [SOURCE.hazards]: hazardsCollection(bootstrap, worldState),
+      [SOURCE.predictions]: predictionSignalsCollection(worldState),
     }),
     [bootstrap, horizonState, routeEdgeIds, worldState],
   );
@@ -208,7 +211,7 @@ export function MapLibreScenarioMap({
       map = new maplibregl.Map({
         container,
         style: buildStyle(),
-        bounds: scenarioBounds(bootstrap),
+        bounds: scenarioBounds(bootstrap, worldState),
         fitBoundsOptions: { padding: FIT_PADDING },
         attributionControl: false,
       });
@@ -304,6 +307,30 @@ export function MapLibreScenarioMap({
     const observer = new ResizeObserver(() => map.resize());
     observer.observe(element);
     return () => observer.disconnect();
+  }, [ready]);
+
+  /* ----------------------------------------------- prediction ping pulse */
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return undefined;
+    }
+
+    let animationFrame = 0;
+    const animate = (timestamp: number) => {
+      if (!mapRef.current || !map.getLayer("ark-prediction-pulse")) return;
+      const phase = (timestamp % 1800) / 1800;
+      map.setPaintProperty("ark-prediction-pulse", "circle-radius", 14 + phase * 20);
+      map.setPaintProperty(
+        "ark-prediction-pulse",
+        "circle-opacity",
+        0.04 + (1 - phase) * 0.2,
+      );
+      animationFrame = window.requestAnimationFrame(animate);
+    };
+    animationFrame = window.requestAnimationFrame(animate);
+    return () => window.cancelAnimationFrame(animationFrame);
   }, [ready]);
 
   /* --------------------------------------------------------- diagnostics */
@@ -428,11 +455,11 @@ export function MapLibreScenarioMap({
   }, [ready, terrain3d]);
 
   const resetView = useCallback(() => {
-    mapRef.current?.fitBounds(scenarioBounds(bootstrap), {
+    mapRef.current?.fitBounds(scenarioBounds(bootstrap, worldState), {
       padding: FIT_PADDING,
       duration: 900,
     });
-  }, [bootstrap]);
+  }, [bootstrap, worldState]);
 
   const toggleLayer = (key: LayerKey) =>
     setLayers((current) => ({ ...current, [key]: !current[key] }));
@@ -440,7 +467,7 @@ export function MapLibreScenarioMap({
   const eventActive = worldState.active_event_ids.length > 0;
 
   return (
-    <section className="map-card maplibre-card" aria-label="Kantipur River scenario map">
+    <section className="map-card maplibre-card" aria-label="Nakkhu River scenario map">
       <div className="map-canvas" ref={containerRef} />
       {!ready ? (
         <div className="map-booting" role="status">
@@ -556,7 +583,7 @@ export function MapLibreScenarioMap({
       ) : null}
 
       <div className="map-provenance">
-        Inundation polygons are a modeled envelope from edge depth, not a hydraulic solve.
+        Water extent is a scenario envelope; pings are frozen event-level model predictions.
       </div>
     </section>
   );

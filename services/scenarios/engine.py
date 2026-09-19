@@ -34,6 +34,8 @@ class ScenarioService:
         self.flood_frames = self._load("flood-frames.json")
         self.response_plans = self._load("response-plans.json")
         self.event_stream = self._load("event-stream.json")
+        self.impact_prior = self._load("model-impact-prior.json")
+        self.prediction_pings = self._load("prediction-pings.json")
         # Visual reference only: never passed to routing or flood derivation.
         self.context_boundaries = self._load("context-boundaries.geojson")
         validate_scenario_fixtures(
@@ -44,6 +46,8 @@ class ScenarioService:
             self.response_plans,
             self.event_stream,
             self.context_boundaries,
+            self.impact_prior,
+            self.prediction_pings,
         )
         self._isolation_cache: Dict[Tuple[str, ...], Dict[str, Optional[float]]] = {}
 
@@ -130,6 +134,9 @@ class ScenarioService:
             "rainfall_multiplier": frame["rainfall_multiplier"],
             "edge_states": list(edge_states_by_id.values()),
             "community_access": community_access,
+            "prediction_signals": self._prediction_signals(
+                frame["simulation_time_hours"]
+            ),
         }
         state["hazards"] = self._hazards(state)
         state["plan_results"] = [
@@ -137,6 +144,55 @@ class ScenarioService:
             for plan in self.response_plans["plans"]
         ]
         return state
+
+    def _prediction_signals(self, simulation_time_hours: float) -> List[JsonObject]:
+        """Project the frozen event-level model output onto map annotations.
+
+        The probabilities remain fixed because the trained model predicts a
+        whole-event impact prior, not an hourly physical state. The scenario
+        timeline only changes whether a signal is still forecast or has become
+        active according to the deterministic flood frame.
+        """
+
+        probabilities = self.impact_prior["impactProbabilities"]
+        return [
+            {
+                "ping_id": ping["ping_id"],
+                "target": ping["target"],
+                "label": ping["label"],
+                "short_label": ping["short_label"],
+                "probability": probabilities[ping["target"]],
+                "percent": round(probabilities[ping["target"]] * 100),
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": ping["coordinates"],
+                },
+                "anchor_asset_id": ping.get("anchor_asset_id"),
+                "activation_hours": ping["activation_hours"],
+                "state": (
+                    "active"
+                    if simulation_time_hours >= ping["activation_hours"]
+                    else "forecast"
+                ),
+                "recommended_action": ping["recommended_action"],
+                "source_type": "model_prediction",
+            }
+            for ping in self.prediction_pings["pings"]
+        ]
+
+    def _impact_model_summary(self) -> JsonObject:
+        model = self.prediction_pings["model"]
+        return {
+            "event_id": self.prediction_pings["event_id"],
+            "location": self.prediction_pings["location"],
+            "model_name": model["model_name"],
+            "model_version": model["model_version"],
+            "status": model["status"],
+            "training_events": model["training_events"],
+            "feature_policy": model["feature_policy"],
+            "evaluation": model["evaluation"],
+            "limitations": self.impact_prior["limitations"],
+        }
 
     def _hazards(self, state: Mapping[str, Any]) -> List[JsonObject]:
         hazards: List[JsonObject] = []
@@ -228,6 +284,7 @@ class ScenarioService:
             ],
             "events": self.event_stream["events"],
             "plans": self.response_plans["plans"],
+            "impact_model": self._impact_model_summary(),
         }
 
     def apply_event(self, event_id: str) -> JsonObject:

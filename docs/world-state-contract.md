@@ -11,7 +11,7 @@ used by routing, scenario evaluation, the API, and the frontend. Flood inputs do
 not directly mutate routes or plan results. They produce a new world-state
 version, and derived services calculate consequences from that immutable input.
 
-The Kantipur fixtures are modeled, synthetic demonstration data. They are not
+The Nakkhu/Kantipur Colony fixtures are modeled, synthetic demonstration data. They are not
 operational flood guidance.
 
 ## Snapshot identity
@@ -29,6 +29,12 @@ Every snapshot contains:
 | `frame_id` | string | Flood frame used to derive the snapshot. |
 | `data_classification` | string | `modeled_synthetic_demo` for this MVP. |
 | `operational_use` | boolean | Always `false` for the Kantipur demo. |
+
+Every snapshot also carries `prediction_signals`. These are separately labeled
+`model_prediction` interpretations from the frozen event-impact model. Their
+probabilities do not mutate as the deterministic flood timeline advances; only
+their `forecast`/`active` display state changes at the configured activation
+hour.
 
 World-state versions are append-only. Applying an event creates a new version;
 it never edits an earlier snapshot in place.
@@ -96,6 +102,10 @@ Every event records:
 Observed input, modeled input, operator-injected events, derived results, and AI
 interpretation must remain separately labeled. AI output cannot change this
 contract's physical or safety fields.
+
+The prediction pings therefore cannot change an edge state, route, isolation
+result, hazard, or counterfactual plan score. Their coordinates are map anchors
+for operational attention, not localized model outputs.
 
 ## Validation behavior
 

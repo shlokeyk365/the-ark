@@ -223,6 +223,34 @@ export function hazardsCollection(
   };
 }
 
+/* ------------------------------------------------------ model predictions */
+
+export function predictionSignalsCollection(
+  worldState: WorldStateSnapshot,
+): MapFeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: worldState.prediction_signals.map((signal) => ({
+      type: "Feature",
+      id: signal.ping_id,
+      geometry: signal.geometry,
+      properties: {
+        ping_id: signal.ping_id,
+        target: signal.target,
+        label: signal.label,
+        short_label: signal.short_label,
+        probability: signal.probability,
+        percent: signal.percent,
+        percent_label: `${signal.percent}%`,
+        state: signal.state,
+        activation_hours: signal.activation_hours,
+        recommended_action: signal.recommended_action,
+        source_type: signal.source_type,
+      },
+    })),
+  };
+}
+
 /* ------------------------------------------------------------------ flood */
 
 /**
@@ -385,6 +413,7 @@ export function contextCollection(
 
 export function scenarioBounds(
   bootstrap: ScenarioBootstrapResponse,
+  worldState?: WorldStateSnapshot,
 ): [[number, number], [number, number]] {
   const positions: Position[] = [];
   bootstrap.road_network.features.forEach((feature) => {
@@ -396,6 +425,9 @@ export function scenarioBounds(
     } else {
       positions.push(...(feature.geometry.coordinates as Position[]));
     }
+  });
+  worldState?.prediction_signals.forEach((signal) => {
+    positions.push(signal.geometry.coordinates);
   });
 
   const longitudes = positions.map(([longitude]) => longitude);

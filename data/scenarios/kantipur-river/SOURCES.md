@@ -1,4 +1,17 @@
-# Kantipur River scenario data sources
+# Nakkhu River scenario data sources
+
+## Historical-event impact prior
+
+`model-impact-prior.json` is the frozen Nakkhu 2024 input/output artifact from
+the repository's CatBoost training pipeline. The model was trained on 4,869
+historical Nepal flood events through 2023 with city, district, and basin
+identity excluded from predictors. Its status is `research_only`; the artifact
+records grouped ROC-AUC/RMSE evaluation and known limitations.
+
+`prediction-pings.json` adds presentation-only coordinates, activation hours,
+and recommended actions for the four probabilities. These coordinates are map
+anchors and are not evidence of parcel- or building-level prediction. Neither
+file participates in routing or flood-depth calculations.
 
 ## Administrative context boundaries
 

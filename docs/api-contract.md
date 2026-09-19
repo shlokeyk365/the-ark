@@ -23,6 +23,8 @@ Returns static data needed to initialize the frontend:
 - Ordered timeline frame summaries.
 - Available injected events.
 - Plan A/B/C definitions and assignments.
+- `impact_model`, a research-only model summary with training-event count,
+  grouped-evaluation metrics, feature policy, and limitations.
 
 The bootstrap response intentionally excludes flood edge readings and derived
 results. Those come from a versioned world-state endpoint.
@@ -46,7 +48,14 @@ Provenance and licensing are recorded in
 
 Both return `WorldStateSnapshot`. The payload contains derived edge status,
 community access, routes, hazards, time-to-isolation, and Plan A/B/C results for
-one immutable state version.
+one immutable state version. It also contains `prediction_signals`, the four
+frozen event-level impact probabilities used by the dashboard pings.
+
+Each prediction signal includes its target, probability and rounded percent,
+map anchor, activation hour, timeline state (`forecast` or `active`), and a
+recommended action. Advancing the timeline changes only that display state; it
+does not recalculate the probability. The current model predicts event impacts,
+not hourly depth or street-level extent.
 
 The frame endpoint accepts a repeatable `events` query parameter so a caller can
 inspect any frame with injected events held active:

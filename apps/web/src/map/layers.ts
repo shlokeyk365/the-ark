@@ -18,6 +18,7 @@ export const SOURCE = {
   assets: "ark-assets",
   bridges: "ark-bridges",
   hazards: "ark-hazards",
+  predictions: "ark-predictions",
 } as const;
 
 export const COLORS = {
@@ -32,6 +33,10 @@ export const COLORS = {
   community: "#eef5fc",
   isolated: "#f24d63",
   context: "#9dc4e8",
+  casualty: "#f24d63",
+  housing: "#f0a52a",
+  transport: "#ffd05a",
+  severe: "#a768f0",
 } as const;
 
 const isBridge = ["==", ["get", "edge_type"], "bridge"];
@@ -103,6 +108,27 @@ export const LAYERS: LayerSpecification[] = [
     type: "line",
     source: SOURCE.channel,
     paint: { "line-color": "#bfe8ff", "line-width": 1.2, "line-opacity": 0.45 },
+  },
+  {
+    id: "ark-channel-flow-arrows",
+    type: "symbol",
+    source: SOURCE.channel,
+    layout: {
+      "symbol-placement": "line",
+      "symbol-spacing": 72,
+      "text-field": "›",
+      "text-font": ["Noto Sans Medium"],
+      "text-size": 18,
+      "text-rotation-alignment": "map",
+      "text-keep-upright": false,
+      "text-allow-overlap": true,
+    },
+    paint: {
+      "text-color": "#dff6ff",
+      "text-opacity": 0.82,
+      "text-halo-color": "rgba(25, 126, 194, 0.75)",
+      "text-halo-width": 1.2,
+    },
   },
 
   // Depth read directly off each edge — this part is model output, not an envelope.
@@ -305,6 +331,86 @@ export const LAYERS: LayerSpecification[] = [
   },
 
   {
+    id: "ark-prediction-pulse",
+    type: "circle",
+    source: SOURCE.predictions,
+    paint: {
+      "circle-radius": 18,
+      "circle-color": [
+        "match",
+        ["get", "target"],
+        "casualty_or_missing",
+        COLORS.casualty,
+        "housing_damage",
+        COLORS.housing,
+        "transport_disruption",
+        COLORS.transport,
+        COLORS.severe,
+      ],
+      "circle-opacity": ["case", ["==", ["get", "state"], "active"], 0.22, 0.1],
+      "circle-stroke-color": [
+        "match",
+        ["get", "target"],
+        "casualty_or_missing",
+        COLORS.casualty,
+        "housing_damage",
+        COLORS.housing,
+        "transport_disruption",
+        COLORS.transport,
+        COLORS.severe,
+      ],
+      "circle-stroke-width": 1.5,
+      "circle-stroke-opacity": 0.6,
+    },
+  },
+  {
+    id: "ark-prediction-ping",
+    type: "circle",
+    source: SOURCE.predictions,
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 6, 16, 11],
+      "circle-color": [
+        "match",
+        ["get", "target"],
+        "casualty_or_missing",
+        COLORS.casualty,
+        "housing_damage",
+        COLORS.housing,
+        "transport_disruption",
+        COLORS.transport,
+        COLORS.severe,
+      ],
+      "circle-opacity": ["case", ["==", ["get", "state"], "active"], 1, 0.68],
+      "circle-stroke-color": "#f7fbff",
+      "circle-stroke-width": 1.5,
+    },
+  },
+  {
+    id: "ark-prediction-label",
+    type: "symbol",
+    source: SOURCE.predictions,
+    layout: {
+      "text-field": [
+        "concat",
+        ["get", "short_label"],
+        " ",
+        ["get", "percent_label"],
+      ],
+      "text-font": ["Noto Sans Medium"],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 11, 9, 16, 12],
+      "text-offset": [0, 1.8],
+      "text-anchor": "top",
+      "text-allow-overlap": true,
+      "text-ignore-placement": true,
+    },
+    paint: {
+      "text-color": "#ffffff",
+      "text-halo-color": "rgba(5, 11, 18, 0.96)",
+      "text-halo-width": 2,
+    },
+  },
+
+  {
     id: "ark-asset-labels",
     type: "symbol",
     source: SOURCE.assets,
@@ -335,6 +441,7 @@ export type LayerKey =
   | "bridges"
   | "gauges"
   | "alerts"
+  | "predictions"
   | "labels";
 
 export interface LayerControl {
@@ -351,7 +458,13 @@ export const LAYER_CONTROLS: LayerControl[] = [
     key: "floodNow",
     label: "Flood inundation (now)",
     swatch: "flood-now",
-    layerIds: ["ark-flood-now-fill", "ark-flood-now-line", "ark-channel-line", "ark-depth-halo"],
+    layerIds: [
+      "ark-flood-now-fill",
+      "ark-flood-now-line",
+      "ark-channel-line",
+      "ark-channel-flow-arrows",
+      "ark-depth-halo",
+    ],
   },
   {
     key: "floodForecast",
@@ -400,6 +513,16 @@ export const LAYER_CONTROLS: LayerControl[] = [
     label: "Alerts",
     swatch: "alerts",
     layerIds: ["ark-hazards"],
+  },
+  {
+    key: "predictions",
+    label: "Model prediction pings",
+    swatch: "predictions",
+    layerIds: [
+      "ark-prediction-pulse",
+      "ark-prediction-ping",
+      "ark-prediction-label",
+    ],
   },
   {
     key: "labels",

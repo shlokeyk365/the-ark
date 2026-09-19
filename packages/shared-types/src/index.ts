@@ -155,6 +155,45 @@ export interface FloodFrameSummary {
   rainfall_multiplier: number;
 }
 
+export interface ImpactModelEvaluation {
+  unseen_district_roc_auc: number;
+  four_split_macro_roc_auc: number;
+  mean_rmse: number;
+}
+
+export interface ImpactModelSummary {
+  event_id: string;
+  location: string;
+  model_name: string;
+  model_version: string;
+  status: "research_only";
+  training_events: number;
+  feature_policy: string;
+  evaluation: ImpactModelEvaluation;
+  limitations: string[];
+}
+
+export type ImpactTarget =
+  | "casualty_or_missing"
+  | "housing_damage"
+  | "transport_disruption"
+  | "severe_impact";
+
+export interface PredictionSignal {
+  ping_id: string;
+  target: ImpactTarget;
+  label: string;
+  short_label: string;
+  probability: number;
+  percent: number;
+  geometry: PointGeometry;
+  anchor_asset_id: string | null;
+  activation_hours: number;
+  state: "forecast" | "active";
+  recommended_action: string;
+  source_type: "model_prediction";
+}
+
 export interface DerivedEdgeState {
   edge_id: string;
   edge_type: "road" | "bridge";
@@ -215,6 +254,7 @@ export interface WorldStateSnapshot {
   edge_states: DerivedEdgeState[];
   community_access: CommunityAccessState[];
   hazards: Hazard[];
+  prediction_signals: PredictionSignal[];
   plan_results: PlanResult[];
 }
 
@@ -298,6 +338,7 @@ export interface ScenarioBootstrapResponse {
   available_frames: FloodFrameSummary[];
   events: IncidentEvent[];
   plans: ResponsePlan[];
+  impact_model: ImpactModelSummary;
 }
 
 export interface EventRecomputeResponse {

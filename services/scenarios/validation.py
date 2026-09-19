@@ -24,6 +24,8 @@ def validate_scenario_fixtures(
     plans: Mapping[str, Any],
     event_stream: Mapping[str, Any],
     context_boundaries: Mapping[str, Any],
+    impact_prior: Mapping[str, Any],
+    prediction_pings: Mapping[str, Any],
 ) -> None:
     scenario_id = manifest["scenario_id"]
     documents = (
@@ -136,6 +138,12 @@ def validate_scenario_fixtures(
         raise ScenarioValidationError("Bridge assets and graph edges must share IDs")
 
     _validate_context_boundaries(context_boundaries, asset_ids | edge_ids)
+    _validate_prediction_pings(
+        scenario_id,
+        asset_ids,
+        impact_prior,
+        prediction_pings,
+    )
 
 
 def _validate_context_boundaries(
@@ -168,4 +176,45 @@ def _validate_context_boundaries(
         if properties["routing_enabled"] or properties["flood_model_input"]:
             raise ScenarioValidationError(
                 f"{properties['id']} must not be flagged as a domain input"
+            )
+
+
+def _validate_prediction_pings(
+    scenario_id: str,
+    asset_ids: set[str],
+    impact_prior: Mapping[str, Any],
+    prediction_pings: Mapping[str, Any],
+) -> None:
+    if prediction_pings["scenario_id"] != scenario_id:
+        raise ScenarioValidationError("Prediction pings must share the scenario_id")
+    if prediction_pings["event_id"] != impact_prior["eventId"]:
+        raise ScenarioValidationError("Prediction pings and model prior must share event_id")
+
+    probabilities = impact_prior["impactProbabilities"]
+    pings = prediction_pings["pings"]
+    _assert_unique((ping["ping_id"] for ping in pings), "prediction ping ID")
+    targets = _assert_unique((ping["target"] for ping in pings), "prediction target")
+    if targets != set(probabilities):
+        raise ScenarioValidationError(
+            "Prediction pings must cover every model target exactly once"
+        )
+
+    for target, probability in probabilities.items():
+        if not 0 <= probability <= 1:
+            raise ScenarioValidationError(
+                f"Prediction probability for {target} must be between 0 and 1"
+            )
+    for ping in pings:
+        if ping.get("anchor_asset_id") not in asset_ids:
+            raise ScenarioValidationError(
+                f"Prediction ping {ping['ping_id']} references an unknown asset"
+            )
+        longitude, latitude = ping["coordinates"]
+        if not (80 <= longitude <= 90 and 25 <= latitude <= 31):
+            raise ScenarioValidationError(
+                f"Prediction ping {ping['ping_id']} falls outside Nepal"
+            )
+        if ping["activation_hours"] < 0:
+            raise ScenarioValidationError(
+                f"Prediction ping {ping['ping_id']} has invalid activation time"
             )

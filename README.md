@@ -1,7 +1,7 @@
 # the ark
 
 the ark is a map-centric, real-time disaster-response world model for flood
-emergencies. The MVP is a deterministic, replayable Kantipur River scenario
+emergencies. The MVP is a deterministic, replayable Nakkhu River scenario
 that derives infrastructure status, safe routes, community isolation, hazards,
 and comparable response-plan outcomes from one canonical world state.
 
@@ -19,11 +19,14 @@ The fixture is synthetic demonstration data and is not operational guidance.
 - FastAPI endpoints returning frontend-ready state.
 - Any frame viewable with injected events held active, with time-to-isolation
   recomputed for that event set.
+- A frozen CatBoost impact prior trained on 4,869 historical Nepal flood events,
+  exposed as four research-only prediction pings on the timeline and map.
 
 ## Verify
 
 ```bash
-PYTHONPYCACHEPREFIX=/private/tmp/pycache-the-ark python3 -m pytest -q
+PYTHONPYCACHEPREFIX=/private/tmp/pycache-the-ark \
+PYTHONPATH=services/physics/src .venv/bin/python -m pytest -q
 ```
 
 ## Run the API
@@ -60,7 +63,7 @@ The map renders on **MapLibre GL JS** over a **Protomaps PMTiles** vector
 basemap, with optional satellite imagery and 3D terrain. There is no access
 token, no account, and no metered tile API.
 
-Fetch the Kantipur basemap once:
+Fetch the Nakkhu/Kantipur Colony basemap once:
 
 ```bash
 npm run basemap
@@ -89,15 +92,17 @@ that path stays light.
 
 Map layers follow the operator list: flood inundation (now), predicted
 inundation, roads, evacuation routes, hospitals and shelters, bridges, river
-gauges, alerts, community labels, and administrative context — plus satellite
-and 3D terrain toggles. River gauges are listed but disabled: the fixture has no
-gauge observations yet.
+gauges, alerts, model prediction pings, community labels, and administrative
+context — plus satellite and 3D terrain toggles. River gauges are listed but
+disabled: the fixture has no gauge observations yet.
 
 The administrative boundaries are Kathmandu and Lalitpur Metropolitan City,
 visual context only — see `data/scenarios/kantipur-river/SOURCES.md` for
 provenance and licensing. The inundation polygons are a placeholder envelope
 derived from per-edge depth, not a hydraulic solve; `docs/scenario-contract.md`
-carries the fixture contract that will replace them.
+carries the fixture contract that will replace them. Prediction percentages are
+event-level impact priors: their map coordinates are visualization anchors, not
+building-level forecasts.
 
 Useful endpoints:
 
