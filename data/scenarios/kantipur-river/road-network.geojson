@@ -1,0 +1,69 @@
+{
+  "type": "FeatureCollection",
+  "name": "Kantipur River routing network",
+  "scenario_id": "kantipur-river-v1",
+  "data_classification": "modeled_synthetic_demo",
+  "operational_use": false,
+  "features": [
+    {
+      "type": "Feature", "id": "ktp-road-01",
+      "properties": { "id": "ktp-road-01", "edge_type": "road", "from_node_id": "ktp-node-com-01", "to_node_id": "ktp-node-junction-nw", "baseline_travel_minutes": 5, "bidirectional": true, "penalty_depth_m": 0.15, "closure_depth_m": 0.3, "penalty_multiplier": 1.5, "critical": false },
+      "geometry": { "type": "LineString", "coordinates": [[85.305, 27.71], [85.317, 27.705]] }
+    },
+    {
+      "type": "Feature", "id": "ktp-road-02",
+      "properties": { "id": "ktp-road-02", "edge_type": "road", "from_node_id": "ktp-node-junction-nw", "to_node_id": "ktp-node-com-02", "baseline_travel_minutes": 6, "bidirectional": true, "penalty_depth_m": 0.15, "closure_depth_m": 0.3, "penalty_multiplier": 1.5, "critical": false },
+      "geometry": { "type": "LineString", "coordinates": [[85.317, 27.705], [85.326, 27.705]] }
+    },
+    {
+      "type": "Feature", "id": "ktp-road-03",
+      "properties": { "id": "ktp-road-03", "edge_type": "road", "from_node_id": "ktp-node-com-02", "to_node_id": "ktp-node-hospital-01", "baseline_travel_minutes": 5, "bidirectional": true, "penalty_depth_m": 0.15, "closure_depth_m": 0.3, "penalty_multiplier": 1.5, "critical": true },
+      "geometry": { "type": "LineString", "coordinates": [[85.326, 27.705], [85.334, 27.705]] }
+    },
+    {
+      "type": "Feature", "id": "ktp-road-04",
+      "properties": { "id": "ktp-road-04", "edge_type": "road", "from_node_id": "ktp-node-hospital-01", "to_node_id": "ktp-node-junction-ne", "baseline_travel_minutes": 5, "bidirectional": true, "penalty_depth_m": 0.15, "closure_depth_m": 0.3, "penalty_multiplier": 1.5, "critical": true },
+      "geometry": { "type": "LineString", "coordinates": [[85.334, 27.705], [85.342, 27.705]] }
+    },
+    {
+      "type": "Feature", "id": "ktp-road-05",
+      "properties": { "id": "ktp-road-05", "edge_type": "road", "from_node_id": "ktp-node-junction-ne", "to_node_id": "ktp-node-com-03", "baseline_travel_minutes": 5, "bidirectional": true, "penalty_depth_m": 0.15, "closure_depth_m": 0.3, "penalty_multiplier": 1.5, "critical": false },
+      "geometry": { "type": "LineString", "coordinates": [[85.342, 27.705], [85.35, 27.705]] }
+    },
+    {
+      "type": "Feature", "id": "ktp-road-06",
+      "properties": { "id": "ktp-road-06", "edge_type": "road", "from_node_id": "ktp-node-com-03", "to_node_id": "ktp-node-shelter-02", "baseline_travel_minutes": 4, "bidirectional": true, "penalty_depth_m": 0.15, "closure_depth_m": 0.3, "penalty_multiplier": 1.5, "critical": false },
+      "geometry": { "type": "LineString", "coordinates": [[85.35, 27.705], [85.36, 27.71]] }
+    },
+    {
+      "type": "Feature", "id": "ktp-road-07",
+      "properties": { "id": "ktp-road-07", "edge_type": "road", "from_node_id": "ktp-node-shelter-01", "to_node_id": "ktp-node-com-04", "baseline_travel_minutes": 4, "bidirectional": true, "penalty_depth_m": 0.15, "closure_depth_m": 0.3, "penalty_multiplier": 1.5, "critical": false },
+      "geometry": { "type": "LineString", "coordinates": [[85.3, 27.652], [85.31, 27.66]] }
+    },
+    {
+      "type": "Feature", "id": "ktp-road-08",
+      "properties": { "id": "ktp-road-08", "edge_type": "road", "from_node_id": "ktp-node-com-04", "to_node_id": "ktp-node-junction-sw", "baseline_travel_minutes": 5, "bidirectional": true, "penalty_depth_m": 0.15, "closure_depth_m": 0.3, "penalty_multiplier": 1.5, "critical": false },
+      "geometry": { "type": "LineString", "coordinates": [[85.31, 27.66], [85.317, 27.675]] }
+    },
+    {
+      "type": "Feature", "id": "ktp-road-09",
+      "properties": { "id": "ktp-road-09", "edge_type": "road", "from_node_id": "ktp-node-junction-sw", "to_node_id": "ktp-node-junction-se", "baseline_travel_minutes": 9, "bidirectional": true, "penalty_depth_m": 0.12, "closure_depth_m": 0.28, "penalty_multiplier": 1.75, "critical": true },
+      "geometry": { "type": "LineString", "coordinates": [[85.317, 27.675], [85.342, 27.675]] }
+    },
+    {
+      "type": "Feature", "id": "ktp-road-10",
+      "properties": { "id": "ktp-road-10", "edge_type": "road", "from_node_id": "ktp-node-junction-se", "to_node_id": "ktp-node-com-05", "baseline_travel_minutes": 4, "bidirectional": true, "penalty_depth_m": 0.12, "closure_depth_m": 0.28, "penalty_multiplier": 1.75, "critical": true },
+      "geometry": { "type": "LineString", "coordinates": [[85.342, 27.675], [85.352, 27.664]] }
+    },
+    {
+      "type": "Feature", "id": "ktp-bridge-01",
+      "properties": { "id": "ktp-bridge-01", "edge_type": "bridge", "from_node_id": "ktp-node-junction-nw", "to_node_id": "ktp-node-junction-sw", "baseline_travel_minutes": 2, "bidirectional": true, "penalty_depth_m": 0.1, "closure_depth_m": 0.22, "penalty_multiplier": 2.0, "critical": true },
+      "geometry": { "type": "LineString", "coordinates": [[85.317, 27.705], [85.317, 27.675]] }
+    },
+    {
+      "type": "Feature", "id": "ktp-bridge-02",
+      "properties": { "id": "ktp-bridge-02", "edge_type": "bridge", "from_node_id": "ktp-node-junction-ne", "to_node_id": "ktp-node-junction-se", "baseline_travel_minutes": 2, "bidirectional": true, "penalty_depth_m": 0.1, "closure_depth_m": 0.22, "penalty_multiplier": 2.0, "critical": true },
+      "geometry": { "type": "LineString", "coordinates": [[85.342, 27.705], [85.342, 27.675]] }
+    }
+  ]
+}

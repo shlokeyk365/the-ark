@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0.0",
+  "scenario_id": "kantipur-river-v1",
+  "data_classification": "modeled_synthetic_demo",
+  "operational_use": false,
+  "plans": [
+    {
+      "plan_id": "ktp-plan-a",
+      "name": "Plan A — protect the exposed south and east",
+      "evaluation_deadline_minutes": 60,
+      "assumptions": [
+        "Both shelters remain open.",
+        "Riverbend uses the shortest route to East Civic Shelter.",
+        "Unassigned population remains in place during this evaluation window."
+      ],
+      "assignments": [
+        { "community_id": "ktp-com-05", "shelter_id": "ktp-shelter-02", "people": 620, "departure_offset_minutes": 0, "route_preference": "shortest_safe" },
+        { "community_id": "ktp-com-04", "shelter_id": "ktp-shelter-01", "people": 1060, "departure_offset_minutes": 0, "route_preference": "shortest_safe" },
+        { "community_id": "ktp-com-03", "shelter_id": "ktp-shelter-02", "people": 940, "departure_offset_minutes": 0, "route_preference": "shortest_safe" }
+      ]
+    },
+    {
+      "plan_id": "ktp-plan-b",
+      "name": "Plan B — fill both shelters to capacity",
+      "evaluation_deadline_minutes": 60,
+      "assumptions": [
+        "Both shelters remain open.",
+        "Riverbend travels west along the southern corridor.",
+        "Assignments exactly consume the modeled shelter capacity."
+      ],
+      "assignments": [
+        { "community_id": "ktp-com-05", "shelter_id": "ktp-shelter-01", "people": 620, "departure_offset_minutes": 0, "route_preference": "shortest_safe" },
+        { "community_id": "ktp-com-04", "shelter_id": "ktp-shelter-01", "people": 680, "departure_offset_minutes": 0, "route_preference": "shortest_safe" },
+        { "community_id": "ktp-com-01", "shelter_id": "ktp-shelter-02", "people": 760, "departure_offset_minutes": 0, "route_preference": "shortest_safe" },
+        { "community_id": "ktp-com-03", "shelter_id": "ktp-shelter-02", "people": 940, "departure_offset_minutes": 0, "route_preference": "shortest_safe" }
+      ]
+    },
+    {
+      "plan_id": "ktp-plan-c",
+      "name": "Plan C — protect dense communities first",
+      "evaluation_deadline_minutes": 60,
+      "assumptions": [
+        "Both shelters remain open.",
+        "North Market receives first claim on East Civic Shelter.",
+        "Only part of Riverbend moves during this evaluation window."
+      ],
+      "assignments": [
+        { "community_id": "ktp-com-02", "shelter_id": "ktp-shelter-02", "people": 1180, "departure_offset_minutes": 0, "route_preference": "shortest_safe" },
+        { "community_id": "ktp-com-03", "shelter_id": "ktp-shelter-02", "people": 520, "departure_offset_minutes": 0, "route_preference": "shortest_safe" },
+        { "community_id": "ktp-com-04", "shelter_id": "ktp-shelter-01", "people": 1060, "departure_offset_minutes": 0, "route_preference": "shortest_safe" },
+        { "community_id": "ktp-com-05", "shelter_id": "ktp-shelter-01", "people": 240, "departure_offset_minutes": 0, "route_preference": "shortest_safe" }
+      ]
+    }
+  ]
+}

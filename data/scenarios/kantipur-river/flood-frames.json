@@ -1,0 +1,116 @@
+{
+  "schema_version": "1.0.0",
+  "scenario_id": "kantipur-river-v1",
+  "data_classification": "modeled_synthetic_demo",
+  "operational_use": false,
+  "frames": [
+    {
+      "frame_id": "ktp-frame-now",
+      "simulation_time_hours": 0,
+      "observed_at": "2026-09-18T12:00:00Z",
+      "rainfall_assumption": "baseline rainfall",
+      "rainfall_multiplier": 1.0,
+      "source": {
+        "source_type": "modeled_input",
+        "model_name": "kantipur-curated-fixture",
+        "model_version": "1.0.0",
+        "description": "Dry baseline used for deterministic route verification."
+      },
+      "edge_conditions": [
+        { "edge_id": "ktp-road-01", "flood_depth_m": 0.0 },
+        { "edge_id": "ktp-road-02", "flood_depth_m": 0.0 },
+        { "edge_id": "ktp-road-03", "flood_depth_m": 0.0 },
+        { "edge_id": "ktp-road-04", "flood_depth_m": 0.0 },
+        { "edge_id": "ktp-road-05", "flood_depth_m": 0.0 },
+        { "edge_id": "ktp-road-06", "flood_depth_m": 0.0 },
+        { "edge_id": "ktp-road-07", "flood_depth_m": 0.0 },
+        { "edge_id": "ktp-road-08", "flood_depth_m": 0.0 },
+        { "edge_id": "ktp-road-09", "flood_depth_m": 0.02 },
+        { "edge_id": "ktp-road-10", "flood_depth_m": 0.02 },
+        { "edge_id": "ktp-bridge-01", "flood_depth_m": 0.0 },
+        { "edge_id": "ktp-bridge-02", "flood_depth_m": 0.01 }
+      ]
+    },
+    {
+      "frame_id": "ktp-frame-plus-6h",
+      "simulation_time_hours": 6,
+      "observed_at": "2026-09-18T18:00:00Z",
+      "rainfall_assumption": "baseline rainfall",
+      "rainfall_multiplier": 1.0,
+      "source": {
+        "source_type": "modeled_input",
+        "model_name": "kantipur-curated-fixture",
+        "model_version": "1.0.0",
+        "description": "Water reaches the low southern corridor and eastern bridge approach."
+      },
+      "edge_conditions": [
+        { "edge_id": "ktp-road-01", "flood_depth_m": 0.01 },
+        { "edge_id": "ktp-road-02", "flood_depth_m": 0.02 },
+        { "edge_id": "ktp-road-03", "flood_depth_m": 0.02 },
+        { "edge_id": "ktp-road-04", "flood_depth_m": 0.03 },
+        { "edge_id": "ktp-road-05", "flood_depth_m": 0.04 },
+        { "edge_id": "ktp-road-06", "flood_depth_m": 0.03 },
+        { "edge_id": "ktp-road-07", "flood_depth_m": 0.02 },
+        { "edge_id": "ktp-road-08", "flood_depth_m": 0.07 },
+        { "edge_id": "ktp-road-09", "flood_depth_m": 0.16 },
+        { "edge_id": "ktp-road-10", "flood_depth_m": 0.1 },
+        { "edge_id": "ktp-bridge-01", "flood_depth_m": 0.05 },
+        { "edge_id": "ktp-bridge-02", "flood_depth_m": 0.12 }
+      ]
+    },
+    {
+      "frame_id": "ktp-frame-plus-12h",
+      "simulation_time_hours": 12,
+      "observed_at": "2026-09-19T00:00:00Z",
+      "rainfall_assumption": "baseline rainfall",
+      "rainfall_multiplier": 1.0,
+      "source": {
+        "source_type": "modeled_input",
+        "model_name": "kantipur-curated-fixture",
+        "model_version": "1.0.0",
+        "description": "The southern corridor closes while the east bridge remains restricted but open."
+      },
+      "edge_conditions": [
+        { "edge_id": "ktp-road-01", "flood_depth_m": 0.02 },
+        { "edge_id": "ktp-road-02", "flood_depth_m": 0.04 },
+        { "edge_id": "ktp-road-03", "flood_depth_m": 0.05 },
+        { "edge_id": "ktp-road-04", "flood_depth_m": 0.06 },
+        { "edge_id": "ktp-road-05", "flood_depth_m": 0.08 },
+        { "edge_id": "ktp-road-06", "flood_depth_m": 0.06 },
+        { "edge_id": "ktp-road-07", "flood_depth_m": 0.03 },
+        { "edge_id": "ktp-road-08", "flood_depth_m": 0.14 },
+        { "edge_id": "ktp-road-09", "flood_depth_m": 0.31 },
+        { "edge_id": "ktp-road-10", "flood_depth_m": 0.18 },
+        { "edge_id": "ktp-bridge-01", "flood_depth_m": 0.09 },
+        { "edge_id": "ktp-bridge-02", "flood_depth_m": 0.18 }
+      ]
+    },
+    {
+      "frame_id": "ktp-frame-plus-24h",
+      "simulation_time_hours": 24,
+      "observed_at": "2026-09-19T12:00:00Z",
+      "rainfall_assumption": "baseline rainfall",
+      "rainfall_multiplier": 1.0,
+      "source": {
+        "source_type": "modeled_input",
+        "model_name": "kantipur-curated-fixture",
+        "model_version": "1.0.0",
+        "description": "Peak fixture conditions close the southern corridor and eastern crossing while restricting the west bridge."
+      },
+      "edge_conditions": [
+        { "edge_id": "ktp-road-01", "flood_depth_m": 0.04 },
+        { "edge_id": "ktp-road-02", "flood_depth_m": 0.07 },
+        { "edge_id": "ktp-road-03", "flood_depth_m": 0.09 },
+        { "edge_id": "ktp-road-04", "flood_depth_m": 0.11 },
+        { "edge_id": "ktp-road-05", "flood_depth_m": 0.13 },
+        { "edge_id": "ktp-road-06", "flood_depth_m": 0.1 },
+        { "edge_id": "ktp-road-07", "flood_depth_m": 0.05 },
+        { "edge_id": "ktp-road-08", "flood_depth_m": 0.2 },
+        { "edge_id": "ktp-road-09", "flood_depth_m": 0.39 },
+        { "edge_id": "ktp-road-10", "flood_depth_m": 0.2 },
+        { "edge_id": "ktp-bridge-01", "flood_depth_m": 0.14 },
+        { "edge_id": "ktp-bridge-02", "flood_depth_m": 0.24 }
+      ]
+    }
+  ]
+}

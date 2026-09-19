@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "scenario_id": "kantipur-river-v1",
+  "name": "Kantipur River deterministic flood-response scenario",
+  "description": "A synthetic two-bank river corridor used to demonstrate routing, isolation, and counterfactual plan evaluation.",
+  "data_classification": "modeled_synthetic_demo",
+  "operational_use": false,
+  "baseline_timestamp": "2026-09-18T12:00:00Z",
+  "initial_world_state_version": "ktp-world-0001",
+  "initial_frame_id": "ktp-frame-now",
+  "evaluation_horizon_hours": 24,
+  "fixture_files": {
+    "assets": "assets.geojson",
+    "road_network": "road-network.geojson",
+    "flood_frames": "flood-frames.json",
+    "response_plans": "response-plans.json",
+    "events": "event-stream.json",
+    "context_boundaries": "context-boundaries.geojson"
+  },
+  "model_metadata": {
+    "model_name": "kantipur-curated-fixture",
+    "model_version": "1.0.0",
+    "source_type": "modeled_input",
+    "limitations": [
+      "Synthetic demonstration data",
+      "Not calibrated to observed hydrology",
+      "Not suitable for operational decisions"
+    ]
+  }
+}
