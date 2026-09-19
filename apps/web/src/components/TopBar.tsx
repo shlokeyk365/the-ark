@@ -16,7 +16,7 @@ export function TopBar({
 }: TopBarProps) {
   return (
     <header className="topbar">
-      <div className="brand" aria-label="the ark flood operations">
+      <a className="brand" href="/" aria-label="Back to ARK landing page" title="Back to landing page">
         <span className="brand-mark">
           <img
             src="/assets/ark-longboat-logo.png"
@@ -27,9 +27,12 @@ export function TopBar({
         <span className="brand-name">ARK</span>
         <span className="brand-divider">/</span>
         <span className="brand-context">FLOODWORLD</span>
-      </div>
+      </a>
 
       <nav className="command-view-tabs" aria-label="Command center views">
+        <a className="command-home-link" href="/" title="Back to landing page">
+          Home
+        </a>
         <button
           aria-current={activeView === "operations" ? "page" : undefined}
           className={activeView === "operations" ? "active" : ""}

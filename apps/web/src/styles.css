@@ -2632,6 +2632,14 @@ input:focus-visible,
 }
 
 .brand { gap: 9px; padding: 0 20px; }
+a.brand {
+  color: inherit;
+  text-decoration: none;
+}
+a.brand:hover .brand-name,
+a.brand:hover .brand-context {
+  color: #e2e1dc;
+}
 .brand-mark { color: #9aadb7; filter: none; }
 .brand-logo { height: 26px; max-width: 36px; }
 .brand-name {
@@ -3378,6 +3386,22 @@ input:focus-visible,
   border: 0;
   border-radius: 5px;
 }
+.command-home-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  padding: 0 15px;
+  color: #707673;
+  font-family: var(--mono);
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: 5px;
+}
+.command-home-link:hover { color: #bfc2bd; }
 .command-view-tabs button:hover { color: #bfc2bd; }
 .command-view-tabs button.active {
   color: #d6d5cf;
