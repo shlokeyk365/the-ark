@@ -8,7 +8,7 @@ uv run uvicorn ark_api.main:app --reload
 ```
 
 `GET /health` returns `{"status":"ok","service":"ark-api"}`. The deterministic
-engine is available as a Python function; no simulation HTTP endpoint exists yet.
+pipeline is exposed through `POST /api/v1/simulate-response` and Python functions.
 
 Development checks:
 
@@ -300,3 +300,103 @@ under the supplied policy, with no mutation of the caller's list or objects.
 Tests include the generic world -> candidate plans -> independent simulations ->
 scoring -> ranking -> recommendation pipeline and serialization in
 `SimulationResponse`.
+
+## Synchronous simulation API
+
+From `apps/api`, run `uv sync --locked`, then
+`uv run uvicorn ark_api.main:app --reload`. The local API is at
+`http://127.0.0.1:8000`; interactive documentation is at `/docs` and the generated
+OpenAPI schema at `/openapi.json`.
+
+`POST /api/v1/simulate-response` executes the complete pipeline **synchronously**
+for the hackathon MVP: validate the request, generate or accept plans, simulate
+each independently from the same world, score with the default policy, rank, and
+recommend a viable plan. It does not create a background job. The route delegates
+to `run_response_simulation`; existing domain functions implement all planning,
+simulation, scoring, ranking, and recommendation behavior.
+
+Request rules:
+
+- `world_state` is required and uses the existing strict world contract.
+- Omitted or null `plans` generates the three baseline strategies with their
+  existing IDs. An explicitly empty list is an error.
+- Supplied plans retain their IDs. IDs must be unique, statuses must be `ready`,
+  and at most **20 plans** may be submitted. Empty-action ready plans are valid.
+- `duration_minutes` defaults to 60 and must be an integer from **1 to 1,440**,
+  inclusive. Limits bound accidental plan-count/time-horizon expansion, not the
+  size of an arbitrary world graph or a wall-clock execution deadline.
+- `random_seed` defaults to 42. It is accepted but unused by this deterministic
+  engine, reserved for later robustness work. Changing it does not change results.
+- Request objects, worlds, and supplied plans are not mutated.
+
+The response contains ranked `ScenarioResult` objects with metrics, signed score
+breakdowns, timelines, violations, viability flags/reasons, and terminal run status.
+Poor outcomes and individual rejected actions still produce HTTP 200. A null
+`recommended_plan_id` means no result passed the configured viability checks;
+it is not a server failure. Model version is the fixed
+`ark-response-simulator/0.1.0`, defined with the disclaimer and limits in
+`routes/simulations.py`, not derived from timestamps or Git state.
+
+Every successful response carries this fixed disclaimer:
+
+> Ark provides experimental decision support. Results depend on supplied data,
+> assumptions, and simplified simulation rules. Human incident command retains
+> operational authority.
+
+### Errors
+
+Malformed JSON, unknown fields, invalid nested models, and nonpositive/noninteger
+durations retain FastAPI's standard **422** `detail` response. A malformed plan
+rejects the entire request before execution. Request-policy/domain failures use
+**400**, and unexpected internal errors use **500**, with this consistent envelope:
+
+```json
+{"error":{"code":"DUPLICATE_PLAN_ID","message":"Plan IDs must be unique.","details":{}}}
+```
+
+| Code | HTTP | Meaning |
+| --- | --- | --- |
+| `EMPTY_PLANS` | 400 | Explicit empty submitted-plan list. |
+| `DUPLICATE_PLAN_ID` | 400 | Submitted plan IDs repeat. |
+| `TOO_MANY_PLANS` | 400 | More than 20 submitted plans; details includes `max_plans`. |
+| `PLAN_NOT_READY` | 400 | A submitted plan is not ready. |
+| `DURATION_LIMIT_EXCEEDED` | 400 | Duration exceeds 1,440; details includes `max_duration_minutes`. |
+| `DOMAIN_VALIDATION_FAILED` | 400 | Planning or ranking rejects the supplied scenario/results. |
+| `INTERNAL_ERROR` | 500 | Unexpected internal failure. |
+
+Client messages are fixed and sanitized. Unexpected exceptions are logged through
+standard Python logging; no exception details or stack traces enter the response.
+Internal Pydantic construction failures are treated as server bugs, not malformed
+client requests. Normal validation rejection of a PlanAction stays in its result.
+
+### Compact example
+
+Send this complete minimal request as JSON to `POST /api/v1/simulate-response`:
+
+```json
+{
+  "world_state": {"scenario_id":"demo","current_minute":0,"nodes":[]},
+  "duration_minutes":60,
+  "random_seed":42
+}
+```
+
+The response contains three empty-work results with score 0. The following shows
+selected response fields only; the actual results also contain all nine metrics
+and contributions, timeline events, violations, and nonviability reasons:
+
+```json
+{
+  "recommended_plan_id":"balanced-response",
+  "results":[
+    {"plan_id":"balanced-response","status":"completed","score":0.0,"viable":true},
+    {"plan_id":"immediate-rescue","status":"completed","score":0.0,"viable":true},
+    {"plan_id":"preventive-evacuation","status":"completed","score":0.0,"viable":true}
+  ],
+  "model_version":"ark-response-simulator/0.1.0",
+  "disclaimer":"Ark provides experimental decision support. Results depend on supplied data, assumptions, and simplified simulation rules. Human incident command retains operational authority."
+}
+```
+
+Here the recommendation follows the plan-ID tie-breaker, not superior outcomes.
+Scores remain operating-priority comparisons, never confidence or probabilities.
