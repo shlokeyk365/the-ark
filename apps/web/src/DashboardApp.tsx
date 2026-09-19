@@ -8,12 +8,14 @@ import type {
 import { applyEvent, getBootstrap, getFrame } from "./api";
 import { eventsActiveAt, formatHours, type FrameSeriesEntry } from "./derive";
 import { logEntry, type LogEntry } from "./session";
-import { IncidentSidebar } from "./components/IncidentSidebar";
 import { RightRail } from "./components/RightRail";
 import { ScenarioMap } from "./components/ScenarioMap";
+import { SelectedAssetPanel } from "./components/SelectedAssetPanel";
 import { StatusBar } from "./components/StatusBar";
+import { TacticalAssetsPanel } from "./components/TacticalAssetsPanel";
 import { Timeline } from "./components/Timeline";
 import { TopBar } from "./components/TopBar";
+import { TopStatusMetrics } from "./components/TopStatusMetrics";
 
 const PLAYBACK_INTERVAL_MS = 1600;
 
@@ -67,6 +69,7 @@ export function App() {
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
   const [activeEventIds, setActiveEventIds] = useState<string[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState("ktp-plan-a");
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [comparison, setComparison] = useState<Comparison | undefined>();
   const [log, setLog] = useState<LogEntry[]>([]);
   const [playing, setPlaying] = useState(false);
@@ -89,6 +92,16 @@ export function App() {
         setBootstrap(loaded);
         setSeries(entries);
         setSelectedFrameId(loaded.initial_frame_id);
+        setSelectedAssetId((current) => {
+          if (current) return current;
+          const eventEdgeId = loaded.events[0]?.changes[0]?.edge_id;
+          return (
+            loaded.assets.features.find(
+              (feature) =>
+                feature.id === eventEdgeId || feature.properties.edge_id === eventEdgeId,
+            )?.id ?? null
+          );
+        });
         pushLog(
           logEntry(
             "load",
@@ -290,7 +303,7 @@ export function App() {
 
   return (
     <div className="app-frame">
-      <TopBar alertCount={worldState.hazards.length} />
+      <TopBar alertCount={worldState.hazards.length} worldState={worldState} />
 
       {error ? (
         <div className="error-banner" role="alert">
@@ -302,16 +315,42 @@ export function App() {
         </div>
       ) : null}
 
-      <main className="dashboard-grid" aria-busy={busy}>
-        <IncidentSidebar bootstrap={bootstrap} series={series} worldState={worldState} />
-
+      <main className="dashboard-grid figma-operations-layout" aria-busy={busy}>
         <section className="map-workspace" aria-label="Operations workspace">
           <ScenarioMap
             bootstrap={bootstrap}
             horizonState={horizonState}
+            onSelectAsset={setSelectedAssetId}
+            selectedPlan={selectedPlan}
+            selectedAssetId={selectedAssetId}
+            worldState={worldState}
+          />
+          <TopStatusMetrics worldState={worldState} />
+          <TacticalAssetsPanel
+            bootstrap={bootstrap}
+            onSelectAsset={setSelectedAssetId}
+            selectedAssetId={selectedAssetId}
             selectedPlan={selectedPlan}
             worldState={worldState}
           />
+          <div className="operations-right-stack">
+            <SelectedAssetPanel
+              activeEventIds={activeEventIds}
+              bootstrap={bootstrap}
+              busy={busy}
+              onApplyEvent={onApplyEvent}
+              selectedAssetId={selectedAssetId}
+              worldState={worldState}
+            />
+            <RightRail
+              bootstrap={bootstrap}
+              comparison={activeComparison}
+              log={log}
+              onSelectPlan={setSelectedPlanId}
+              selectedPlanId={selectedPlan?.plan_id ?? selectedPlanId}
+              worldState={worldState}
+            />
+          </div>
           <Timeline
             activeEventIds={activeEventIds}
             bootstrap={bootstrap}
@@ -324,15 +363,6 @@ export function App() {
             worldState={worldState}
           />
         </section>
-
-        <RightRail
-          bootstrap={bootstrap}
-          comparison={activeComparison}
-          log={log}
-          onSelectPlan={setSelectedPlanId}
-          selectedPlanId={selectedPlan?.plan_id ?? selectedPlanId}
-          worldState={worldState}
-        />
       </main>
 
       <StatusBar

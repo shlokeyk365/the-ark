@@ -47,6 +47,7 @@ export function roadsCollection(
   bootstrap: ScenarioBootstrapResponse,
   worldState: WorldStateSnapshot,
   routeEdgeIds: Set<string>,
+  selectedAssetId: string | null,
 ): MapFeatureCollection {
   const stateById = new Map(
     worldState.edge_states.map((edge) => [edge.edge_id, edge]),
@@ -71,6 +72,7 @@ export function roadsCollection(
           originating_event_id: state?.originating_event_id ?? null,
           critical: Boolean(state?.critical ?? feature.properties.critical),
           on_route: routeEdgeIds.has(feature.id),
+          selected: feature.id === selectedAssetId,
         },
       };
     }),
@@ -107,6 +109,7 @@ export function routeEdgeIdsFor(plan: PlanResult | undefined): Set<string> {
 export function assetsCollection(
   bootstrap: ScenarioBootstrapResponse,
   worldState: WorldStateSnapshot,
+  selectedAssetId: string | null,
 ): MapFeatureCollection {
   const accessById = new Map(
     worldState.community_access.map((access) => [access.community_id, access]),
@@ -135,6 +138,7 @@ export function assetsCollection(
             hospital_accessible: access ? access.hospital_accessible : true,
             reachable_shelters: access?.reachable_shelter_ids.length ?? 0,
             time_to_isolation_hours: access?.time_to_isolation_hours ?? null,
+            selected: feature.id === selectedAssetId,
           },
         };
       }),
@@ -144,6 +148,7 @@ export function assetsCollection(
 export function bridgesCollection(
   bootstrap: ScenarioBootstrapResponse,
   worldState: WorldStateSnapshot,
+  selectedAssetId: string | null,
 ): MapFeatureCollection {
   const stateById = new Map(
     worldState.edge_states.map((edge) => [edge.edge_id, edge]),
@@ -172,6 +177,7 @@ export function bridgesCollection(
             name: feature.properties.name,
             status: state?.status ?? "open",
             flood_depth_m: state?.flood_depth_m ?? 0,
+            selected: feature.id === selectedAssetId || edgeId === selectedAssetId,
           },
         };
       }),

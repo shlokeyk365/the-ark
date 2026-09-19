@@ -21,17 +21,17 @@ export const SOURCE = {
 } as const;
 
 export const COLORS = {
-  open: "#dce8f4",
-  restricted: "#f0a52a",
-  closed: "#f24d63",
-  route: "#5fc4ff",
-  water: "#2aa5ef",
-  forecast: "#7d5cf0",
-  hospital: "#e8536a",
-  shelter: "#2eb277",
-  community: "#eef5fc",
-  isolated: "#f24d63",
-  context: "#9dc4e8",
+  open: "#aab8b2",
+  restricted: "#a8967f",
+  closed: "#b8797f",
+  route: "#9aabb9",
+  water: "#657d91",
+  forecast: "#7f8f9d",
+  hospital: "#b8797f",
+  shelter: "#869b8c",
+  community: "#d3d4cf",
+  isolated: "#b8797f",
+  context: "#77828a",
 } as const;
 
 const isBridge = ["==", ["get", "edge_type"], "bridge"];
@@ -72,7 +72,7 @@ export const LAYERS: LayerSpecification[] = [
     id: "ark-flood-forecast-fill",
     type: "fill",
     source: SOURCE.floodForecast,
-    paint: { "fill-color": COLORS.forecast, "fill-opacity": 0.14 },
+    paint: { "fill-color": COLORS.forecast, "fill-opacity": 0.1 },
   },
   {
     id: "ark-flood-forecast-line",
@@ -81,7 +81,7 @@ export const LAYERS: LayerSpecification[] = [
     paint: {
       "line-color": COLORS.forecast,
       "line-width": 1.2,
-      "line-opacity": 0.55,
+      "line-opacity": 0.72,
       "line-dasharray": [3, 2],
     },
   },
@@ -90,19 +90,19 @@ export const LAYERS: LayerSpecification[] = [
     id: "ark-flood-now-fill",
     type: "fill",
     source: SOURCE.floodNow,
-    paint: { "fill-color": COLORS.water, "fill-opacity": 0.32 },
+    paint: { "fill-color": COLORS.water, "fill-opacity": 0.25 },
   },
   {
     id: "ark-flood-now-line",
     type: "line",
     source: SOURCE.floodNow,
-    paint: { "line-color": "#8ad6ff", "line-width": 1.4, "line-opacity": 0.7 },
+    paint: { "line-color": "#a5b4bf", "line-width": 1.1, "line-opacity": 0.62 },
   },
   {
     id: "ark-channel-line",
     type: "line",
     source: SOURCE.channel,
-    paint: { "line-color": "#bfe8ff", "line-width": 1.2, "line-opacity": 0.45 },
+    paint: { "line-color": "#a9b9c3", "line-width": 1, "line-opacity": 0.36 },
   },
 
   // Depth read directly off each edge — this part is model output, not an envelope.
@@ -113,9 +113,9 @@ export const LAYERS: LayerSpecification[] = [
     filter: [">", ["get", "flood_depth_m"], 0],
     layout: { "line-cap": "round" },
     paint: {
-      "line-color": "#49b6ff",
-      "line-blur": 4,
-      "line-opacity": 0.45,
+      "line-color": "#738b9d",
+      "line-blur": 5,
+      "line-opacity": 0.24,
       "line-width": [
         "interpolate",
         ["linear"],
@@ -134,7 +134,7 @@ export const LAYERS: LayerSpecification[] = [
     source: SOURCE.roads,
     layout: { "line-cap": "round", "line-join": "round" },
     paint: {
-      "line-color": "#050b12",
+      "line-color": "#101315",
       "line-opacity": 0.8,
       "line-width": roadWidth(7, 11) as never,
     },
@@ -171,6 +171,19 @@ export const LAYERS: LayerSpecification[] = [
       "line-dasharray": [1, 1.5],
     },
   },
+  {
+    id: "ark-selected-road",
+    type: "line",
+    source: SOURCE.roads,
+    filter: ["==", ["get", "selected"], true],
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": "#e0ded7",
+      "line-width": roadWidth(7.5, 12) as never,
+      "line-opacity": 0.85,
+      "line-blur": 1.5,
+    },
+  },
 
   {
     id: "ark-route-glow",
@@ -179,9 +192,9 @@ export const LAYERS: LayerSpecification[] = [
     layout: { "line-cap": "round", "line-join": "round" },
     paint: {
       "line-color": COLORS.route,
-      "line-width": 15,
-      "line-blur": 11,
-      "line-opacity": 0.4,
+      "line-width": 8,
+      "line-blur": 9,
+      "line-opacity": 0.18,
     },
   },
   {
@@ -191,8 +204,8 @@ export const LAYERS: LayerSpecification[] = [
     layout: { "line-cap": "butt", "line-join": "round" },
     paint: {
       "line-color": COLORS.route,
-      "line-width": 3.4,
-      "line-dasharray": [0.4, 1.6],
+      "line-width": 2.2,
+      "line-dasharray": [1.2, 1.4],
     },
   },
 
@@ -209,10 +222,23 @@ export const LAYERS: LayerSpecification[] = [
         COLORS.closed,
         "restricted",
         COLORS.restricted,
-        "#0b1726",
+        "#242b2d",
       ],
-      "circle-stroke-color": "#cddcea",
+      "circle-stroke-color": "#d0d2cd",
       "circle-stroke-width": 1.6,
+    },
+  },
+  {
+    id: "ark-selected-bridge",
+    type: "circle",
+    source: SOURCE.bridges,
+    filter: ["==", ["get", "selected"], true],
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 8, 16, 16],
+      "circle-color": "rgba(0, 0, 0, 0)",
+      "circle-stroke-color": "#e4e1d8",
+      "circle-stroke-width": 2,
+      "circle-stroke-opacity": 0.95,
     },
   },
 
@@ -228,6 +254,24 @@ export const LAYERS: LayerSpecification[] = [
       "circle-stroke-color": COLORS.isolated,
       "circle-stroke-width": 1.5,
       "circle-stroke-opacity": 0.7,
+    },
+  },
+  {
+    id: "ark-assets-risk-ring",
+    type: "circle",
+    source: SOURCE.assets,
+    filter: ["==", ["get", "asset_type"], "community"],
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 18, 16, 48],
+      "circle-color": "rgba(0,0,0,0)",
+      "circle-stroke-color": [
+        "case",
+        ["==", ["get", "isolated"], true],
+        COLORS.isolated,
+        "#89989a",
+      ],
+      "circle-stroke-width": 1,
+      "circle-stroke-opacity": ["case", ["==", ["get", "isolated"], true], 0.7, 0.28],
     },
   },
   {
@@ -258,8 +302,21 @@ export const LAYERS: LayerSpecification[] = [
           COLORS.community,
         ],
       ],
-      "circle-stroke-color": "#091421",
+      "circle-stroke-color": "#171b1c",
       "circle-stroke-width": 2,
+    },
+  },
+  {
+    id: "ark-selected-asset",
+    type: "circle",
+    source: SOURCE.assets,
+    filter: ["==", ["get", "selected"], true],
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 10, 16, 20],
+      "circle-color": "rgba(0, 0, 0, 0)",
+      "circle-stroke-color": "#e4e1d8",
+      "circle-stroke-width": 2,
+      "circle-stroke-opacity": 0.95,
     },
   },
   {
@@ -275,7 +332,7 @@ export const LAYERS: LayerSpecification[] = [
       "text-allow-overlap": true,
       "text-ignore-placement": true,
     },
-    paint: { "text-color": "#ffffff" },
+    paint: { "text-color": "#f1eee7" },
   },
 
   {
@@ -297,9 +354,68 @@ export const LAYERS: LayerSpecification[] = [
         COLORS.closed,
         "high",
         COLORS.restricted,
-        "#7fc4ff",
+        "#93a4ae",
       ],
-      "text-halo-color": "#050b12",
+      "text-halo-color": "#111416",
+      "text-halo-width": 1.6,
+    },
+  },
+  {
+    id: "ark-hazard-labels",
+    type: "symbol",
+    source: SOURCE.hazards,
+    layout: {
+      "text-field": ["upcase", ["get", "priority"]],
+      "text-font": ["Noto Sans Medium"],
+      "text-size": 9,
+      "text-offset": [1.1, -1.5],
+      "text-anchor": "left",
+      "text-allow-overlap": false,
+    },
+    paint: {
+      "text-color": "#d1c9c5",
+      "text-halo-color": "rgba(17,20,22,0.94)",
+      "text-halo-width": 2,
+    },
+  },
+
+  {
+    id: "ark-bridge-labels",
+    type: "symbol",
+    source: SOURCE.bridges,
+    minzoom: 11,
+    layout: {
+      "text-field": ["get", "name"],
+      "text-font": ["Noto Sans Medium"],
+      "text-size": 9,
+      "text-offset": [0, -1.5],
+      "text-anchor": "bottom",
+      "text-optional": true,
+    },
+    paint: {
+      "text-color": "#c8c8c2",
+      "text-halo-color": "rgba(17,20,22,0.94)",
+      "text-halo-width": 1.5,
+    },
+  },
+  {
+    id: "ark-road-labels",
+    type: "symbol",
+    source: SOURCE.roads,
+    minzoom: 12,
+    filter: ["any", ["==", ["get", "critical"], true], ["==", ["get", "selected"], true]],
+    layout: {
+      "symbol-placement": "line",
+      "text-field": ["concat", ["get", "id"], "  ·  ", ["upcase", ["get", "status"]]],
+      "text-font": ["Noto Sans Medium"],
+      "text-size": 8,
+      "text-letter-spacing": 0.08,
+      "text-offset": [0, 0.9],
+      "text-optional": true,
+    },
+    paint: {
+      "text-color": "#aeb2ae",
+      "text-halo-color": "rgba(17,20,22,0.94)",
       "text-halo-width": 1.6,
     },
   },
@@ -317,8 +433,8 @@ export const LAYERS: LayerSpecification[] = [
       "text-optional": true,
     },
     paint: {
-      "text-color": "#f1f7fc",
-      "text-halo-color": "rgba(5, 11, 18, 0.92)",
+      "text-color": "#deddd7",
+      "text-halo-color": "rgba(17, 20, 22, 0.94)",
       "text-halo-width": 1.7,
     },
   },
@@ -368,6 +484,7 @@ export const LAYER_CONTROLS: LayerControl[] = [
       "ark-roads-open",
       "ark-roads-restricted",
       "ark-roads-closed",
+      "ark-selected-road",
     ],
   },
   {
@@ -380,13 +497,13 @@ export const LAYER_CONTROLS: LayerControl[] = [
     key: "facilities",
     label: "Hospitals & shelters",
     swatch: "facilities",
-    layerIds: ["ark-assets-circle", "ark-assets-glyph", "ark-assets-halo"],
+    layerIds: ["ark-assets-circle", "ark-assets-glyph", "ark-assets-halo", "ark-assets-risk-ring", "ark-selected-asset"],
   },
   {
     key: "bridges",
     label: "Bridges",
     swatch: "bridges",
-    layerIds: ["ark-bridges-marker"],
+    layerIds: ["ark-bridges-marker", "ark-selected-bridge", "ark-bridge-labels"],
   },
   {
     key: "gauges",
@@ -399,13 +516,13 @@ export const LAYER_CONTROLS: LayerControl[] = [
     key: "alerts",
     label: "Alerts",
     swatch: "alerts",
-    layerIds: ["ark-hazards"],
+    layerIds: ["ark-hazards", "ark-hazard-labels"],
   },
   {
     key: "labels",
     label: "Community labels",
     swatch: "labels",
-    layerIds: ["ark-asset-labels"],
+    layerIds: ["ark-asset-labels", "ark-road-labels"],
   },
   {
     key: "context",

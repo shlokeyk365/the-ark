@@ -171,7 +171,7 @@ export function RightRail({
       <section className="right-section plans-panel panel-shell">
         <div className="section-title-row">
           <h2>
-            Response plans <span>(counterfactuals)</span>
+            Response plan comparison <span>(counterfactuals)</span>
           </h2>
           <span
             className="help-mark"

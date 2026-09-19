@@ -21,6 +21,8 @@ interface ScenarioMapProps {
   worldState: WorldStateSnapshot;
   horizonState: WorldStateSnapshot | undefined;
   selectedPlan: PlanResult | undefined;
+  selectedAssetId: string | null;
+  onSelectAsset: (assetId: string) => void;
 }
 
 function BasemapLoading() {
@@ -46,6 +48,8 @@ export function ScenarioMap({
   worldState,
   horizonState,
   selectedPlan,
+  selectedAssetId,
+  onSelectAsset,
 }: ScenarioMapProps) {
   const [failure, setFailure] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
@@ -62,7 +66,9 @@ export function ScenarioMap({
       <div className="map-fallback-wrap">
         <SchematicMap
           bootstrap={bootstrap}
+          onSelectAsset={onSelectAsset}
           selectedPlan={selectedPlan}
+          selectedAssetId={selectedAssetId}
           worldState={worldState}
         />
         {!dismissed ? (
@@ -96,7 +102,9 @@ export function ScenarioMap({
         bootstrap={bootstrap}
         horizonState={horizonState}
         onFailure={onFailure}
+        onSelectAsset={onSelectAsset}
         selectedPlan={selectedPlan}
+        selectedAssetId={selectedAssetId}
         worldState={worldState}
       />
     </Suspense>
