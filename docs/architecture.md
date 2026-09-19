@@ -67,6 +67,16 @@ event recomputation response when the bridge failure is injected. It highlights
 the selected plan's returned route IDs but does not calculate routing or scoring
 inside the browser.
 
+Map rendering is a projection of that state, not a second source of truth.
+`apps/web/src/map/scenarioSources.ts` turns API payloads into GeoJSON whose
+properties are named for what the map draws with them; the layer stack in
+`layers.ts` reads those properties and never re-derives a judgement the world
+state already made. Incident focus (`selection.ts`) resolves a selected
+community, edge or hazard into the related assets, edges and hazards by reading
+the world state's own routes and access results, so the map and the side rails
+agree on what "related" means. Emphasis — hover, selection, dimming — is carried
+by MapLibre feature state rather than by rebuilding sources.
+
 ## Run and report lifecycle
 
 Frame browsing is stateless and does not create audit records. An explicit run

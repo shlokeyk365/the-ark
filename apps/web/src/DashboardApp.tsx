@@ -7,6 +7,7 @@ import type {
 
 import { applyEvent, getBootstrap, getFrame } from "./api";
 import { eventsActiveAt, formatHours, type FrameSeriesEntry } from "./derive";
+import type { MapSelection } from "./map/selection";
 import { logEntry, type LogEntry } from "./session";
 import { RightRail } from "./components/RightRail";
 import { ReportsPage } from "./components/ReportsPage";
@@ -71,7 +72,25 @@ export function App() {
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
   const [activeEventIds, setActiveEventIds] = useState<string[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState("ktp-plan-a");
-  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  /*
+   * One selection for the whole dashboard.
+   *
+   * The map, the tactical list and the asset panel all used to track what was
+   * selected separately, which meant clicking a community on the map left the
+   * panel showing something else. `MapSelection` is now the single source of
+   * truth; `selectedAssetId` below is a view of it for the components that only
+   * care about assets.
+   */
+  const [selection, setSelection] = useState<MapSelection | null>(null);
+  const selectedAssetId = useMemo(
+    () => (selection?.kind === "asset" ? selection.id : null),
+    [selection],
+  );
+  const selectAsset = useCallback(
+    (assetId: string | null) =>
+      setSelection(assetId ? { kind: "asset", id: assetId } : null),
+    [],
+  );
   const [comparison, setComparison] = useState<Comparison | undefined>();
   const [log, setLog] = useState<LogEntry[]>([]);
   const [playing, setPlaying] = useState(false);
@@ -98,15 +117,14 @@ export function App() {
         setBootstrap(loaded);
         setSeries(entries);
         setSelectedFrameId(loaded.initial_frame_id);
-        setSelectedAssetId((current) => {
+        setSelection((current) => {
           if (current) return current;
           const eventEdgeId = loaded.events[0]?.changes[0]?.edge_id;
-          return (
-            loaded.assets.features.find(
-              (feature) =>
-                feature.id === eventEdgeId || feature.properties.edge_id === eventEdgeId,
-            )?.id ?? null
-          );
+          const assetId = loaded.assets.features.find(
+            (feature) =>
+              feature.id === eventEdgeId || feature.properties.edge_id === eventEdgeId,
+          )?.id;
+          return assetId ? { kind: "asset", id: assetId } : null;
         });
         pushLog(
           logEntry(
@@ -333,6 +351,8 @@ export function App() {
           <ScenarioMap
             bootstrap={bootstrap}
             focusedRouteEdgeIds={focusedDestination?.edgeIds}
+            onSelect={setSelection}
+            selection={selection}
             horizonState={horizonState}
             selectedPlan={selectedPlan}
             worldState={worldState}
@@ -340,7 +360,7 @@ export function App() {
           <TopStatusMetrics worldState={worldState} />
           <TacticalAssetsPanel
             bootstrap={bootstrap}
-            onSelectAsset={setSelectedAssetId}
+            onSelectAsset={selectAsset}
             selectedAssetId={selectedAssetId}
             selectedPlan={selectedPlan}
             worldState={worldState}
@@ -359,6 +379,8 @@ export function App() {
               comparison={activeComparison}
               focusedDestinationId={focusedDestination?.id ?? null}
               log={log}
+              onSelect={setSelection}
+              selection={selection}
               onFocusDestination={(id, edgeIds) =>
                 setFocusedDestination(id ? { id, edgeIds } : null)
               }

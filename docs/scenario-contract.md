@@ -135,15 +135,21 @@ modify plan results. Those continue to come from the deterministic world state.
 
 ## Flood depth polygons
 
-`flood-polygons.geojson` provides a curated, synthetic depth surface at the
-0/6/12/24h anchor frames. It is referenced by `scenario.json`, validated during
-scenario load, and served in the bootstrap response as `flood_polygons`.
+`flood-polygons.geojson` provides a curated, synthetic depth surface for **every**
+timeline frame. It is referenced by `scenario.json`, validated during scenario
+load, and served in the bootstrap response as `flood_polygons`.
+
+The surface is generated rather than authored — see
+`data/scenarios/kantipur-river/SOURCES.md` and
+`scripts/generate-flood-surface.mjs`. Terrain supplies the band shapes; the
+canonical `edge_conditions` supply the depths and the growth curve, so the
+polygons cannot disagree with the frame they belong to.
 
 The collection is a **rendering and situational-awareness input**. Routing,
 closures, isolation, and plan scoring continue to derive from the frame's
-`edge_conditions`; polygon geometry is never used as a safety constraint. The
-frontend cross-fades the surrounding polygon keyframes at the intermediate
-3/9/15/18/21h frames.
+`edge_conditions`; polygon geometry is never used as a safety constraint. Because
+every frame now carries its own bands, the frontend no longer cross-fades
+between keyframes at the intermediate 3/9/15/18/21h steps.
 
 Shape:
 
@@ -175,15 +181,19 @@ Shape:
 
 Validation guarantees:
 
+- One or more polygons per `frame_id`, banded by depth so the map can shade by
+  severity rather than drawing a single flat extent.
 - Every referenced `frame_id` exists in `flood-frames.json`, and its declared
   simulation time matches that frame.
-- The first and last timeline frames have surface keyframes.
-- Bands begin at zero, are contiguous, and cover each keyframe's peak edge
-  depth.
-- Rings are closed and remain within Nepal coordinate bounds.
+- **Every** timeline frame has a surface, not only the first and last. A frame
+  without one leaves the map blank at that step, which reads as the water
+  receding rather than as missing data.
+- Bands begin at zero, are contiguous, and cover the frame's peak edge depth.
+- Rings are closed and remain within the scenario's Nepal coordinate bounds.
 - Classification remains synthetic/modelled and `operational_use` remains
   `false`.
 
-The frontend uses a shared depth ramp, overlays the final horizon as a faint
-dashed extent, exposes provenance on hover, and labels the surface as curated
-synthetic data rather than a hydraulic solve or operational forecast.
+The frontend renders the selected frame with a shared depth ramp, overlays the
+last horizon frame as a faint dashed extent, exposes provenance on hover, and
+uses a short opacity transition when the frame changes. The surface is labeled
+as curated synthetic data and not as a hydraulic solve or operational forecast.

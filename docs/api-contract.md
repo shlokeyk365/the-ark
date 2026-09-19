@@ -20,8 +20,8 @@ Returns static data needed to initialize the frontend:
 - Asset GeoJSON for communities, shelters, hospital, and bridges.
 - Routing-network GeoJSON with explicit node references and thresholds.
 - Administrative context boundaries for map background only.
-- Curated synthetic flood-depth polygon keyframes for display and situational
-  awareness only.
+- Curated synthetic flood-depth polygons for every timeline frame, for display
+  and situational awareness only.
 - Ordered timeline frame summaries.
 - Available injected events.
 - Plan A/B/C definitions and assignments.

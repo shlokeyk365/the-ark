@@ -3549,3 +3549,320 @@ input:focus-visible,
   .report-governance-grid,
   .report-provenance { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   Operations map — legend, incident focus and layer controls
+   Added with the map redesign; kept after the Figma dashboard
+   styles above so these win where the two overlap.
+   ============================================================ */
+
+/* ---------------------------------------------------------- map legend */
+
+/*
+ * Reads in about five seconds: what the water is doing, what the symbols mean,
+ * and how a current observation differs from a modeled one. Anything longer
+ * than that belongs in a panel, not on the map.
+ */
+.map-legend {
+  position: absolute;
+  z-index: 4;
+  bottom: 43px;
+  left: 12px;
+  display: flex;
+  gap: 14px;
+  padding: 9px 11px;
+  color: var(--muted);
+  font-size: 8.5px;
+  font-variant-numeric: tabular-nums;
+  background: rgba(8, 15, 24, 0.88);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(9px);
+  pointer-events: none;
+}
+
+.legend-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.legend-block.wide {
+  justify-content: flex-end;
+  padding-left: 14px;
+  border-left: 1px solid rgba(101, 132, 162, 0.22);
+}
+
+.map-legend strong {
+  color: #dbeaf7;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.map-legend span {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.map-legend i {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+
+.map-legend i.depth-1 { background: #86c5e4; }
+.map-legend i.depth-2 { background: #4e9ccd; }
+.map-legend i.depth-3 { background: #2b6ca8; }
+.map-legend i.depth-4 { background: #17427a; }
+
+/* Legend glyphs mirror the map symbols: shape is type, fill is status. */
+.map-legend i.glyph { border: 1px solid rgba(6, 13, 22, 0.9); }
+.map-legend i.glyph.community { background: #cfe2f4; border-radius: 50%; }
+.map-legend i.glyph.shelter {
+  background: #2eb277;
+  clip-path: polygon(50% 0, 100% 38%, 100% 100%, 0 100%, 0 38%);
+  border: 0;
+}
+.map-legend i.glyph.hospital {
+  background:
+    linear-gradient(#fff, #fff) 50% 50% / 60% 20% no-repeat,
+    linear-gradient(#fff, #fff) 50% 50% / 20% 60% no-repeat,
+    #e8536a;
+  border-radius: 2px;
+}
+.map-legend i.glyph.hazard {
+  background: #f24d63;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  border: 0;
+}
+/* Matches the navigation puck the animation loop moves along active routes. */
+.map-legend i.glyph.team {
+  background: #5fc4ff;
+  border-radius: 50%;
+  box-shadow: inset 0 -2px 0 -1px rgba(4, 18, 31, 0.85);
+}
+
+.map-legend i.glyph.injected {
+  background: #f5b54a;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  border: 0;
+}
+
+.map-legend i.rule {
+  width: 15px;
+  height: 0;
+  border-radius: 0;
+}
+.map-legend i.rule.current { border-top: 2px solid #5fc4ff; }
+.map-legend i.rule.modeled { border-top: 2px dashed #8e75f6; }
+
+/* ------------------------------------------------------- incident focus */
+
+/*
+ * Contextual mode for one selected incident. The map dims everything outside
+ * the focus set, and this panel carries the answers a commander needs next:
+ * who is affected, what they can still reach, and how long it takes.
+ */
+.incident-focus {
+  position: absolute;
+  z-index: 6;
+  top: 52px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 246px;
+  padding: 11px 12px;
+  background: rgba(8, 15, 24, 0.93);
+  border: 1px solid rgba(95, 196, 255, 0.34);
+  border-radius: var(--radius);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(12px);
+  animation: focus-in 180ms ease-out;
+}
+
+@keyframes focus-in {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: none; }
+}
+
+.incident-focus header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.focus-kind {
+  color: var(--cyan-bright);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.focus-exit {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 3px 7px;
+  color: var(--dim);
+  font-size: 8.5px;
+  font-weight: 650;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.focus-exit:hover { color: var(--text); background: var(--panel-hover); }
+
+.incident-focus strong { font-size: 13px; line-height: 1.25; }
+
+.incident-focus p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+.incident-focus dl {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 2px 0 0;
+  border-top: 1px solid var(--border-soft);
+}
+
+.focus-fact {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(29, 45, 66, 0.5);
+}
+
+.focus-fact dt {
+  color: var(--dim);
+  font-size: 9px;
+}
+
+.focus-fact dd {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 9.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-fact.good dd { color: #8fe3bd; }
+.focus-fact.warn dd { color: #ffd08a; }
+.focus-fact.bad dd { color: #ffb0ba; }
+
+.layer-swatch.terrain { background: linear-gradient(135deg, #3f6b52, #7d6a48); }
+.layer-swatch.operational { background: linear-gradient(135deg, #1b2a3c, #33465c); }
+
+.layer-swatch.terrain { background: linear-gradient(135deg, #3f6b52, #7d6a48); }
+.layer-swatch.operational { background: linear-gradient(135deg, #1b2a3c, #33465c); }
+.layer-swatch.route-alt {
+  background: repeating-linear-gradient(90deg, #8ba0b8, #8ba0b8 3px, transparent 3px, transparent 6px);
+}
+
+.layer-group-label {
+  margin-top: 2px;
+  color: var(--faint);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.layer-toggle input[type="radio"] {
+  width: 13px;
+  height: 13px;
+  accent-color: var(--cyan);
+  cursor: pointer;
+}
+
+/* Focused hazard mirrors the map's selection ring. */
+.hazard-item.focused {
+  background: var(--panel-hover);
+  border-color: rgba(95, 196, 255, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(95, 196, 255, 0.18);
+}
+
+/* Buttons used as list rows still need the row layout. */
+.hazard-item {
+  width: 100%;
+  text-align: left;
+}
+
+/* Swatch for the impact-prediction toggle. */
+.layer-swatch.predictions {
+  background: conic-gradient(#f24d63 0 25%, #f0a52a 0 50%, #ffd05a 0 75%, #a768f0 0);
+  border-radius: 50%;
+}
+
+/* ----------------------------------------------------- fullscreen dashboard */
+
+/*
+ * Fullscreen expands the whole shell, not the map panel.
+ *
+ * Promoting the map alone drops the tactical list and the asset panel out of
+ * the fullscreen subtree, so they disappear at exactly the moment someone is
+ * presenting from the screen. Expanding the shell keeps the three-column
+ * layout and simply reclaims the browser chrome.
+ */
+.app-frame:fullscreen,
+.app-frame.ark-fullscreen-fallback {
+  width: 100vw;
+  height: 100vh;
+  background: var(--bg);
+}
+
+/* Fallback only: the shell has to leave the document flow to fill the screen. */
+.app-frame.ark-fullscreen-fallback {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+}
+
+.app-frame:fullscreen::backdrop {
+  background: var(--bg);
+}
+
+.fullscreen-toggle {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  padding: 5px 8px;
+  color: var(--dim);
+  font-size: 9px;
+  font-weight: 650;
+  background: rgba(8, 15, 24, 0.86);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(10px);
+}
+
+.fullscreen-toggle:hover { color: var(--text); border-color: var(--cyan-dim); }
+.fullscreen-toggle.active { color: var(--cyan-bright); border-color: rgba(95, 196, 255, 0.45); }
+
+.fullscreen-toggle kbd {
+  padding: 1px 4px;
+  color: inherit;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
