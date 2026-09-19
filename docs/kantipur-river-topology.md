@@ -1,6 +1,6 @@
 # Kantipur River topology and asset draft
 
-Status: draft for review
+Status: implemented MVP fixture
 
 Scenario ID: `kantipur-river-v1`
 
@@ -81,7 +81,7 @@ Combined modeled shelter capacity: 3,000 people. The capacity is intentionally l
 
 ## Road and bridge edges
 
-Travel times are deterministic modeled baseline minutes. Flood penalties and closure timing are intentionally deferred to the flood-frame step.
+Travel times are deterministic modeled baseline minutes. Flood penalties and closure thresholds are stored on each edge in `road-network.geojson`; time-indexed depths are supplied by `flood-frames.json`.
 
 | Edge ID | Type | From | To | Baseline minutes | Topology purpose |
 | --- | --- | --- | --- | ---: | --- |
@@ -118,11 +118,16 @@ All edges are bidirectional in the baseline scenario. Directional controls, cong
 - Riverbend Settlement has two baseline exits and a deterministic two-chokepoint isolation condition.
 - The topology supports bridge failure, hospital-access loss, rerouting, shelter overload, and community isolation without changing the graph design.
 
-## Deferred to the next scenario step
+## Implemented companion fixtures
 
-- GeoJSON coordinates and line geometry.
-- Flood depths and arrival times for `now`, `+6h`, `+12h`, and `+24h`.
-- Deterministic road and bridge closure thresholds.
-- Vulnerable-population proxies.
-- Plan A/B/C actions and resource assumptions.
-- The injected disruption event.
+- `assets.geojson`: community, facility, and bridge geometry plus population,
+  capacity, and vulnerability-proxy fields.
+- `road-network.geojson`: explicit graph connections, travel times, and closure
+  and penalty thresholds.
+- `flood-frames.json`: edge-level depths at `now`, `+6h`, `+12h`, and `+24h`.
+- `response-plans.json`: Plan A/B/C assignments and assumptions.
+- `event-stream.json`: the injected East River Bridge failure at `+12h`.
+
+The baseline flood progression isolates Riverbend at `+24h`. Injecting the
+bridge failure after the southern corridor closes accelerates that isolation to
+`+12h` and forces all three plans to be recomputed.
