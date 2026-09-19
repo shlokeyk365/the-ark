@@ -192,6 +192,9 @@ def test_openapi_publishes_named_frontend_contracts() -> None:
     assert "ScenarioBootstrapResponse" in schemas
     assert "WorldStateSnapshot" in schemas
     assert "EventRecomputeResponse" in schemas
+    assert "SimulationRun" in schemas
+    assert "SimulationReport" in schemas
+    assert "SimulationRunSummary" in schemas
     bootstrap_schema = schema["paths"]["/scenarios/kantipur-river/bootstrap"][
         "get"
     ]["responses"]["200"]["content"]["application/json"]["schema"]

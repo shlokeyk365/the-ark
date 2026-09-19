@@ -1,17 +1,24 @@
 """FastAPI surface for the deterministic Kantipur scenario."""
 
 import os
-from typing import Annotated, List, Optional
+from pathlib import Path
+from typing import Annotated, List, Literal, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 
 from apps.api.models import (
     EventRecomputeResponse,
     HealthResponse,
     ScenarioBootstrapResponse,
+    SimulationReport,
+    SimulationRun,
+    SimulationRunRequest,
+    SimulationRunSummary,
     WorldStateSnapshot,
 )
+from services.reports import ReportRepository, SimulationReportService
 from services.scenarios import ScenarioService
 
 app = FastAPI(
@@ -36,6 +43,15 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 scenario_service = ScenarioService()
+default_report_database = (
+    Path(__file__).resolve().parents[2] / "data" / "runtime" / "the-ark.sqlite3"
+)
+report_repository = ReportRepository(
+    os.getenv("THE_ARK_REPORT_DB_PATH", str(default_report_database))
+)
+simulation_report_service = SimulationReportService(
+    scenario_service, report_repository
+)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["system"])
@@ -92,3 +108,69 @@ def apply_event(event_id: str) -> dict:
         return scenario_service.apply_event(event_id)
     except KeyError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.post(
+    "/scenarios/kantipur-river/runs",
+    response_model=SimulationRun,
+    tags=["reports"],
+)
+def create_simulation_run(request: SimulationRunRequest) -> dict:
+    """Evaluate the full frozen horizon and persist exactly one report."""
+
+    try:
+        return simulation_report_service.create_run(request.event_ids)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.get(
+    "/scenarios/kantipur-river/runs",
+    response_model=List[SimulationRunSummary],
+    tags=["reports"],
+)
+def list_simulation_runs(
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> list[dict]:
+    return simulation_report_service.list_runs(limit)
+
+
+@app.get(
+    "/scenarios/kantipur-river/runs/{run_id}",
+    response_model=SimulationRun,
+    tags=["reports"],
+)
+def get_simulation_run(run_id: str) -> dict:
+    run = simulation_report_service.get_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail=f"Unknown run_id: {run_id}")
+    return run
+
+
+@app.get(
+    "/reports/{report_id}",
+    response_model=SimulationReport,
+    tags=["reports"],
+)
+def get_simulation_report(report_id: str) -> dict:
+    report = simulation_report_service.get_report(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail=f"Unknown report_id: {report_id}")
+    return report
+
+
+@app.get("/reports/{report_id}/export", tags=["reports"])
+def export_simulation_report(
+    report_id: str,
+    format: Annotated[Literal["json", "csv", "html"], Query()] = "json",
+) -> Response:
+    exported = simulation_report_service.export(report_id, format)
+    if exported is None:
+        raise HTTPException(status_code=404, detail=f"Unknown report_id: {report_id}")
+    content, media_type, filename = exported
+    disposition = "inline" if format == "html" else "attachment"
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'{disposition}; filename="{filename}"'},
+    )

@@ -1,6 +1,9 @@
 import type {
   EventRecomputeResponse,
   ScenarioBootstrapResponse,
+  SimulationReport,
+  SimulationRun,
+  SimulationRunSummary,
   WorldStateSnapshot,
 } from "@the-ark/shared-types";
 
@@ -62,4 +65,30 @@ export function applyEvent(eventId: string, signal?: AbortSignal) {
     `/scenarios/kantipur-river/events/${encodeURIComponent(eventId)}`,
     { method: "POST", signal },
   );
+}
+
+export function createSimulationRun(eventIds: string[] = [], signal?: AbortSignal) {
+  return fetchJson<SimulationRun>("/scenarios/kantipur-river/runs", {
+    method: "POST",
+    signal,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event_ids: eventIds }),
+  });
+}
+
+export function listSimulationRuns(signal?: AbortSignal) {
+  return fetchJson<SimulationRunSummary[]>("/scenarios/kantipur-river/runs", {
+    signal,
+  });
+}
+
+export function getSimulationReport(reportId: string, signal?: AbortSignal) {
+  return fetchJson<SimulationReport>(
+    `/reports/${encodeURIComponent(reportId)}`,
+    { signal },
+  );
+}
+
+export function reportExportUrl(reportId: string, format: "json" | "csv" | "html") {
+  return `${API_BASE_URL}/reports/${encodeURIComponent(reportId)}/export?format=${format}`;
 }
