@@ -976,7 +976,10 @@ input:focus-visible,
 .layer-swatch.context { background: rgba(120, 150, 180, 0.35); border: 1px solid #55708c; }
 .layer-swatch.inundation { background: linear-gradient(180deg, #38a9f5, #1668b4); }
 .layer-swatch.network { background: #9db3c4; }
-.layer-swatch.route { background: var(--cyan-bright); }
+.layer-swatch.route {
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(47, 201, 142, 0.55);
+}
 .layer-swatch.predictions {
   background: linear-gradient(135deg, var(--red), var(--amber) 38%, var(--purple));
   border-radius: 50%;
@@ -1105,7 +1108,7 @@ input:focus-visible,
 .road-edge.bridge { stroke-width: 6; stroke: #c3d4e2; }
 .road-edge.restricted { stroke: var(--amber); stroke-dasharray: 10 6; }
 .road-edge.closed { stroke: var(--red); stroke-dasharray: 4 6; }
-.road-edge.selected { stroke: var(--cyan-bright); stroke-width: 6; }
+.road-edge.selected { stroke: var(--green); stroke-width: 6; }
 .road-edge.selected.bridge { stroke-width: 8; }
 .road-group.hovered .road-edge { stroke-width: 7; }
 

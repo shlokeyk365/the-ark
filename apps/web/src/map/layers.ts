@@ -25,7 +25,7 @@ export const COLORS = {
   open: "#8fa8bc",
   restricted: "#f0a52a",
   closed: "#f24d63",
-  route: "#55d6ff",
+  route: "#2fc98e",
   water: "#009dff",
   forecast: "#806dff",
   hospital: "#e8536a",
@@ -259,8 +259,7 @@ export const LAYERS: LayerSpecification[] = [
     layout: { "line-cap": "butt", "line-join": "round" },
     paint: {
       "line-color": COLORS.route,
-      "line-width": 3.8,
-      "line-dasharray": [0.4, 1.6],
+      "line-width": 4.2,
     },
   },
 
