@@ -737,6 +737,23 @@ export function MapLibreScenarioMap({
     // Motion state comes from the animator rather than from the map, because
     // `querySourceFeatures` only sees sources whose layers are within their
     // zoom range — a parked loop and a zoomed-out layer would look identical.
+    // Flood state. The surface going missing is the failure this panel exists
+    // to catch, so report what the source holds and whether the layer can draw.
+    [SOURCE.floodNow, SOURCE.floodForecast].forEach((id) => {
+      const rendered = map.querySourceFeatures(id).length;
+      lines.push(`source ${id}: ${rendered} features in view`);
+    });
+    ["flood-current-fill", "flood-modeled-fill"].forEach((layerId) => {
+      if (!map.getLayer(layerId)) {
+        lines.push(`layer ${layerId}: MISSING`);
+        return;
+      }
+      lines.push(
+        `layer ${layerId}: ${map.getLayoutProperty(layerId, "visibility") ?? "visible"}` +
+          ` · rendered ${map.queryRenderedFeatures({ layers: [layerId] }).length}`,
+      );
+    });
+
     lines.push(`motion: ${animatorRef.current?.describe() ?? "animator missing"}`);
     lines.push(`escalated asset: ${pulsingRef.current?.assetId ?? "none"}`);
     lines.push(
