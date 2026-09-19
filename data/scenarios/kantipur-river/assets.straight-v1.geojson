@@ -1,0 +1,166 @@
+{
+  "type": "FeatureCollection",
+  "name": "Nakkhu River scenario assets",
+  "scenario_id": "kantipur-river-v1",
+  "data_classification": "modeled_synthetic_demo",
+  "operational_use": false,
+  "features": [
+    {
+      "type": "Feature",
+      "id": "ktp-com-01",
+      "properties": {
+        "id": "ktp-com-01",
+        "asset_type": "community",
+        "name": "Kantipur Colony North",
+        "node_id": "ktp-node-com-01",
+        "bank": "north",
+        "zone": "west",
+        "elevation_band": "high",
+        "population": 760,
+        "vulnerable_population_proxy": 114
+      },
+      "geometry": { "type": "Point", "coordinates": [85.305, 27.71] }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-com-02",
+      "properties": {
+        "id": "ktp-com-02",
+        "asset_type": "community",
+        "name": "Nakhipot Market",
+        "node_id": "ktp-node-com-02",
+        "bank": "north",
+        "zone": "central",
+        "elevation_band": "medium",
+        "population": 1180,
+        "vulnerable_population_proxy": 212
+      },
+      "geometry": { "type": "Point", "coordinates": [85.326, 27.705] }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-com-03",
+      "properties": {
+        "id": "ktp-com-03",
+        "asset_type": "community",
+        "name": "Nakhipot East",
+        "node_id": "ktp-node-com-03",
+        "bank": "north",
+        "zone": "east",
+        "elevation_band": "medium",
+        "population": 940,
+        "vulnerable_population_proxy": 160
+      },
+      "geometry": { "type": "Point", "coordinates": [85.35, 27.705] }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-com-04",
+      "properties": {
+        "id": "ktp-com-04",
+        "asset_type": "community",
+        "name": "Kantipur Colony Lowlands",
+        "node_id": "ktp-node-com-04",
+        "bank": "south",
+        "zone": "west",
+        "elevation_band": "low",
+        "population": 1060,
+        "vulnerable_population_proxy": 201
+      },
+      "geometry": { "type": "Point", "coordinates": [85.31, 27.66] }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-com-05",
+      "properties": {
+        "id": "ktp-com-05",
+        "asset_type": "community",
+        "name": "Nakkhu Riverbend",
+        "node_id": "ktp-node-com-05",
+        "bank": "south",
+        "zone": "east_bend",
+        "elevation_band": "very_low",
+        "population": 620,
+        "vulnerable_population_proxy": 149
+      },
+      "geometry": { "type": "Point", "coordinates": [85.352, 27.664] }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-hospital-01",
+      "properties": {
+        "id": "ktp-hospital-01",
+        "asset_type": "hospital",
+        "name": "Lalitpur Emergency Hospital",
+        "node_id": "ktp-node-hospital-01",
+        "bank": "north",
+        "zone": "central",
+        "elevation_band": "medium_high",
+        "open": true
+      },
+      "geometry": { "type": "Point", "coordinates": [85.334, 27.705] }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-shelter-01",
+      "properties": {
+        "id": "ktp-shelter-01",
+        "asset_type": "shelter",
+        "name": "Kantipur Ridge Shelter",
+        "node_id": "ktp-node-shelter-01",
+        "bank": "south",
+        "zone": "west",
+        "elevation_band": "high",
+        "capacity": 1300,
+        "open": true
+      },
+      "geometry": { "type": "Point", "coordinates": [85.3, 27.652] }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-shelter-02",
+      "properties": {
+        "id": "ktp-shelter-02",
+        "asset_type": "shelter",
+        "name": "Nakhipot Civic Shelter",
+        "node_id": "ktp-node-shelter-02",
+        "bank": "north",
+        "zone": "east",
+        "elevation_band": "high",
+        "capacity": 1700,
+        "open": true
+      },
+      "geometry": { "type": "Point", "coordinates": [85.36, 27.71] }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-bridge-01",
+      "properties": {
+        "id": "ktp-bridge-01",
+        "asset_type": "bridge",
+        "name": "Nakhipot Access Bridge",
+        "edge_id": "ktp-bridge-01",
+        "relative_exposure": "medium"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[85.317, 27.705], [85.317, 27.675]]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-bridge-02",
+      "properties": {
+        "id": "ktp-bridge-02",
+        "asset_type": "bridge",
+        "name": "Nakkhu East Bridge",
+        "edge_id": "ktp-bridge-02",
+        "relative_exposure": "high"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[85.342, 27.705], [85.342, 27.675]]
+      }
+    }
+  ]
+}

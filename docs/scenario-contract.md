@@ -1,0 +1,199 @@
+# Counterfactual scenario contract
+
+Status: MVP contract
+
+Schema version: `1.0.0`
+
+## Timeline cadence
+
+The dashboard exposes frames every three hours from now through +24h. The
+now/+6h/+12h/+24h fixtures are the original curated anchors. Intermediate
++3h/+9h/+15h/+18h/+21h edge depths are linear interpolations and carry model
+version `1.0.0-interpolated`; they improve animation cadence but do not add new
+hydrologic evidence.
+
+## Evaluation model
+
+Each plan is evaluated against the same frozen canonical world-state snapshot.
+The evaluator clones the snapshot for each plan and never mutates the baseline.
+Plan actions can select evacuation priority, shelter assignments, departure
+offsets, and route preferences, but cannot override closed edges or capacity
+constraints.
+
+For the MVP, an evacuation assignment contains:
+
+- `community_id` and `shelter_id`.
+- `people` targeted by the assignment.
+- `departure_offset_minutes` from the snapshot time.
+- An optional route preference, initially `shortest_safe`.
+
+People are counted as evacuated when their assigned shelter is reachable and
+their departure offset plus route travel time is within the plan's evaluation
+deadline. Hospital access is scored separately and never counts as evacuation.
+
+## Result identity and lifecycle
+
+Every result records:
+
+| Field | Meaning |
+| --- | --- |
+| `result_id` | Unique evaluation result identifier. |
+| `plan_id` | Evaluated plan. |
+| `source_world_state_version` | Frozen input snapshot. |
+| `status` | `current`, `stale`, or `superseded`. |
+| `calculated_at` | Calculation timestamp. |
+| `assumptions` | Exact plan and routing assumptions. |
+| `invalidation_reason` | Why a prior result became stale, if applicable. |
+
+When a flood frame or event changes an edge used by a result, the previous
+result is retained and marked `stale`. Recalculation produces a new `current`
+result referencing the new world-state version. The old result is not deleted.
+
+The static MVP may conservatively invalidate all three plans after its injected
+bridge event. Selective dependency-based invalidation can be introduced without
+changing the payload shape.
+
+## Metrics
+
+All plans use the same definitions and evaluation deadline:
+
+- `people_isolated`: population of graph-isolated communities.
+- `people_evacuated_by_deadline`: people in successful assignments.
+- `evacuation_completion_minutes`: latest successful arrival; `null` when no
+  assignment succeeds.
+- `critical_routes_lost`: number of critical routing edges that are closed.
+- `hospital_accessible`: whether every community has a route to the hospital.
+- `hospital_accessible_communities`: number of communities with such a route.
+- `shelter_overload`: people assigned beyond combined per-shelter capacity.
+- `plan_viable`: `true` only when all assignments are reachable, no shelter is
+  overloaded, and every successful trip meets the deadline.
+
+Metrics describe the synthetic scenario only. There is no generic AI confidence
+score. The separately labeled impact probabilities are outputs from the frozen
+historical-event model and are not plan-viability metrics.
+
+## Frontend payload
+
+The API returns already-derived results:
+
+- Snapshot identity and recomputation status.
+- Asset and edge status with closure reasons.
+- Community shelter/hospital access and time-to-isolation.
+- Prioritized hazards with originating edge, frame, or event IDs.
+- Plan actions, comparable metrics, lifecycle status, and invalidation reason.
+
+The frontend may sort, filter, and visualize these fields but must not recompute
+routing, isolation, capacity, or plan viability.
+
+## Historical impact prediction pings
+
+`model-impact-prior.json` stores the frozen Nakkhu 2024 event input and four
+probabilities produced by the CatBoost model. `prediction-pings.json` supplies
+display anchors, nearby network edges, activation hours, explanation text, and
+recommended actions. Multiple POIs may share one target's event prior; their
+displayed risks differ because they are adjusted by different anchor-edge flood
+depths. The scenario service joins them by target and returns the result as
+`prediction_signals`.
+
+The base percentages stay constant because the trained model is an event-level
+impact classifier. The displayed percentage is a monotonic prototype localized
+risk score. It combines five normalized components: absolute depth relative to
+the scenario-wide maximum, depth relative to the edge closure threshold,
+open/restricted/closed status, route criticality, and exposed population. The
+weights differ by impact target: housing and casualty emphasize population,
+while transport emphasizes thresholds, status, and route criticality.
+
+| Target | Absolute depth | Closure threshold | Edge status | Critical route | Exposed population |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Casualty or missing | 35% | 25% | 15% | 5% | 20% |
+| Housing damage | 35% | 25% | 10% | 0% | 30% |
+| Transport disruption | 30% | 30% | 20% | 15% | 5% |
+| Severe impact | 35% | 25% | 15% | 10% | 15% |
+
+The displayed score is `base_probability * (0.10 + 0.90 * local_danger)`.
+Responder priority is `70% local_danger + 30% base_probability`, ranked across
+all POIs for the current frame. This prevents every location in a category from
+converging to the same value merely because it reached its own local maximum.
+The timeline separately marks a signal `active` at its configured activation
+hour.
+
+Priority levels are `critical` at 70 or above, `high` at 55–69, `elevated` at
+35–54, and `low` below 35. These cutoffs are presentation assumptions, not an
+incident-command standard.
+
+A ping means “surface this evolving scenario risk near the relevant asset”; it
+is not a claim that the exact point or building has that risk. This deterministic
+adjustment is labeled `scenario_adjusted_model_prior` with score type
+`prototype_localized_risk_score`; it must not be described as a new hourly ML
+prediction or a validated live-dispatch rule. Its separation of hazard and
+exposure follows the conceptual framing in
+[UNDRR terminology](https://www.undrr.org/terminology/exposure), but the weights
+are hackathon assumptions requiring emergency-management validation.
+
+The prediction layer cannot close roads, alter flood depth, change routing, or
+modify plan results. Those continue to come from the deterministic world state.
+
+## Flood depth polygons
+
+`flood-polygons.geojson` provides a curated, synthetic depth surface for **every**
+timeline frame. It is referenced by `scenario.json`, validated during scenario
+load, and served in the bootstrap response as `flood_polygons`.
+
+The surface is generated rather than authored — see
+`data/scenarios/kantipur-river/SOURCES.md` and
+`scripts/generate-flood-surface.mjs`. Terrain supplies the band shapes; the
+canonical `edge_conditions` supply the depths and the growth curve, so the
+polygons cannot disagree with the frame they belong to.
+
+The collection is a **rendering and situational-awareness input**. Routing,
+closures, isolation, and plan scoring continue to derive from the frame's
+`edge_conditions`; polygon geometry is never used as a safety constraint. Because
+every frame now carries its own bands, the frontend no longer cross-fades
+between keyframes at the intermediate 3/9/15/18/21h steps.
+
+Shape:
+
+```json
+{
+  "type": "FeatureCollection",
+  "scenario_id": "kantipur-river-v1",
+  "data_classification": "modeled_synthetic_demo",
+  "operational_use": false,
+  "source": { "source_type": "modeled_input", "model_name": "...", "model_version": "..." },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "ktp-flood-ktp-frame-plus-12h-0",
+      "properties": {
+        "frame_id": "ktp-frame-plus-12h",
+        "simulation_time_hours": 12,
+        "depth_min_m": 0.3,
+        "depth_max_m": 0.5,
+        "band_label": "0.30–0.50 m",
+        "surface_kind": "curated_synthetic_surface",
+        "source_type": "modeled_input"
+      },
+      "geometry": { "type": "Polygon", "coordinates": [[[85.31, 27.69], "..."]] }
+    }
+  ]
+}
+```
+
+Validation guarantees:
+
+- One or more polygons per `frame_id`, banded by depth so the map can shade by
+  severity rather than drawing a single flat extent.
+- Every referenced `frame_id` exists in `flood-frames.json`, and its declared
+  simulation time matches that frame.
+- **Every** timeline frame has a surface, not only the first and last. A frame
+  without one leaves the map blank at that step, which reads as the water
+  receding rather than as missing data.
+- Bands begin at zero, are contiguous, and cover the frame's peak edge depth.
+- Rings are closed and remain within the scenario's Nepal coordinate bounds.
+- Classification remains synthetic/modelled and `operational_use` remains
+  `false`.
+
+The frontend renders the selected frame with a shared depth ramp, overlays the
+last horizon frame as a faint dashed extent, exposes provenance on hover, and
+uses a short opacity transition when the frame changes. The surface is labeled
+as curated synthetic data and not as a hydraulic solve or operational forecast.

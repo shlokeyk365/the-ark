@@ -1,0 +1,281 @@
+{
+  "type": "FeatureCollection",
+  "name": "Kantipur River curated flood depth bands",
+  "scenario_id": "kantipur-river-v1",
+  "data_classification": "modeled_synthetic_demo",
+  "operational_use": false,
+  "source": {
+    "source_type": "modeled_input",
+    "model_name": "kantipur-curated-surface",
+    "model_version": "1.0.0",
+    "description": "Deterministic synthetic depth-band polygons curated to match the scenario edge-depth progression. These are not hydraulic solver output."
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "ktp-flood-now-shallow",
+      "properties": {
+        "id": "ktp-flood-now-shallow",
+        "frame_id": "ktp-frame-now",
+        "simulation_time_hours": 0,
+        "depth_min_m": 0.0,
+        "depth_max_m": 0.1,
+        "band_label": "0–0.10 m",
+        "surface_kind": "curated_synthetic_surface",
+        "source_type": "modeled_input"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [85.292, 27.689], [85.301, 27.686], [85.311, 27.687],
+          [85.321, 27.690], [85.331, 27.688], [85.342, 27.689],
+          [85.353, 27.683], [85.365, 27.685], [85.365, 27.682],
+          [85.354, 27.680], [85.342, 27.685], [85.331, 27.684],
+          [85.320, 27.686], [85.310, 27.683], [85.300, 27.683],
+          [85.292, 27.686], [85.292, 27.689]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-flood-plus-6h-shallow",
+      "properties": {
+        "id": "ktp-flood-plus-6h-shallow",
+        "frame_id": "ktp-frame-plus-6h",
+        "simulation_time_hours": 6,
+        "depth_min_m": 0.0,
+        "depth_max_m": 0.1,
+        "band_label": "0–0.10 m",
+        "surface_kind": "curated_synthetic_surface",
+        "source_type": "modeled_input"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [85.289, 27.692], [85.300, 27.689], [85.310, 27.691],
+          [85.321, 27.694], [85.331, 27.691], [85.343, 27.692],
+          [85.354, 27.687], [85.368, 27.688], [85.369, 27.681],
+          [85.357, 27.677], [85.345, 27.681], [85.334, 27.678],
+          [85.322, 27.681], [85.311, 27.679], [85.300, 27.680],
+          [85.289, 27.684], [85.289, 27.692]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-flood-plus-6h-moderate",
+      "properties": {
+        "id": "ktp-flood-plus-6h-moderate",
+        "frame_id": "ktp-frame-plus-6h",
+        "simulation_time_hours": 6,
+        "depth_min_m": 0.1,
+        "depth_max_m": 0.2,
+        "band_label": "0.10–0.20 m",
+        "surface_kind": "curated_synthetic_surface",
+        "source_type": "modeled_input"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [85.307, 27.689], [85.318, 27.691], [85.330, 27.689],
+          [85.342, 27.690], [85.355, 27.685], [85.360, 27.684],
+          [85.358, 27.680], [85.346, 27.683], [85.334, 27.681],
+          [85.322, 27.684], [85.311, 27.682], [85.307, 27.685],
+          [85.307, 27.689]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-flood-plus-12h-shallow",
+      "properties": {
+        "id": "ktp-flood-plus-12h-shallow",
+        "frame_id": "ktp-frame-plus-12h",
+        "simulation_time_hours": 12,
+        "depth_min_m": 0.0,
+        "depth_max_m": 0.1,
+        "band_label": "0–0.10 m",
+        "surface_kind": "curated_synthetic_surface",
+        "source_type": "modeled_input"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [85.286, 27.696], [85.299, 27.693], [85.309, 27.696],
+          [85.321, 27.699], [85.332, 27.696], [85.344, 27.697],
+          [85.355, 27.692], [85.371, 27.692], [85.373, 27.681],
+          [85.360, 27.674], [85.351, 27.676], [85.342, 27.671],
+          [85.331, 27.674], [85.320, 27.671], [85.309, 27.674],
+          [85.298, 27.677], [85.286, 27.683], [85.286, 27.696]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-flood-plus-12h-moderate",
+      "properties": {
+        "id": "ktp-flood-plus-12h-moderate",
+        "frame_id": "ktp-frame-plus-12h",
+        "simulation_time_hours": 12,
+        "depth_min_m": 0.1,
+        "depth_max_m": 0.2,
+        "band_label": "0.10–0.20 m",
+        "surface_kind": "curated_synthetic_surface",
+        "source_type": "modeled_input"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [85.298, 27.692], [85.310, 27.693], [85.321, 27.696],
+          [85.332, 27.693], [85.344, 27.694], [85.356, 27.689],
+          [85.366, 27.689], [85.365, 27.682], [85.356, 27.678],
+          [85.347, 27.680], [85.339, 27.675], [85.328, 27.678],
+          [85.318, 27.675], [85.308, 27.678], [85.298, 27.683],
+          [85.298, 27.692]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-flood-plus-12h-deep",
+      "properties": {
+        "id": "ktp-flood-plus-12h-deep",
+        "frame_id": "ktp-frame-plus-12h",
+        "simulation_time_hours": 12,
+        "depth_min_m": 0.2,
+        "depth_max_m": 0.3,
+        "band_label": "0.20–0.30 m",
+        "surface_kind": "curated_synthetic_surface",
+        "source_type": "modeled_input"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [85.307, 27.688], [85.319, 27.691], [85.331, 27.689],
+          [85.343, 27.690], [85.355, 27.685], [85.359, 27.682],
+          [85.350, 27.682], [85.341, 27.678], [85.330, 27.681],
+          [85.320, 27.678], [85.311, 27.681], [85.307, 27.688]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-flood-plus-12h-critical",
+      "properties": {
+        "id": "ktp-flood-plus-12h-critical",
+        "frame_id": "ktp-frame-plus-12h",
+        "simulation_time_hours": 12,
+        "depth_min_m": 0.3,
+        "depth_max_m": 0.5,
+        "band_label": "0.30–0.50 m",
+        "surface_kind": "curated_synthetic_surface",
+        "source_type": "modeled_input"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [85.314, 27.679], [85.323, 27.681], [85.333, 27.680],
+          [85.344, 27.681], [85.348, 27.677], [85.340, 27.673],
+          [85.330, 27.676], [85.320, 27.674], [85.314, 27.679]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-flood-plus-24h-shallow",
+      "properties": {
+        "id": "ktp-flood-plus-24h-shallow",
+        "frame_id": "ktp-frame-plus-24h",
+        "simulation_time_hours": 24,
+        "depth_min_m": 0.0,
+        "depth_max_m": 0.1,
+        "band_label": "0–0.10 m",
+        "surface_kind": "curated_synthetic_surface",
+        "source_type": "modeled_input"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [85.283, 27.700], [85.297, 27.697], [85.309, 27.700],
+          [85.321, 27.703], [85.333, 27.700], [85.345, 27.701],
+          [85.357, 27.696], [85.374, 27.696], [85.378, 27.682],
+          [85.364, 27.671], [85.354, 27.673], [85.343, 27.667],
+          [85.331, 27.670], [85.319, 27.667], [85.307, 27.670],
+          [85.296, 27.673], [85.283, 27.680], [85.283, 27.700]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-flood-plus-24h-moderate",
+      "properties": {
+        "id": "ktp-flood-plus-24h-moderate",
+        "frame_id": "ktp-frame-plus-24h",
+        "simulation_time_hours": 24,
+        "depth_min_m": 0.1,
+        "depth_max_m": 0.2,
+        "band_label": "0.10–0.20 m",
+        "surface_kind": "curated_synthetic_surface",
+        "source_type": "modeled_input"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [85.294, 27.696], [85.307, 27.697], [85.320, 27.700],
+          [85.333, 27.697], [85.346, 27.698], [85.359, 27.693],
+          [85.370, 27.693], [85.370, 27.682], [85.360, 27.676],
+          [85.350, 27.678], [85.341, 27.671], [85.329, 27.674],
+          [85.317, 27.671], [85.305, 27.675], [85.294, 27.681],
+          [85.294, 27.696]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-flood-plus-24h-deep",
+      "properties": {
+        "id": "ktp-flood-plus-24h-deep",
+        "frame_id": "ktp-frame-plus-24h",
+        "simulation_time_hours": 24,
+        "depth_min_m": 0.2,
+        "depth_max_m": 0.3,
+        "band_label": "0.20–0.30 m",
+        "surface_kind": "curated_synthetic_surface",
+        "source_type": "modeled_input"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [85.304, 27.692], [85.317, 27.695], [85.330, 27.693],
+          [85.344, 27.694], [85.357, 27.688], [85.364, 27.685],
+          [85.357, 27.680], [85.348, 27.682], [85.339, 27.676],
+          [85.328, 27.679], [85.318, 27.676], [85.309, 27.680],
+          [85.304, 27.692]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-flood-plus-24h-critical",
+      "properties": {
+        "id": "ktp-flood-plus-24h-critical",
+        "frame_id": "ktp-frame-plus-24h",
+        "simulation_time_hours": 24,
+        "depth_min_m": 0.3,
+        "depth_max_m": 0.5,
+        "band_label": "0.30–0.50 m",
+        "surface_kind": "curated_synthetic_surface",
+        "source_type": "modeled_input"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [85.311, 27.684], [85.321, 27.687], [85.333, 27.685],
+          [85.346, 27.686], [85.355, 27.681], [85.349, 27.675],
+          [85.340, 27.671], [85.330, 27.675], [85.320, 27.672],
+          [85.311, 27.677], [85.311, 27.684]
+        ]]
+      }
+    }
+  ]
+}

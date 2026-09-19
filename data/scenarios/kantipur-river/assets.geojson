@@ -1,0 +1,284 @@
+{
+  "type": "FeatureCollection",
+  "name": "Nakkhu River scenario assets",
+  "scenario_id": "kantipur-river-v1",
+  "data_classification": "modeled_synthetic_demo",
+  "operational_use": false,
+  "features": [
+    {
+      "type": "Feature",
+      "id": "ktp-com-01",
+      "properties": {
+        "id": "ktp-com-01",
+        "asset_type": "community",
+        "name": "Kantipur Colony North",
+        "node_id": "ktp-node-com-01",
+        "bank": "north",
+        "zone": "west",
+        "elevation_band": "high",
+        "population": 760,
+        "vulnerable_population_proxy": 114
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          85.305163,
+          27.710018
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-com-02",
+      "properties": {
+        "id": "ktp-com-02",
+        "asset_type": "community",
+        "name": "Nakhipot Market",
+        "node_id": "ktp-node-com-02",
+        "bank": "north",
+        "zone": "central",
+        "elevation_band": "medium",
+        "population": 1180,
+        "vulnerable_population_proxy": 212
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          85.32616,
+          27.705387
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-com-03",
+      "properties": {
+        "id": "ktp-com-03",
+        "asset_type": "community",
+        "name": "Nakhipot East",
+        "node_id": "ktp-node-com-03",
+        "bank": "north",
+        "zone": "east",
+        "elevation_band": "medium",
+        "population": 940,
+        "vulnerable_population_proxy": 160
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          85.349838,
+          27.705021
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-com-04",
+      "properties": {
+        "id": "ktp-com-04",
+        "asset_type": "community",
+        "name": "Kantipur Colony Lowlands",
+        "node_id": "ktp-node-com-04",
+        "bank": "south",
+        "zone": "west",
+        "elevation_band": "low",
+        "population": 1060,
+        "vulnerable_population_proxy": 201
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          85.30968,
+          27.659978
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-com-05",
+      "properties": {
+        "id": "ktp-com-05",
+        "asset_type": "community",
+        "name": "Nakkhu Riverbend",
+        "node_id": "ktp-node-com-05",
+        "bank": "south",
+        "zone": "east_bend",
+        "elevation_band": "very_low",
+        "population": 620,
+        "vulnerable_population_proxy": 149
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          85.352139,
+          27.664145
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-hospital-01",
+      "properties": {
+        "id": "ktp-hospital-01",
+        "asset_type": "hospital",
+        "name": "Lalitpur Emergency Hospital",
+        "node_id": "ktp-node-hospital-01",
+        "bank": "north",
+        "zone": "central",
+        "elevation_band": "medium_high",
+        "open": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          85.334029,
+          27.705116
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-shelter-01",
+      "properties": {
+        "id": "ktp-shelter-01",
+        "asset_type": "shelter",
+        "name": "Kantipur Ridge Shelter",
+        "node_id": "ktp-node-shelter-01",
+        "bank": "south",
+        "zone": "west",
+        "elevation_band": "high",
+        "capacity": 1300,
+        "open": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          85.300207,
+          27.651839
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-shelter-02",
+      "properties": {
+        "id": "ktp-shelter-02",
+        "asset_type": "shelter",
+        "name": "Nakhipot Civic Shelter",
+        "node_id": "ktp-node-shelter-02",
+        "bank": "north",
+        "zone": "east",
+        "elevation_band": "high",
+        "capacity": 1700,
+        "open": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          85.359473,
+          27.710236
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-bridge-01",
+      "properties": {
+        "id": "ktp-bridge-01",
+        "asset_type": "bridge",
+        "name": "Nakhipot Access Bridge",
+        "edge_id": "ktp-bridge-01",
+        "relative_exposure": "medium"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            85.316155,
+            27.688288
+          ],
+          [
+            85.316171,
+            27.688074
+          ],
+          [
+            85.316225,
+            27.687984
+          ],
+          [
+            85.316434,
+            27.687794
+          ],
+          [
+            85.316584,
+            27.687699
+          ],
+          [
+            85.316659,
+            27.687632
+          ],
+          [
+            85.317239,
+            27.686777
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ktp-bridge-02",
+      "properties": {
+        "id": "ktp-bridge-02",
+        "asset_type": "bridge",
+        "name": "Nakkhu East Bridge",
+        "edge_id": "ktp-bridge-02",
+        "relative_exposure": "high"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            85.334764,
+            27.680151
+          ],
+          [
+            85.335048,
+            27.679652
+          ],
+          [
+            85.335118,
+            27.679566
+          ],
+          [
+            85.335199,
+            27.679424
+          ],
+          [
+            85.335231,
+            27.679362
+          ],
+          [
+            85.335311,
+            27.679086
+          ],
+          [
+            85.335343,
+            27.67901
+          ],
+          [
+            85.335408,
+            27.678953
+          ],
+          [
+            85.335504,
+            27.678721
+          ],
+          [
+            85.335585,
+            27.678455
+          ]
+        ]
+      }
+    }
+  ]
+}
