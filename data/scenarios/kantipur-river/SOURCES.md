@@ -1,4 +1,35 @@
-# Kantipur River scenario data sources
+# Nakkhu River scenario data sources
+
+## Curated flood depth surface
+
+`flood-polygons.geojson` is original synthetic demo geometry authored for this
+repository. It is not copied from an observed flood, remote-sensing product, or
+hydraulic model. The bands provide deterministic visual keyframes at
+0/6/12/24h and are explicitly marked `modeled_synthetic_demo`,
+`curated_synthetic_surface`, and `operational_use: false`. The frontend
+cross-fades adjacent keyframes for the intervening three-hour timeline frames.
+
+The polygons are not inputs to road closure, routing, isolation, or response
+plan scoring. Those results continue to use the asset-level depths in
+`flood-frames.json`.
+
+## Historical-event impact prior
+
+`model-impact-prior.json` is the frozen Nakkhu 2024 input/output artifact from
+the repository's CatBoost training pipeline. The model was trained on 4,869
+historical Nepal flood events through 2023 with city, district, and basin
+identity excluded from predictors. Its status is `research_only`; the artifact
+records grouped ROC-AUC/RMSE evaluation and known limitations.
+
+`prediction-pings.json` adds presentation coordinates, nearby network-edge
+references, activation hours, explanations, and recommended actions for ten
+operational POIs derived from the four probabilities. The edge references let
+the scenario service adjust displayed risk using already-modeled local flood
+depth and infrastructure status; exposure-asset references supply the synthetic
+nearby population. They do not alter depth or routing. Multiple POIs can share
+one event prior. The coordinates are map anchors and are not evidence of parcel-
+or building-level prediction. Local scores and dispatch ranks are prototype
+decision-support outputs and have not been validated for operational use.
 
 ## Administrative context boundaries
 

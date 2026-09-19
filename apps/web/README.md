@@ -31,9 +31,23 @@ Open `http://127.0.0.1:5173`. Vite proxies `/api` requests to
 ```bash
 npm run typecheck:web
 npm run build:web
+npm --prefix apps/web test
 ```
 
 Set `VITE_API_BASE_URL` when the API is hosted at another origin.
+
+## Responder destination brief
+
+The right rail turns the selected counterfactual plan's evaluated assignments
+into an operator-facing destination brief. Each stop shows the destination
+community, transfer shelter, assigned population, backend-computed ETA, route
+condition, access window, and strongest nearby model signal. Selecting a stop
+focuses only that assignment's evaluated route on either map renderer.
+
+This is a presentation of deterministic plan results, not a separate dispatch
+engine. The fixture contains no responder roster or verified incident calls, so
+the view remains explicitly labeled as modeled synthetic decision support and
+never presents prediction pings as confirmed rescue requests.
 
 ## Basemap
 

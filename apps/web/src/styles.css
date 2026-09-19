@@ -2972,3 +2972,110 @@ input:focus-visible,
   .timeline-actions { grid-column: 1 / -1; }
   .map-layers { display: block; }
 }
+
+/* Main-branch flood surfaces and prediction signals, adapted to the Figma palette. */
+.flood-depth-band {
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  cursor: crosshair;
+}
+.flood-depth-band.depth-1 { fill: #a8b9bf; stroke: #a8b9bf; }
+.flood-depth-band.depth-2 { fill: #839ba5; stroke: #839ba5; }
+.flood-depth-band.depth-3 { fill: #667f8b; stroke: #667f8b; }
+.flood-depth-band.depth-4 { fill: #4f6874; stroke: #4f6874; }
+.flood-depth-band.current { fill-opacity: .3; stroke-opacity: .64; }
+.flood-depth-band.forecast {
+  fill-opacity: .07;
+  stroke: #8d969c;
+  stroke-dasharray: 5 4;
+  stroke-opacity: .52;
+}
+.river-flow {
+  fill: none;
+  stroke: rgba(214, 221, 219, .56);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 16;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  animation: river-flow 2.2s linear infinite;
+}
+.river-flow-b { animation-delay: -1.1s; opacity: .45; }
+@keyframes river-flow { to { stroke-dashoffset: -36; } }
+
+.prediction-layer { color: #a8967f; }
+.prediction-ping { color: #8a8998; cursor: pointer; }
+.prediction-ping.casualty_or_missing { color: #b8797f; }
+.prediction-ping.housing_damage { color: #a8967f; }
+.prediction-ping.transport_disruption { color: #a9a27f; }
+.prediction-ping.severe_impact { color: #8a8998; }
+.prediction-ping.forecast { opacity: .62; }
+.prediction-ping.active { opacity: 1; }
+.prediction-ring { fill: none; stroke: currentcolor; vector-effect: non-scaling-stroke; }
+.prediction-ring-outer { stroke-width: 1; opacity: .38; animation: prediction-ripple 1.8s ease-out infinite; }
+.prediction-ring-inner { stroke-width: 1.3; opacity: .56; animation: prediction-ripple 1.8s .55s ease-out infinite; }
+.prediction-core { fill: currentcolor; stroke: #1a1e1f; stroke-width: 2; }
+.prediction-mark { fill: #e1dfd8; font-family: var(--mono); font-size: 9px; font-weight: 700; }
+.prediction-label-card rect { fill: rgba(20,24,25,.72); stroke: rgba(151,157,153,.28); }
+.prediction-label { fill: #d2d1cb; font-family: var(--mono); font-size: 7px; }
+.prediction-percent { fill: #8d928f; font-family: var(--mono); font-size: 7px; }
+@keyframes prediction-ripple {
+  0% { opacity: .62; transform: scale(.7); }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+
+.ark-prediction-popup .maplibregl-popup-content,
+.prediction-popup-card {
+  color: #c9c9c3;
+  background: rgba(20,24,25,.78);
+  border: 1px solid rgba(151,157,153,.26);
+  border-radius: 8px;
+  box-shadow: 0 16px 36px rgba(0,0,0,.34);
+  backdrop-filter: blur(14px);
+}
+.ark-prediction-popup .maplibregl-popup-tip { display: none; }
+.prediction-popup-card { display: grid; gap: 8px; padding: 12px; font-size: 8px; }
+.prediction-popup-heading { display: flex; gap: 8px; align-items: start; justify-content: space-between; }
+.prediction-popup-heading strong { font-size: 10px; }
+.prediction-popup-heading span { color: #b8797f; font-family: var(--mono); font-size: 7px; text-transform: uppercase; }
+.prediction-popup-risk { display: flex; gap: 7px; align-items: baseline; }
+.prediction-popup-risk strong { color: #d5d4ce; font-family: var(--mono); font-size: 20px; }
+.prediction-popup-risk span,
+.prediction-popup-metrics,
+.prediction-popup-card small { color: #737976; font-family: var(--mono); font-size: 7px; text-transform: uppercase; }
+.prediction-popup-metrics { display: grid; gap: 3px; }
+.prediction-popup-card p { margin: 0; color: #a1a5a1; line-height: 1.45; }
+.schematic-prediction-popup { position: absolute; z-index: 14; right: 320px; bottom: 160px; width: 270px; }
+.schematic-prediction-close { position: absolute; top: 5px; right: 5px; color: #8a908d; background: none; border: 0; }
+
+/* New responder brief from main, kept compact inside the right glass rail. */
+.responder-brief { position: relative; overflow: hidden; }
+.responder-brief-heading { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
+.responder-brief-heading h2 { margin: 2px 0 0; color: #c9c9c3; font-family: var(--mono); font-size: 8px; text-transform: uppercase; }
+.section-kicker { color: #686e6b; font-family: var(--mono); font-size: 6px; letter-spacing: .1em; text-transform: uppercase; }
+.brief-plan-chip { padding: 3px 6px; color: #aab5b2; font-family: var(--mono); font-size: 7px; border: 1px solid #4a5250; border-radius: 999px; }
+.brief-summary { display: grid; grid-template-columns: repeat(3,1fr); margin-top: 9px; border: 1px solid rgba(151,157,153,.16); border-radius: 6px; }
+.brief-summary > span { display: grid; gap: 2px; padding: 6px; border-right: 1px solid rgba(151,157,153,.14); }
+.brief-summary > span:last-child { border-right: 0; }
+.brief-summary strong { color: #d2d1cb; font-family: var(--mono); font-size: 9px; }
+.brief-summary small { color: #686e6b; font-size: 6px; }
+.destination-list { display: grid; gap: 5px; margin-top: 8px; }
+.destination-card { display: grid; grid-template-columns: 22px 1fr; gap: 6px; padding: 7px; background: rgba(40,46,47,.42); border: 1px solid rgba(151,157,153,.16); border-radius: 6px; }
+.destination-card.focused { border-color: #83949b; }
+.destination-rank { color: #7e8581; font-family: var(--mono); font-size: 8px; }
+.destination-main { min-width: 0; }
+.destination-title-row { display: flex; justify-content: space-between; gap: 6px; }
+.destination-title-row > div { display: grid; }
+.destination-title-row span { color: #686e6b; font-size: 6px; text-transform: uppercase; }
+.destination-title-row strong { overflow: hidden; color: #c8c8c2; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.destination-title-row em { color: #8fa694; font-family: var(--mono); font-size: 6px; font-style: normal; text-transform: uppercase; }
+.destination-main p { margin: 5px 0; color: #858a87; font-size: 7px; line-height: 1.4; }
+.destination-transfer,
+.destination-metrics,
+.destination-rationale { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; color: #737976; font-size: 6px; }
+.destination-transfer strong { color: #aeb1ac; }
+.destination-map-button { width: 100%; margin-top: 6px; padding: 5px; color: #aeb8b5; font-family: var(--mono); font-size: 6px; background: transparent; border: 1px solid #48504e; border-radius: 5px; }
+.brief-disclaimer { margin: 8px 0 0; color: #5e6461; font-size: 6px; line-height: 1.4; }
+
+@media (max-width: 900px) {
+  .schematic-prediction-popup { right: 18px; bottom: 18px; }
+}

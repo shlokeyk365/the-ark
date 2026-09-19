@@ -3,12 +3,14 @@ import { useEffect, useState } from "react";
 import type {
   PlanMetrics,
   PlanResult,
+  PredictionSignal,
   ScenarioBootstrapResponse,
   WorldStateSnapshot,
 } from "@the-ark/shared-types";
 
 import { assetNames, describeAsset, formatHours } from "../derive";
 import { relativeTime, type LogEntry } from "../session";
+import { ResponderBrief } from "./ResponderBrief";
 import { ShellIcon } from "./ShellIcon";
 
 interface RightRailProps {
@@ -19,6 +21,8 @@ interface RightRailProps {
   /** Pre-event metrics, present only while viewing the recomputed state. */
   comparison: Map<string, PlanMetrics> | undefined;
   log: LogEntry[];
+  focusedDestinationId: string | null;
+  onFocusDestination: (destinationId: string | null, edgeIds: string[]) => void;
 }
 
 const PLAN_LETTERS = ["A", "B", "C"];
@@ -155,6 +159,8 @@ export function RightRail({
   onSelectPlan,
   comparison,
   log,
+  focusedDestinationId,
+  onFocusDestination,
 }: RightRailProps) {
   const names = assetNames(bootstrap);
   const [now, setNow] = useState(() => new Date());
@@ -165,9 +171,39 @@ export function RightRail({
   }, []);
 
   const connected = worldState.community_access.filter((access) => !access.isolated).length;
+  const signalSummaries = Array.from(
+    worldState.prediction_signals.reduce(
+      (groups, signal) => {
+        const current = groups.get(signal.target);
+        if (!current) {
+          groups.set(signal.target, { signal, count: 1 });
+        } else {
+          groups.set(signal.target, {
+            signal:
+              signal.priority_score > current.signal.priority_score
+                ? signal
+                : current.signal,
+            count: current.count + 1,
+          });
+        }
+        return groups;
+      },
+      new Map<string, { signal: PredictionSignal; count: number }>(),
+    ).values(),
+  );
 
   return (
     <aside className="right-rail" aria-label="Response plans, alerts and activity">
+      <ResponderBrief
+        bootstrap={bootstrap}
+        focusedDestinationId={focusedDestinationId}
+        onFocusDestination={onFocusDestination}
+        selectedPlan={worldState.plan_results.find(
+          (result) => result.plan_id === selectedPlanId,
+        )}
+        worldState={worldState}
+      />
+
       <section className="right-section plans-panel panel-shell">
         <div className="section-title-row">
           <h2>
@@ -198,6 +234,36 @@ export function RightRail({
             />
           ))}
         </div>
+      </section>
+
+      <section className="right-section model-signals-panel panel-shell">
+        <div className="section-title-row">
+          <h2>Model prediction pings</h2>
+          <span>{bootstrap.impact_model.evaluation.unseen_district_roc_auc.toFixed(2)} AUC</span>
+        </div>
+        <div className="model-signal-grid">
+          {signalSummaries.map(({ signal, count }) => (
+            <article
+              className={`model-signal ${signal.target} ${signal.state}`}
+              key={signal.ping_id}
+              title={signal.recommended_action}
+            >
+              <i />
+              <div>
+                <strong>{signal.percent}%</strong>
+                <span>
+                  #{signal.priority_rank} {signal.priority_level} · {count} locations · prior {signal.base_percent}%
+                </span>
+              </div>
+              <em>{signal.state}</em>
+            </article>
+          ))}
+        </div>
+        <p className="model-signal-note">
+          Local risk combines the event prior with hazard, access, and exposed population.
+          Pings remain area indicators, not building-level forecasts. Prototype only—not validated
+          for live dispatch.
+        </p>
       </section>
 
       <section className="right-section alerts-panel panel-shell">

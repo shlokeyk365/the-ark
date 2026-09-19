@@ -20,12 +20,18 @@ Returns static data needed to initialize the frontend:
 - Asset GeoJSON for communities, shelters, hospital, and bridges.
 - Routing-network GeoJSON with explicit node references and thresholds.
 - Administrative context boundaries for map background only.
+- Curated synthetic flood-depth polygon keyframes for display and situational
+  awareness only.
 - Ordered timeline frame summaries.
 - Available injected events.
 - Plan A/B/C definitions and assignments.
+- `impact_model`, a research-only model summary with training-event count,
+  grouped-evaluation metrics, feature policy, and limitations.
 
 The bootstrap response intentionally excludes flood edge readings and derived
-results. Those come from a versioned world-state endpoint.
+results. Those come from a versioned world-state endpoint. `flood_polygons` is
+static display geometry and must not be used to infer route safety in the
+browser.
 
 ### Administrative context
 
@@ -46,7 +52,20 @@ Provenance and licensing are recorded in
 
 Both return `WorldStateSnapshot`. The payload contains derived edge status,
 community access, routes, hazards, time-to-isolation, and Plan A/B/C results for
-one immutable state version.
+one immutable state version. It also contains `prediction_signals`, ten
+time-adjusted operational POIs spanning the model's four impact targets.
+
+Each prediction signal includes the frozen `base_probability` from the event
+model and a displayed localized score adjusted for the current scenario frame.
+The adjustment combines absolute flood depth on the declared `anchor_edge_id`,
+its closure threshold and current status, route criticality, and the population
+of `exposure_asset_id`. The signal also includes `priority_score`,
+`priority_rank`, `priority_level`, local flood depth, activation state, the
+reason the location was flagged, and a recommended action.
+
+`score_type` is `prototype_localized_risk_score`. Neither that score nor the
+priority rank is a calibrated hourly probability or validated dispatch rule.
+The model still predicts whole-event impacts, not street-level depth.
 
 The frame endpoint accepts a repeatable `events` query parameter so a caller can
 inspect any frame with injected events held active:
@@ -76,6 +95,34 @@ Returns `EventRecomputeResponse`, containing:
 
 The MVP endpoint is deterministic and stateless. Repeating the same request
 replays the same named event rather than mutating server-global state.
+
+## Simulation runs and reports
+
+`POST /scenarios/kantipur-river/runs`
+
+Accepts an optional ordered `event_ids` array. The service validates the IDs,
+freezes the inputs, evaluates every frame, persists the complete run, and
+returns `SimulationRun`. A run receives a unique `run_id` and `report_id`; the
+SHA-256 `input_fingerprint` remains stable when the scenario fixtures and event
+set are identical.
+
+Ordinary frame reads and timeline playback do not create runs or reports.
+
+- `GET /scenarios/kantipur-river/runs` returns newest-first summaries.
+- `GET /scenarios/kantipur-river/runs/{run_id}` returns the frozen snapshots and
+  report for one run.
+- `GET /reports/{report_id}` returns the immutable report.
+- `GET /reports/{report_id}/export?format=json|csv|html` renders the stored
+  report without recomputing its findings. The HTML export is print-styled for
+  browser PDF output.
+
+Reports contain headline metrics, deterministic narrative, adjacent-frame
+changes, event-versus-baseline effects, community impact, plan analysis,
+assumptions, limitations, and provenance. The historical impact prior is marked
+`impact_prior_used: false`; external news is not part of report calculation.
+
+Persistence defaults to `data/runtime/the-ark.sqlite3`. Override it with
+`THE_ARK_REPORT_DB_PATH`.
 
 ## Health and discovery
 

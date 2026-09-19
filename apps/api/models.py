@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import List, Literal, Optional, Tuple, Union
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class WireModel(BaseModel):
@@ -139,12 +139,92 @@ class RoadFeatureCollection(WireModel):
     features: List[RoadFeature]
 
 
+class FloodPolygonProperties(WireModel):
+    id: str
+    frame_id: str
+    simulation_time_hours: float
+    depth_min_m: float
+    depth_max_m: float
+    band_label: str
+    surface_kind: Literal["curated_synthetic_surface"]
+    source_type: Literal["modeled_input"]
+
+
+class FloodPolygonFeature(WireModel):
+    type: Literal["Feature"]
+    id: str
+    properties: FloodPolygonProperties
+    geometry: PolygonGeometry
+
+
+class FloodPolygonCollection(WireModel):
+    """Synthetic situational-awareness surface; never a routing input."""
+
+    type: Literal["FeatureCollection"]
+    name: str
+    scenario_id: str
+    data_classification: Literal["modeled_synthetic_demo"]
+    operational_use: Literal[False]
+    source: SourceMetadata
+    features: List[FloodPolygonFeature]
+
+
 class FloodFrameSummary(WireModel):
     frame_id: str
     simulation_time_hours: float
     observed_at: str
     rainfall_assumption: str
     rainfall_multiplier: float
+
+
+class ImpactModelEvaluation(WireModel):
+    unseen_district_roc_auc: float
+    four_split_macro_roc_auc: float
+    mean_rmse: float
+
+
+class ImpactModelSummary(WireModel):
+    event_id: str
+    location: str
+    model_name: str
+    model_version: str
+    status: Literal["research_only"]
+    training_events: int
+    feature_policy: str
+    evaluation: ImpactModelEvaluation
+    limitations: List[str]
+
+
+class PredictionSignal(WireModel):
+    ping_id: str
+    target: Literal[
+        "casualty_or_missing",
+        "housing_damage",
+        "transport_disruption",
+        "severe_impact",
+    ]
+    label: str
+    short_label: str
+    base_probability: float
+    base_percent: int
+    probability: float
+    percent: int
+    geometry: PointGeometry
+    anchor_asset_id: Optional[str]
+    anchor_edge_id: str
+    exposure_asset_id: str
+    exposed_people: int
+    local_flood_depth_m: float
+    local_danger_score: float
+    priority_score: int
+    priority_rank: int
+    priority_level: Literal["critical", "high", "elevated", "low"]
+    score_type: Literal["prototype_localized_risk_score"]
+    activation_hours: float
+    state: Literal["forecast", "active"]
+    reason: str
+    recommended_action: str
+    source_type: Literal["scenario_adjusted_model_prior"]
 
 
 class EvacuationAssignment(WireModel):
@@ -192,10 +272,12 @@ class ScenarioBootstrapResponse(WireModel):
     evaluation_horizon_hours: float
     assets: AssetFeatureCollection
     road_network: RoadFeatureCollection
+    flood_polygons: FloodPolygonCollection
     context_boundaries: ContextBoundaryCollection
     available_frames: List[FloodFrameSummary]
     events: List[IncidentEvent]
     plans: List[ResponsePlan]
+    impact_model: ImpactModelSummary
 
 
 class DerivedEdgeState(WireModel):
@@ -296,6 +378,7 @@ class WorldStateSnapshot(WireModel):
     edge_states: List[DerivedEdgeState]
     community_access: List[CommunityAccessState]
     hazards: List[Hazard]
+    prediction_signals: List[PredictionSignal]
     plan_results: List[PlanResult]
 
 
@@ -306,3 +389,119 @@ class EventRecomputeResponse(WireModel):
     updated_world_state: WorldStateSnapshot
     stale_plan_results: List[PlanResult]
     recomputed_plan_results: List[PlanResult]
+
+
+class SimulationRunRequest(WireModel):
+    event_ids: List[str] = Field(default_factory=list)
+
+
+class SimulationRunInput(WireModel):
+    scenario_id: str
+    event_ids: List[str]
+    evaluation_horizon_hours: float
+    fixture_sha256: str
+    impact_prior_sha256: Optional[str]
+    impact_prior_used: Literal[False]
+
+
+class ReportSummaryMetrics(WireModel):
+    peak_flood_depth_m: float
+    peak_isolated_people: int
+    peak_isolated_communities: int
+    peak_critical_routes_lost: int
+    first_isolation_hours: Optional[float]
+    viable_plans_at_horizon: int
+
+
+class ReportChange(WireModel):
+    change_id: str
+    at_hours: float
+    category: Literal["infrastructure", "community", "plan", "event"]
+    subject_id: str
+    subject_name: str
+    description: str
+    before_value: str
+    after_value: str
+    comparison: Literal["timeline", "baseline_counterfactual"]
+    source_event_id: Optional[str]
+
+
+class CommunityImpactReport(WireModel):
+    community_id: str
+    community_name: str
+    population: int
+    first_isolated_at_hours: Optional[float]
+    hospital_access_lost_at_hours: Optional[float]
+    horizon_isolated: bool
+    horizon_hospital_accessible: bool
+    horizon_reachable_shelter_ids: List[str]
+    analysis: str
+
+
+class PlanAnalysisReport(WireModel):
+    plan_id: str
+    plan_name: str
+    baseline_metrics: PlanMetrics
+    horizon_metrics: PlanMetrics
+    people_evacuated_change: int
+    people_isolated_change: int
+    critical_routes_lost_change: int
+    shelter_overload_change: int
+    viability_changed: bool
+    analysis: str
+
+
+class ReportProvenance(WireModel):
+    input_fingerprint: str
+    fixture_sha256: str
+    impact_prior_sha256: Optional[str]
+    impact_prior_used: Literal[False]
+    world_state_versions: List[str]
+    engine_version: Literal["reports-1.0.0"]
+    data_classification: Literal["modeled_synthetic_demo"]
+    operational_use: Literal[False]
+
+
+class SimulationReport(WireModel):
+    schema_version: Literal["1.0.0"]
+    report_id: str
+    run_id: str
+    scenario_id: str
+    status: Literal["completed"]
+    generated_at: str
+    title: str
+    event_ids: List[str]
+    summary: ReportSummaryMetrics
+    narrative: List[str]
+    changes: List[ReportChange]
+    community_impacts: List[CommunityImpactReport]
+    plan_analysis: List[PlanAnalysisReport]
+    assumptions: List[str]
+    limitations: List[str]
+    provenance: ReportProvenance
+
+
+class SimulationRun(WireModel):
+    schema_version: Literal["1.0.0"]
+    run_id: str
+    report_id: str
+    scenario_id: str
+    status: Literal["completed"]
+    started_at: str
+    completed_at: str
+    input: SimulationRunInput
+    input_fingerprint: str
+    snapshots: List[WorldStateSnapshot]
+    report: SimulationReport
+
+
+class SimulationRunSummary(WireModel):
+    run_id: str
+    report_id: str
+    scenario_id: str
+    status: Literal["completed"]
+    completed_at: str
+    title: str
+    event_ids: List[str]
+    input_fingerprint: str
+    summary: ReportSummaryMetrics

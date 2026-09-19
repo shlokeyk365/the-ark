@@ -19,7 +19,10 @@ curated flood frame + injected event
      frozen Plan A/B/C evaluation
                   |
                   v
-        frontend-ready API payload
+      full-horizon simulation run
+                  |
+                  v
+ immutable report + frontend payload
 ```
 
 The world state is the shared source of truth. Physics inputs publish flood
@@ -35,6 +38,8 @@ frontend does not recalculate domain logic.
   and time-to-isolation.
 - `services/scenarios/`: fixture validation, plan scoring, invalidation, and
   event recomputation.
+- `services/reports/`: explicit full-horizon run orchestration, deterministic
+  delta analysis, SQLite persistence, and report export rendering.
 - `apps/api/`: strict Pydantic wire models plus FastAPI endpoints for bootstrap,
   baseline, named frames, and event flow.
 - `apps/web/`: React operations shell with a projected SVG map, timeline,
@@ -49,6 +54,8 @@ frontend does not recalculate domain logic.
 - Scenario evaluation consumes a frozen derived state.
 - Future agents may explain completed results but cannot alter safety fields or
   scores.
+- Reports are derived only from frozen world-state snapshots. Their prose may
+  explain those results but may not invent or recalculate domain metrics.
 - Administrative context boundaries are visual reference data only and are not
   loaded by routing or scenario services.
 
@@ -59,3 +66,18 @@ requests named frames from the timeline and replaces the current state with the
 event recomputation response when the bridge failure is injected. It highlights
 the selected plan's returned route IDs but does not calculate routing or scoring
 inside the browser.
+
+## Run and report lifecycle
+
+Frame browsing is stateless and does not create audit records. An explicit run
+freezes the requested event set and evaluates every scenario frame. The run
+records the input fingerprint, fixture digest, actual start/completion times,
+ordered world-state snapshots, and one immutable report.
+
+The report builder compares adjacent frames for timeline changes and compares
+event-affected frames with the same baseline frames for counterfactual event
+effects. SQLite stores the complete run and report JSON; exports render the
+stored report without recalculating findings.
+
+The historical impact prior is recorded in provenance as research context but
+is not used by routing, isolation, plan scoring, or report conclusions.

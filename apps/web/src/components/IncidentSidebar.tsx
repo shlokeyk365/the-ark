@@ -112,8 +112,17 @@ export function IncidentSidebar({
             {worldState.active_event_ids.length ? "DISRUPTED" : "MODELED"}
           </span>
         </div>
-        <h1>Kantipur River Flood Exercise</h1>
-        <p>{bootstrap.description}</p>
+        <h1>Nakkhu River Flood</h1>
+        <p>Kantipur Colony · Nakhipot, Lalitpur Ward 14</p>
+        <div className="impact-model-summary">
+          <span>CATBOOST IMPACT MODEL</span>
+          <strong>
+            {bootstrap.impact_model.evaluation.unseen_district_roc_auc.toFixed(2)} AUC
+          </strong>
+          <em>
+            unseen districts · {bootstrap.impact_model.training_events.toLocaleString()} events
+          </em>
+        </div>
         <div className="incident-meta">
           <span>
             <ShellIcon name="clock" size={13} />

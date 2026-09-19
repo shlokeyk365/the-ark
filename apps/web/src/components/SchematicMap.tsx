@@ -11,6 +11,7 @@ import type {
   DerivedEdgeState,
   PlanResult,
   Position,
+  PredictionSignal,
   ScenarioBootstrapResponse,
   WorldStateSnapshot,
 } from "@the-ark/shared-types";
@@ -21,15 +22,21 @@ import {
   DEFAULT_BASE_H,
   baseHeightFor,
   buildProjection,
-  kmToLatDegrees,
   layoutLabels,
   smoothPath,
 } from "./mapProjection";
+import {
+  floodForecastCollection,
+  floodNowCollection,
+  type MapFeatureCollection,
+} from "../map/scenarioSources";
 
 interface SchematicMapProps {
   bootstrap: ScenarioBootstrapResponse;
   worldState: WorldStateSnapshot;
+  horizonState: WorldStateSnapshot | undefined;
   selectedPlan: PlanResult | undefined;
+  focusedRouteEdgeIds?: string[];
   selectedAssetId: string | null;
   onSelectAsset: (assetId: string) => void;
 }
@@ -45,29 +52,34 @@ const MAX_ZOOM = 6;
 
 /**
  * Illustrative channel centreline. The river itself carries no derived state:
- * it orients the two banks that the bridges connect. Inundation width is the
- * only part driven by frame data.
+ * it orients the two banks that the bridges connect. The flood surface comes
+ * from validated scenario polygons instead.
  */
 const CHANNEL_CENTRELINE: Position[] = [
-  [85.262, 27.6955],
-  [85.29, 27.6884],
-  [85.317, 27.6906],
-  [85.334, 27.6872],
-  [85.352, 27.6913],
-  [85.378, 27.6858],
+  [85.289, 27.688],
+  [85.301, 27.685],
+  [85.311, 27.686],
+  [85.321, 27.689],
+  [85.332, 27.687],
+  [85.343, 27.688],
+  [85.354, 27.682],
+  [85.368, 27.684],
 ];
 
-const CHANNEL_HALF_WIDTH_KM = 0.22;
-/** Metres of depth to kilometres of modelled lateral spread. */
-const SPREAD_KM_PER_METRE = 2.9;
-
-type LayerKey = "context" | "inundation" | "network" | "route" | "labels";
+type LayerKey =
+  | "context"
+  | "inundation"
+  | "network"
+  | "route"
+  | "predictions"
+  | "labels";
 
 const LAYER_LABELS: { key: LayerKey; label: string }[] = [
   { key: "context", label: "Administrative context" },
-  { key: "inundation", label: "Modeled inundation" },
+  { key: "inundation", label: "Modeled depth bands" },
   { key: "network", label: "Roads & bridges" },
   { key: "route", label: "Selected plan route" },
+  { key: "predictions", label: "Model prediction pings" },
   { key: "labels", label: "Asset labels" },
 ];
 
@@ -88,6 +100,13 @@ function niceScaleKm(pxPerKm: number) {
   return steps.find((step) => step * pxPerKm >= 72) ?? steps[steps.length - 1];
 }
 
+function depthClass(depthMaxM: number) {
+  if (depthMaxM <= 0.1) return "depth-1";
+  if (depthMaxM <= 0.2) return "depth-2";
+  if (depthMaxM <= 0.3) return "depth-3";
+  return "depth-4";
+}
+
 /**
  * Token-free fallback renderer: a self-contained SVG schematic of the same
  * derived state. Used when no Mapbox token is configured, or when the Mapbox
@@ -96,7 +115,9 @@ function niceScaleKm(pxPerKm: number) {
 export function SchematicMap({
   bootstrap,
   worldState,
+  horizonState,
   selectedPlan,
+  focusedRouteEdgeIds,
   selectedAssetId,
   onSelectAsset,
 }: SchematicMapProps) {
@@ -111,6 +132,8 @@ export function SchematicMap({
     h: DEFAULT_BASE_H,
   });
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+  const [hoveredFloodId, setHoveredFloodId] = useState<string | null>(null);
+  const [selectedPredictionId, setSelectedPredictionId] = useState<string | null>(null);
   const [layersOpen, setLayersOpen] = useState(true);
   // Once the operator chooses, stop auto-collapsing on resize.
   const [layersPinned, setLayersPinned] = useState(false);
@@ -119,6 +142,7 @@ export function SchematicMap({
     inundation: true,
     network: true,
     route: true,
+    predictions: true,
     labels: true,
   });
 
@@ -165,8 +189,20 @@ export function SchematicMap({
         positions.push(feature.geometry.coordinates);
       }
     });
+    worldState.prediction_signals.forEach((signal) => {
+      positions.push(signal.geometry.coordinates);
+    });
+    bootstrap.flood_polygons.features.forEach((feature) => {
+      feature.geometry.coordinates.forEach((ring) => positions.push(...ring));
+    });
     return buildProjection(positions, baseH);
-  }, [baseH, bootstrap.assets.features, bootstrap.road_network.features]);
+  }, [
+    baseH,
+    bootstrap.assets.features,
+    bootstrap.flood_polygons.features,
+    bootstrap.road_network.features,
+    worldState.prediction_signals,
+  ]);
 
   const edgeStateById = useMemo(
     () => new Map(worldState.edge_states.map((edge) => [edge.edge_id, edge])),
@@ -174,12 +210,13 @@ export function SchematicMap({
   );
 
   const selectedRouteEdges = useMemo(() => {
+    if (focusedRouteEdgeIds?.length) return new Set(focusedRouteEdgeIds);
     const edgeIds = new Set<string>();
     selectedPlan?.assignment_results.forEach((assignment) => {
       assignment.route?.edge_ids.forEach((edgeId) => edgeIds.add(edgeId));
     });
     return edgeIds;
-  }, [selectedPlan]);
+  }, [focusedRouteEdgeIds, selectedPlan]);
 
   const isolatedCommunities = useMemo(
     () =>
@@ -189,15 +226,6 @@ export function SchematicMap({
           .map((access) => access.community_id),
       ),
     [worldState.community_access],
-  );
-
-  const maxDepth = useMemo(
-    () =>
-      worldState.edge_states.reduce(
-        (highest, edge) => Math.max(highest, edge.flood_depth_m),
-        0,
-      ),
-    [worldState.edge_states],
   );
 
   const contextPaths = useMemo(
@@ -220,25 +248,55 @@ export function SchematicMap({
     [bootstrap.context_boundaries.features, project],
   );
 
-  const channel = useMemo(() => {
-    const band = (halfWidthKm: number) => {
-      const offset = kmToLatDegrees(halfWidthKm);
-      const north = CHANNEL_CENTRELINE.map(([longitude, latitude]) =>
-        project([longitude, latitude + offset]),
-      );
-      const south = CHANNEL_CENTRELINE.map(([longitude, latitude]) =>
-        project([longitude, latitude - offset]),
-      ).reverse();
-      return `${smoothPath(north)} ${smoothPath(south).replace(/^M/, "L")} Z`;
-    };
+  const channel = useMemo(
+    () => smoothPath(CHANNEL_CENTRELINE.map((position) => project(position))),
+    [project],
+  );
 
+  const floodBands = useMemo(() => {
+    const projectCollection = (
+      collection: MapFeatureCollection,
+      displayState: "current" | "forecast",
+    ) =>
+      collection.features.map((feature) => ({
+        id: String(feature.id),
+        label: String(feature.properties.band_label),
+        simulationTimeHours: Number(feature.properties.requested_time_hours),
+        keyframeTimeHours: Number(feature.properties.keyframe_time_hours),
+        interpolated: Boolean(feature.properties.interpolated),
+        displayState,
+        opacity: Number(feature.properties.frame_weight ?? 1),
+        depthClass: depthClass(Number(feature.properties.depth_max_m)),
+        d:
+          feature.geometry.type === "Polygon"
+            ? feature.geometry.coordinates
+                .map(
+                  (ring) =>
+                    `${ring
+                      .map((position, index) => {
+                        const point = project(position);
+                        return `${index === 0 ? "M" : "L"}${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
+                      })
+                      .join(" ")} Z`,
+                )
+                .join(" ")
+            : "",
+      }));
+
+    const current = projectCollection(
+      floodNowCollection(bootstrap, worldState),
+      "current",
+    );
+    const forecast = projectCollection(
+      floodForecastCollection(bootstrap, worldState, horizonState),
+      "forecast",
+    );
     return {
-      water: band(CHANNEL_HALF_WIDTH_KM),
-      inundation: band(CHANNEL_HALF_WIDTH_KM + maxDepth * SPREAD_KM_PER_METRE),
-      outer: band(CHANNEL_HALF_WIDTH_KM + maxDepth * SPREAD_KM_PER_METRE * 1.45),
-      centreline: smoothPath(CHANNEL_CENTRELINE.map((position) => project(position))),
+      current,
+      forecast,
+      byId: new Map([...forecast, ...current].map((band) => [band.id, band])),
     };
-  }, [maxDepth, project]);
+  }, [bootstrap, horizonState, project, worldState]);
 
   const edges = useMemo(
     () =>
@@ -274,6 +332,24 @@ export function SchematicMap({
     [bootstrap.assets.features, project],
   );
 
+  const predictionSignals = useMemo(
+    () =>
+      worldState.prediction_signals.map((signal) => ({
+        ...signal,
+        point: project(signal.geometry.coordinates),
+      })),
+    [project, worldState.prediction_signals],
+  );
+  const selectedPrediction: PredictionSignal | undefined = selectedPredictionId
+    ? worldState.prediction_signals.find(
+        (signal) => signal.ping_id === selectedPredictionId,
+      )
+    : undefined;
+
+  useEffect(() => {
+    setSelectedPredictionId(null);
+  }, [worldState.world_state_version]);
+
   /**
    * The floating map chrome sits above the SVG, so its footprint is reserved
    * before labels are placed. Positions mirror the CSS, converted from screen
@@ -292,7 +368,7 @@ export function SchematicMap({
 
     return [
       box(6, 6, 360, 36), // status chips
-      box(cardWidth - 208, 6, 202, layersOpen ? 205 : 40), // layers panel
+      box(cardWidth - 208, 6, 202, layersOpen ? 230 : 40), // layers panel
       box(cardWidth - 48, cardHeight - 108, 42, 102), // zoom + compass
       box(8, cardHeight - 46, 160, 40), // scale bar
     ];
@@ -409,6 +485,9 @@ export function SchematicMap({
   const hoveredEdge: DerivedEdgeState | undefined = hoveredEdgeId
     ? edgeStateById.get(hoveredEdgeId)
     : undefined;
+  const hoveredFlood = hoveredFloodId
+    ? floodBands.byId.get(hoveredFloodId)
+    : undefined;
 
   // The bar is an HTML overlay, so the scale must be in CSS pixels rather
   // than base-canvas units or the stated distance is wrong.
@@ -423,7 +502,7 @@ export function SchematicMap({
     <section
       className="map-card schematic-card"
       ref={cardRef}
-      aria-label="Kantipur River scenario map (schematic)"
+      aria-label="Nakkhu River scenario map (schematic)"
     >
       <div className="map-toolbar">
         <span className={`state-pill ${eventActive ? "event" : "baseline"}`}>
@@ -486,11 +565,12 @@ export function SchematicMap({
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
       >
-        <title id="map-title">Kantipur River infrastructure status</title>
+        <title id="map-title">Nakkhu River infrastructure and model-risk status</title>
         <desc id="map-description">
           Synthetic road network over Kathmandu and Lalitpur administrative
           context, showing communities, bridges, shelters, a hospital, modeled
-          inundation, current closures, and the selected response plan route.
+          inundation, current closures, the selected response plan route, and
+          event-level impact-model prediction pings.
         </desc>
 
         <defs>
@@ -498,16 +578,6 @@ export function SchematicMap({
             <stop offset="0" stopColor="#202729" />
             <stop offset="0.55" stopColor="#181e20" />
             <stop offset="1" stopColor="#121718" />
-          </linearGradient>
-          <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#506976" />
-            <stop offset="0.5" stopColor="#718a95" />
-            <stop offset="1" stopColor="#435c67" />
-          </linearGradient>
-          <linearGradient id="inundation" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#657b84" stopOpacity="0.12" />
-            <stop offset="0.5" stopColor="#7f949c" stopOpacity="0.3" />
-            <stop offset="1" stopColor="#657b84" stopOpacity="0.12" />
           </linearGradient>
           <filter id="soft-blur" x="-30%" y="-30%" width="160%" height="160%">
             <feGaussianBlur stdDeviation="14" />
@@ -576,11 +646,40 @@ export function SchematicMap({
         ) : null}
 
         {layers.inundation ? (
-          <g className="flood-layer" aria-hidden="true">
-            <path className="flood-outer" d={channel.outer} />
-            <path className="flood-band" d={channel.inundation} fill="url(#inundation)" />
-            <path className="river-water" d={channel.water} fill="url(#water)" />
-            <path className="river-centreline" d={channel.centreline} />
+          <g className="flood-layer" key={worldState.frame_id}>
+            {floodBands.forecast.map((band) => (
+              <path
+                className={`flood-depth-band forecast ${band.depthClass}`}
+                d={band.d}
+                key={band.id}
+                style={{ opacity: band.opacity }}
+                onMouseEnter={() => {
+                  setHoveredEdgeId(null);
+                  setHoveredFloodId(band.id);
+                }}
+                onMouseLeave={() =>
+                  setHoveredFloodId((current) => (current === band.id ? null : current))
+                }
+              />
+            ))}
+            {floodBands.current.map((band) => (
+              <path
+                className={`flood-depth-band current ${band.depthClass}`}
+                d={band.d}
+                key={band.id}
+                style={{ opacity: band.opacity }}
+                onMouseEnter={() => {
+                  setHoveredEdgeId(null);
+                  setHoveredFloodId(band.id);
+                }}
+                onMouseLeave={() =>
+                  setHoveredFloodId((current) => (current === band.id ? null : current))
+                }
+              />
+            ))}
+            <path className="river-centreline" d={channel} />
+            <path className="river-flow river-flow-a" d={channel} />
+            <path className="river-flow river-flow-b" d={channel} />
           </g>
         ) : null}
 
@@ -610,7 +709,10 @@ export function SchematicMap({
                 <g
                   key={edge.id}
                   className={`road-group ${hoveredEdgeId === edge.id ? "hovered" : ""}`}
-                  onMouseEnter={() => setHoveredEdgeId(edge.id)}
+                  onMouseEnter={() => {
+                    setHoveredFloodId(null);
+                    setHoveredEdgeId(edge.id);
+                  }}
                   onMouseLeave={() =>
                     setHoveredEdgeId((current) => (current === edge.id ? null : current))
                   }
@@ -680,7 +782,95 @@ export function SchematicMap({
             );
           })}
         </g>
+
+        {layers.predictions ? (
+          <g className="prediction-layer">
+            {predictionSignals.map((signal) => {
+              const labelLeft = signal.point.x > BASE_W / 2;
+              const labelBelow = signal.point.y < 72;
+              const labelX = labelLeft ? -142 : 20;
+              const labelY = labelBelow ? 19 : -48;
+              return (
+                <g
+                  className={`prediction-ping ${signal.target} ${signal.state}`}
+                  key={signal.ping_id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Priority ${signal.priority_rank}, ${signal.label}: ${signal.percent}% localized risk score, ${signal.state}`}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={() => setSelectedPredictionId(signal.ping_id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedPredictionId(signal.ping_id);
+                    }
+                  }}
+                >
+                  <g
+                    transform={`translate(${signal.point.x} ${signal.point.y}) scale(${counter})`}
+                  >
+                    <circle className="prediction-ring prediction-ring-outer" r="28" />
+                    <circle className="prediction-ring prediction-ring-inner" r="19" />
+                    <circle
+                      className="prediction-core"
+                      r={7 + signal.priority_score * 0.05}
+                    />
+                    <text className="prediction-mark" textAnchor="middle" y="4">
+                      !
+                    </text>
+                  </g>
+                  {selectedPredictionId === signal.ping_id ? (
+                    <g
+                      className="prediction-label-card"
+                      transform={`translate(${signal.point.x} ${signal.point.y}) scale(${counter}) translate(${labelX} ${labelY})`}
+                    >
+                      <rect width="122" height="36" rx="6" />
+                      <text className="prediction-label" x="9" y="14">
+                        #{signal.priority_rank} {signal.short_label}
+                      </text>
+                      <text className="prediction-percent" x="9" y="29">
+                        {signal.percent}% predicted
+                      </text>
+                    </g>
+                  ) : null}
+                </g>
+              );
+            })}
+          </g>
+        ) : null}
       </svg>
+
+      {selectedPrediction ? (
+        <div className="schematic-prediction-popup prediction-popup-card" role="dialog">
+          <button
+            className="schematic-prediction-close"
+            type="button"
+            aria-label="Close prediction details"
+            onClick={() => setSelectedPredictionId(null)}
+          >
+            ×
+          </button>
+          <div className="prediction-popup-heading">
+            <strong>{selectedPrediction.label}</strong>
+            <span className={`priority-${selectedPrediction.priority_level}`}>
+              #{selectedPrediction.priority_rank} {selectedPrediction.priority_level}
+            </span>
+          </div>
+          <div className="prediction-popup-risk">
+            <strong>{selectedPrediction.percent}%</strong>
+            <span>localized risk score</span>
+          </div>
+          <div className="prediction-popup-metrics">
+            <span>Event prior {selectedPrediction.base_percent}%</span>
+            <span>Nearby depth {selectedPrediction.local_flood_depth_m.toFixed(2)} m</span>
+            <span>{selectedPrediction.exposed_people.toLocaleString()} people nearby</span>
+          </div>
+          <small>Why this ping</small>
+          <p>{selectedPrediction.reason}</p>
+          <small>Recommended action</small>
+          <p className="prediction-popup-action">{selectedPrediction.recommended_action}</p>
+        </div>
+      ) : null}
 
       {layers.context ? (
         <div className="context-credit">
@@ -723,7 +913,10 @@ export function SchematicMap({
         <span>{scaleKm < 1 ? `${scaleKm * 1000} m` : `${scaleKm} km`}</span>
       </div>
 
-      <div className={`edge-inspector ${hoveredEdge ? "visible" : ""}`} role="status">
+      <div
+        className={`edge-inspector ${hoveredEdge || hoveredFlood ? "visible" : ""}`}
+        role="status"
+      >
         {hoveredEdge ? (
           <>
             <strong>{hoveredEdge.edge_id}</strong>
@@ -738,9 +931,31 @@ export function SchematicMap({
             </span>
             {hoveredEdge.critical ? <span className="inspector-critical">critical</span> : null}
           </>
+        ) : hoveredFlood ? (
+          <>
+            <strong>{hoveredFlood.label}</strong>
+            <span className="inspector-status flood">{hoveredFlood.displayState}</span>
+            <span>+{hoveredFlood.simulationTimeHours}h frame</span>
+            {hoveredFlood.interpolated ? (
+              <span>blended from +{hoveredFlood.keyframeTimeHours}h</span>
+            ) : null}
+            <span>curated synthetic surface</span>
+          </>
         ) : (
-          <span className="inspector-hint">Hover a road or bridge for derived state</span>
+          <span className="inspector-hint">Hover a depth band, road, or bridge</span>
         )}
+      </div>
+
+      <div className="flood-legend" aria-label="Modeled flood depth legend">
+        <strong>Modeled depth</strong>
+        <span><i className="depth-1" />0–0.10 m</span>
+        <span><i className="depth-2" />0.10–0.20 m</span>
+        <span><i className="depth-3" />0.20–0.30 m</span>
+        <span><i className="depth-4" />0.30–0.50 m</span>
+        <span className="forecast-key"><i />24h extent</span>
+      </div>
+      <div className="map-provenance">
+        Curated synthetic depth surface · not a hydraulic solve or operational forecast · POI risk uses local depth and time.
       </div>
     </section>
   );

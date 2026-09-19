@@ -21,6 +21,7 @@ interface ScenarioMapProps {
   worldState: WorldStateSnapshot;
   horizonState: WorldStateSnapshot | undefined;
   selectedPlan: PlanResult | undefined;
+  focusedRouteEdgeIds?: string[];
   selectedAssetId: string | null;
   onSelectAsset: (assetId: string) => void;
 }
@@ -48,6 +49,7 @@ export function ScenarioMap({
   worldState,
   horizonState,
   selectedPlan,
+  focusedRouteEdgeIds,
   selectedAssetId,
   onSelectAsset,
 }: ScenarioMapProps) {
@@ -66,6 +68,8 @@ export function ScenarioMap({
       <div className="map-fallback-wrap">
         <SchematicMap
           bootstrap={bootstrap}
+          focusedRouteEdgeIds={focusedRouteEdgeIds}
+          horizonState={horizonState}
           onSelectAsset={onSelectAsset}
           selectedPlan={selectedPlan}
           selectedAssetId={selectedAssetId}
@@ -82,7 +86,7 @@ export function ScenarioMap({
                   <>
                     {" · Run "}
                     <code>npm run basemap</code>
-                    {" to fetch the Kantipur PMTiles archive."}
+                    {" to fetch the Nakkhu scenario PMTiles archive."}
                   </>
                 ) : null}
               </span>
@@ -100,9 +104,10 @@ export function ScenarioMap({
     <Suspense fallback={<BasemapLoading />}>
       <MapLibreScenarioMap
         bootstrap={bootstrap}
+        focusedRouteEdgeIds={focusedRouteEdgeIds}
         horizonState={horizonState}
-        onFailure={onFailure}
         onSelectAsset={onSelectAsset}
+        onFailure={onFailure}
         selectedPlan={selectedPlan}
         selectedAssetId={selectedAssetId}
         worldState={worldState}

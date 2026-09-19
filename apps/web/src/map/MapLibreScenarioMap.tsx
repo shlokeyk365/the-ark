@@ -33,10 +33,14 @@ import {
   pmtilesUrl,
 } from "./basemap";
 import {
+  CURRENT_FLOOD_OPACITY,
+  FORECAST_FLOOD_OPACITY,
+  HOVERABLE_FLOOD_LAYERS,
   HOVERABLE_ROAD_LAYERS,
   LAYERS,
   LAYER_CONTROLS,
   SOURCE,
+  floodOpacity,
   type LayerKey,
 } from "./layers";
 import {
@@ -48,6 +52,7 @@ import {
   floodForecastCollection,
   floodNowCollection,
   hazardsCollection,
+  predictionSignalsCollection,
   roadsCollection,
   routeCollection,
   routeEdgeIdsFor,
@@ -57,6 +62,34 @@ import {
 
 const FIT_PADDING = { top: 112, right: 328, bottom: 172, left: 328 };
 const LOAD_TIMEOUT_MS = 15000;
+const BUILDING_3D_LAYER_ID = "basemap-buildings-3d";
+
+interface FloodHover {
+  bandLabel: string;
+  displayState: "current" | "forecast";
+  simulationTimeHours: number;
+  keyframeTimeHours: number;
+  interpolated: boolean;
+  surfaceKind: string;
+}
+
+function floodHoverFromFeature(
+  feature: maplibregl.MapGeoJSONFeature | undefined,
+): FloodHover | null {
+  const properties = feature?.properties;
+  if (!properties) return null;
+  const displayState = properties.display_state;
+  if (displayState !== "current" && displayState !== "forecast") return null;
+
+  return {
+    bandLabel: String(properties.band_label ?? "Modeled depth"),
+    displayState,
+    simulationTimeHours: Number(properties.requested_time_hours ?? 0),
+    keyframeTimeHours: Number(properties.keyframe_time_hours ?? 0),
+    interpolated: Boolean(properties.interpolated),
+    surfaceKind: String(properties.surface_kind ?? "curated_synthetic_surface"),
+  };
+}
 
 /** Registered once per page; the protocol object is stateless across maps. */
 let protocolRegistered = false;
@@ -64,6 +97,53 @@ function registerPmtilesProtocol() {
   if (protocolRegistered) return;
   maplibregl.addProtocol("pmtiles", new Protocol().tile);
   protocolRegistered = true;
+}
+
+function predictionPopupContent(properties: Record<string, unknown>): HTMLDivElement {
+  const text = (key: string) => String(properties[key] ?? "");
+  const root = document.createElement("div");
+  root.className = "prediction-popup-card";
+
+  const heading = document.createElement("div");
+  heading.className = "prediction-popup-heading";
+  const title = document.createElement("strong");
+  title.textContent = text("label");
+  const state = document.createElement("span");
+  state.className = `priority-${text("priority_level")}`;
+  state.textContent = `#${text("priority_rank")} ${text("priority_level")}`;
+  heading.append(title, state);
+
+  const risk = document.createElement("div");
+  risk.className = "prediction-popup-risk";
+  const value = document.createElement("strong");
+  value.textContent = `${text("percent")}%`;
+  const valueLabel = document.createElement("span");
+  valueLabel.textContent = "localized risk score";
+  risk.append(value, valueLabel);
+
+  const metrics = document.createElement("div");
+  metrics.className = "prediction-popup-metrics";
+  const prior = document.createElement("span");
+  prior.textContent = `Event prior ${text("base_percent")}%`;
+  const depth = document.createElement("span");
+  const depthValue = Number(properties.local_flood_depth_m ?? 0);
+  depth.textContent = `Nearby depth ${depthValue.toFixed(2)} m`;
+  const exposure = document.createElement("span");
+  exposure.textContent = `${Number(properties.exposed_people ?? 0).toLocaleString()} people nearby`;
+  metrics.append(prior, depth, exposure);
+
+  const whyLabel = document.createElement("small");
+  whyLabel.textContent = "Why this ping";
+  const why = document.createElement("p");
+  why.textContent = text("reason");
+  const actionLabel = document.createElement("small");
+  actionLabel.textContent = "Recommended action";
+  const action = document.createElement("p");
+  action.className = "prediction-popup-action";
+  action.textContent = text("recommended_action");
+
+  root.append(heading, risk, metrics, whyLabel, why, actionLabel, action);
+  return root;
 }
 
 /**
@@ -85,6 +165,12 @@ const basemapLabelIds = new Set(
 function buildStyle(): StyleSpecification {
   return {
     version: 8,
+    light: {
+      anchor: "map",
+      color: "#8ed8ff",
+      intensity: 0.38,
+      position: [1.15, 205, 35],
+    },
     glyphs: BASEMAP_GLYPHS,
     sprite: BASEMAP_SPRITE,
     sources: {
@@ -131,6 +217,49 @@ function buildStyle(): StyleSpecification {
         },
       },
       ...basemapLayers,
+      {
+        id: BUILDING_3D_LAYER_ID,
+        type: "fill-extrusion",
+        source: BASEMAP_SOURCE_ID,
+        "source-layer": "buildings",
+        minzoom: 13,
+        filter: ["in", "kind", "building", "building_part"],
+        paint: {
+          "fill-extrusion-color": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            13,
+            "#132839",
+            16,
+            "#2c536a",
+          ],
+          "fill-extrusion-height": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            13,
+            0,
+            13.6,
+            [
+              "case",
+              ["has", "height"],
+              ["to-number", ["get", "height"]],
+              ["has", "levels"],
+              ["*", ["to-number", ["get", "levels"]], 3],
+              8,
+            ],
+          ],
+          "fill-extrusion-base": [
+            "case",
+            ["has", "min_height"],
+            ["to-number", ["get", "min_height"]],
+            0,
+          ],
+          "fill-extrusion-opacity": 0.78,
+          "fill-extrusion-vertical-gradient": true,
+        },
+      },
       ...LAYERS,
     ],
   };
@@ -142,13 +271,14 @@ interface MapLibreScenarioMapProps {
   /** Last frame in the horizon, used for the predicted-inundation layer. */
   horizonState: WorldStateSnapshot | undefined;
   selectedPlan: PlanResult | undefined;
+  focusedRouteEdgeIds?: string[];
   selectedAssetId: string | null;
   onSelectAsset: (assetId: string) => void;
   onFailure: (reason: string) => void;
 }
 
 const DEFAULT_LAYERS: Record<LayerKey, boolean> = {
-  context: true,
+  context: false,
   floodNow: true,
   floodForecast: true,
   roads: true,
@@ -157,6 +287,7 @@ const DEFAULT_LAYERS: Record<LayerKey, boolean> = {
   bridges: true,
   gauges: false,
   alerts: true,
+  predictions: true,
   labels: true,
 };
 
@@ -165,35 +296,54 @@ export function MapLibreScenarioMap({
   worldState,
   horizonState,
   selectedPlan,
+  focusedRouteEdgeIds,
   selectedAssetId,
   onSelectAsset,
   onFailure,
 }: MapLibreScenarioMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const predictionPopupRef = useRef<maplibregl.Popup | null>(null);
   const [ready, setReady] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
   const [satellite, setSatellite] = useState(true);
   const [terrain3d, setTerrain3d] = useState(false);
   const [hovered, setHovered] = useState<DerivedEdgeState | null>(null);
+  const [hoveredFlood, setHoveredFlood] = useState<FloodHover | null>(null);
   const [diagnostics, setDiagnostics] = useState<string[] | null>(null);
   const [layers, setLayers] = useState<Record<LayerKey, boolean>>(DEFAULT_LAYERS);
 
-  const routeEdgeIds = useMemo(() => routeEdgeIdsFor(selectedPlan), [selectedPlan]);
+  const routeEdgeIds = useMemo(
+    () =>
+      focusedRouteEdgeIds?.length
+        ? new Set(focusedRouteEdgeIds)
+        : routeEdgeIdsFor(selectedPlan),
+    [focusedRouteEdgeIds, selectedPlan],
+  );
+
+  const floodNow = useMemo(
+    () => floodNowCollection(bootstrap, worldState),
+    [bootstrap, worldState.frame_id],
+  );
+  const floodForecast = useMemo(
+    () => floodForecastCollection(bootstrap, worldState, horizonState),
+    [bootstrap, horizonState?.frame_id, worldState.frame_id],
+  );
 
   const collections = useMemo(
     (): Record<string, MapFeatureCollection> => ({
       [SOURCE.context]: contextCollection(bootstrap),
-      [SOURCE.floodForecast]: floodForecastCollection(horizonState),
-      [SOURCE.floodNow]: floodNowCollection(worldState),
+      [SOURCE.floodForecast]: floodForecast,
+      [SOURCE.floodNow]: floodNow,
       [SOURCE.channel]: channelCollection(),
       [SOURCE.roads]: roadsCollection(bootstrap, worldState, routeEdgeIds, selectedAssetId),
       [SOURCE.route]: routeCollection(bootstrap, routeEdgeIds),
       [SOURCE.assets]: assetsCollection(bootstrap, worldState, selectedAssetId),
       [SOURCE.bridges]: bridgesCollection(bootstrap, worldState, selectedAssetId),
       [SOURCE.hazards]: hazardsCollection(bootstrap, worldState),
+      [SOURCE.predictions]: predictionSignalsCollection(worldState),
     }),
-    [bootstrap, horizonState, routeEdgeIds, selectedAssetId, worldState],
+    [bootstrap, floodForecast, floodNow, routeEdgeIds, selectedAssetId, worldState],
   );
 
   const edgeStateById = useMemo(
@@ -221,7 +371,7 @@ export function MapLibreScenarioMap({
       map = new maplibregl.Map({
         container,
         style: buildStyle(),
-        bounds: scenarioBounds(bootstrap),
+        bounds: scenarioBounds(bootstrap, worldState),
         fitBoundsOptions: { padding: FIT_PADDING },
         attributionControl: false,
       });
@@ -255,6 +405,11 @@ export function MapLibreScenarioMap({
      * is raised. Without this the panel would spin forever, so fall back to the
      * schematic instead.
      */
+    const markReady = () => {
+      window.clearTimeout(watchdog);
+      setReady(true);
+    };
+
     const watchdog = window.setTimeout(() => {
       if (!map.isStyleLoaded()) {
         failureRef.current(
@@ -265,9 +420,14 @@ export function MapLibreScenarioMap({
       }
     }, LOAD_TIMEOUT_MS);
 
+    // `load` waits until every visible source has completed. That includes the
+    // optional terrain DEM, whose public host must never decide whether the
+    // same-origin PMTiles basemap is allowed to appear. `style.load` means the
+    // vector style and its sources are ready to render; tiles continue to
+    // stream in afterward as normal.
+    map.on("style.load", markReady);
     map.on("load", () => {
-      window.clearTimeout(watchdog);
-      setReady(true);
+      markReady();
 
       // A zero-sized drawing buffer renders nothing and raises no error, so
       // recover from it and surface it rather than showing an empty panel.
@@ -288,11 +448,32 @@ export function MapLibreScenarioMap({
     };
     const move = (event: maplibregl.MapLayerMouseEvent) => {
       const id = event.features?.[0]?.properties?.id;
-      if (typeof id === "string") setHovered(edgeStateRef.current.get(id) ?? null);
+      if (typeof id === "string") {
+        setHoveredFlood(null);
+        setHovered(edgeStateRef.current.get(id) ?? null);
+      }
     };
     const leave = () => {
       map.getCanvas().style.cursor = "";
       setHovered(null);
+    };
+    const showPrediction = (event: maplibregl.MapLayerMouseEvent) => {
+      const feature = event.features?.[0];
+      if (!feature || feature.geometry.type !== "Point") return;
+      const coordinates = feature.geometry.coordinates as [number, number];
+      predictionPopupRef.current?.remove();
+      predictionPopupRef.current = new maplibregl.Popup({
+        className: "ark-prediction-popup",
+        closeButton: true,
+        closeOnClick: true,
+        maxWidth: "310px",
+        offset: 16,
+      })
+        .setLngLat(coordinates)
+        .setDOMContent(
+          predictionPopupContent(feature.properties as Record<string, unknown>),
+        )
+        .addTo(map);
     };
 
     HOVERABLE_ROAD_LAYERS.forEach((layerId) => {
@@ -300,6 +481,24 @@ export function MapLibreScenarioMap({
       map.on("mousemove", layerId, move);
       map.on("mouseleave", layerId, leave);
     });
+
+    const moveFlood = (event: maplibregl.MapLayerMouseEvent) => {
+      setHovered(null);
+      setHoveredFlood(floodHoverFromFeature(event.features?.[0]));
+    };
+    const leaveFlood = () => {
+      map.getCanvas().style.cursor = "";
+      setHoveredFlood(null);
+    };
+
+    HOVERABLE_FLOOD_LAYERS.forEach((layerId) => {
+      map.on("mouseenter", layerId, enter);
+      map.on("mousemove", layerId, moveFlood);
+      map.on("mouseleave", layerId, leaveFlood);
+    });
+    map.on("mouseenter", "ark-prediction-ping", enter);
+    map.on("mouseleave", "ark-prediction-ping", leave);
+    map.on("click", "ark-prediction-ping", showPrediction);
 
     const selectFeature = (event: maplibregl.MapLayerMouseEvent) => {
       const id = event.features?.[0]?.properties?.id;
@@ -314,6 +513,8 @@ export function MapLibreScenarioMap({
 
     return () => {
       window.clearTimeout(watchdog);
+      predictionPopupRef.current?.remove();
+      predictionPopupRef.current = null;
       setReady(false);
       mapRef.current = null;
       selectableLayerIds.forEach((layerId) => map.off("click", layerId, selectFeature));
@@ -329,6 +530,34 @@ export function MapLibreScenarioMap({
     const observer = new ResizeObserver(() => map.resize());
     observer.observe(element);
     return () => observer.disconnect();
+  }, [ready]);
+
+  /* ----------------------------------------------- prediction ping pulse */
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return undefined;
+    }
+
+    let animationFrame = 0;
+    const animate = (timestamp: number) => {
+      if (!mapRef.current || !map.getLayer("ark-prediction-pulse")) return;
+      const phase = (timestamp % 1800) / 1800;
+      map.setPaintProperty("ark-prediction-pulse", "circle-radius", [
+        "+",
+        12 + phase * 18,
+        ["*", ["get", "priority_score"], 0.07],
+      ]);
+      map.setPaintProperty(
+        "ark-prediction-pulse",
+        "circle-opacity",
+        0.04 + (1 - phase) * 0.2,
+      );
+      animationFrame = window.requestAnimationFrame(animate);
+    };
+    animationFrame = window.requestAnimationFrame(animate);
+    return () => window.cancelAnimationFrame(animationFrame);
   }, [ready]);
 
   /* --------------------------------------------------------- diagnostics */
@@ -379,6 +608,7 @@ export function MapLibreScenarioMap({
     if (!map || !ready) return;
 
     Object.entries(collections).forEach(([id, data]) => {
+      if (id === SOURCE.floodNow || id === SOURCE.floodForecast) return;
       const source = map.getSource(id);
       if (source && "setData" in source) {
         (source as maplibregl.GeoJSONSource).setData(
@@ -387,6 +617,46 @@ export function MapLibreScenarioMap({
       }
     });
   }, [collections, ready]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return undefined;
+
+    map.setPaintProperty("ark-flood-now-fill", "fill-opacity", 0.08);
+    map.setPaintProperty("ark-flood-forecast-fill", "fill-opacity", 0.015);
+
+    const restore = window.setTimeout(() => {
+      const currentSource = map.getSource(SOURCE.floodNow);
+      const forecastSource = map.getSource(SOURCE.floodForecast);
+      if (currentSource && "setData" in currentSource) {
+        (currentSource as maplibregl.GeoJSONSource).setData(
+          floodNow as unknown as GeoJSON.FeatureCollection,
+        );
+      }
+      if (forecastSource && "setData" in forecastSource) {
+        (forecastSource as maplibregl.GeoJSONSource).setData(
+          floodForecast as unknown as GeoJSON.FeatureCollection,
+        );
+      }
+      map.setPaintProperty(
+        "ark-flood-now-fill",
+        "fill-opacity",
+        floodOpacity(CURRENT_FLOOD_OPACITY),
+      );
+      map.setPaintProperty(
+        "ark-flood-forecast-fill",
+        "fill-opacity",
+        floodOpacity(FORECAST_FLOOD_OPACITY),
+      );
+    }, 70);
+
+    return () => window.clearTimeout(restore);
+  }, [floodForecast, floodNow, ready]);
+
+  useEffect(() => {
+    predictionPopupRef.current?.remove();
+    predictionPopupRef.current = null;
+  }, [worldState.world_state_version]);
 
   /* ---------------------------------------------------- layer visibility */
 
@@ -435,6 +705,14 @@ export function MapLibreScenarioMap({
     const map = mapRef.current;
     if (!map || !ready) return;
 
+    if (map.getLayer(BUILDING_3D_LAYER_ID)) {
+      map.setLayoutProperty(
+        BUILDING_3D_LAYER_ID,
+        "visibility",
+        terrain3d ? "visible" : "none",
+      );
+    }
+
     if (terrain3d) {
       map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration: 1.4 });
       map.setSky({
@@ -445,7 +723,7 @@ export function MapLibreScenarioMap({
         "horizon-fog-blend": 0.5,
         "fog-ground-blend": 0.2,
       });
-      map.easeTo({ pitch: 55, duration: 900 });
+      map.easeTo({ pitch: 52, bearing: -18, duration: 900 });
     } else {
       map.setTerrain(null);
       map.easeTo({ pitch: 0, bearing: 0, duration: 700 });
@@ -453,11 +731,11 @@ export function MapLibreScenarioMap({
   }, [ready, terrain3d]);
 
   const resetView = useCallback(() => {
-    mapRef.current?.fitBounds(scenarioBounds(bootstrap), {
+    mapRef.current?.fitBounds(scenarioBounds(bootstrap, worldState), {
       padding: FIT_PADDING,
       duration: 900,
     });
-  }, [bootstrap]);
+  }, [bootstrap, worldState]);
 
   const toggleLayer = (key: LayerKey) =>
     setLayers((current) => ({ ...current, [key]: !current[key] }));
@@ -465,7 +743,7 @@ export function MapLibreScenarioMap({
   const eventActive = worldState.active_event_ids.length > 0;
 
   return (
-    <section className="map-card maplibre-card" aria-label="Kantipur River scenario map">
+    <section className="map-card maplibre-card" aria-label="Nakkhu River scenario map">
       <div className="map-canvas" ref={containerRef} />
       {!ready ? (
         <div className="map-booting" role="status">
@@ -485,6 +763,17 @@ export function MapLibreScenarioMap({
             : `+${worldState.simulation_time_hours}h modeled`}
         </span>
         <span className="state-version">{worldState.world_state_version}</span>
+        <button
+          className="map-dimension-toggle"
+          type="button"
+          onClick={() => setTerrain3d((enabled) => !enabled)}
+          aria-label={`Switch to ${terrain3d ? "2D" : "3D"} map view`}
+          aria-pressed={terrain3d}
+          title={`Switch to ${terrain3d ? "2D" : "3D"} map view`}
+        >
+          <span className={!terrain3d ? "selected" : ""}>2D</span>
+          <span className={terrain3d ? "selected" : ""}>3D</span>
+        </button>
       </div>
 
       <div className={`map-layers ${layersOpen ? "open" : "closed"}`}>
@@ -537,7 +826,7 @@ export function MapLibreScenarioMap({
                 type="checkbox"
               />
               <span className="layer-swatch terrain" aria-hidden="true" />
-              3D terrain
+              3D terrain & buildings
             </label>
 
             <button className="layer-reset" type="button" onClick={resetView}>
@@ -550,7 +839,10 @@ export function MapLibreScenarioMap({
         ) : null}
       </div>
 
-      <div className={`edge-inspector ${hovered ? "visible" : ""}`} role="status">
+      <div
+        className={`edge-inspector ${hovered || hoveredFlood ? "visible" : ""}`}
+        role="status"
+      >
         {hovered ? (
           <>
             <strong>{hovered.edge_id}</strong>
@@ -563,9 +855,30 @@ export function MapLibreScenarioMap({
             </span>
             {hovered.critical ? <span className="inspector-critical">critical</span> : null}
           </>
+        ) : hoveredFlood ? (
+          <>
+            <strong>{hoveredFlood.bandLabel}</strong>
+            <span className="inspector-status flood">
+              {hoveredFlood.displayState}
+            </span>
+            <span>+{hoveredFlood.simulationTimeHours}h frame</span>
+            {hoveredFlood.interpolated ? (
+              <span>blended from +{hoveredFlood.keyframeTimeHours}h</span>
+            ) : null}
+            <span>{hoveredFlood.surfaceKind.replaceAll("_", " ")}</span>
+          </>
         ) : (
-          <span className="inspector-hint">Hover a road or bridge for derived state</span>
+          <span className="inspector-hint">Hover a depth band, road, or bridge</span>
         )}
+      </div>
+
+      <div className="flood-legend" aria-label="Modeled flood depth legend">
+        <strong>Modeled depth</strong>
+        <span><i className="depth-1" />0–0.10 m</span>
+        <span><i className="depth-2" />0.10–0.20 m</span>
+        <span><i className="depth-3" />0.20–0.30 m</span>
+        <span><i className="depth-4" />0.30–0.50 m</span>
+        <span className="forecast-key"><i />24h extent</span>
       </div>
 
       {diagnostics ? (
@@ -581,7 +894,7 @@ export function MapLibreScenarioMap({
       ) : null}
 
       <div className="map-provenance">
-        Inundation polygons are a modeled envelope from edge depth, not a hydraulic solve.
+        Curated synthetic depth surface · not a hydraulic solve or operational forecast · POI risk uses local depth and time.
       </div>
     </section>
   );

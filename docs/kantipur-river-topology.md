@@ -124,7 +124,9 @@ All edges are bidirectional in the baseline scenario. Directional controls, cong
   capacity, and vulnerability-proxy fields.
 - `road-network.geojson`: explicit graph connections, travel times, and closure
   and penalty thresholds.
-- `flood-frames.json`: edge-level depths at `now`, `+6h`, `+12h`, and `+24h`.
+- `flood-frames.json`: edge-level depths every three hours from `now` through
+  `+24h`; +3h/+9h/+15h/+18h/+21h are labeled linear interpolations between the
+  original now/+6h/+12h/+24h anchor frames.
 - `response-plans.json`: Plan A/B/C assignments and assumptions.
 - `event-stream.json`: the injected East River Bridge failure at `+12h`.
 

@@ -12,7 +12,9 @@
     "build": "npm --workspace apps/web run build",
     "build:web": "npm --prefix apps/web run build",
     "typecheck:web": "npm --prefix apps/web run typecheck",
+    "test": "PYTHONPATH=services/physics/src PYTHONPYCACHEPREFIX=/private/tmp/pycache-the-ark python3 -m pytest -q",
     "test:fixtures": "python3 -m pytest tests/test_kantipur_scenario.py",
+    "test:physics": "PYTHONPATH=services/physics/src PYTHONPYCACHEPREFIX=/private/tmp/pycache-the-ark python3 -m pytest -q services/physics/tests",
     "basemap": "./scripts/fetch-basemap.sh"
   }
 }
