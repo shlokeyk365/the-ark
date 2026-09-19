@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0",
+  "eventId": "nakkhu-2024",
+  "modelPurpose": "historical_event_impact_prior",
+  "input": {
+    "year": 2024,
+    "month": 9,
+    "day": 28,
+    "region": "Central Region",
+    "district": "Lalitpur",
+    "cause": "HEAVY RAINS"
+  },
+  "impactProbabilities": {
+    "casualty_or_missing": 0.671789,
+    "housing_damage": 0.786653,
+    "transport_disruption": 0.344443,
+    "severe_impact": 0.355226
+  },
+  "trainingMetadata": {
+    "record_count": 3953,
+    "event_count": 3953,
+    "year_min": 1971,
+    "year_max": 2013,
+    "source_names": [
+      "UNDRR DesInventar Nepal"
+    ],
+    "holdout_policy": "No event from 2024 or later is allowed in training."
+  },
+  "limitations": [
+    "These probabilities do not predict street-level flood extent or depth.",
+    "The historical records contain reporting bias and incomplete zero values.",
+    "Counterfactual rescue outcomes cannot be validated by this model."
+  ]
+}

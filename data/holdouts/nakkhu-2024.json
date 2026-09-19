@@ -1,0 +1,27 @@
+{
+  "event_id": "nakkhu-2024",
+  "locked": true,
+  "location": "Kantipur Colony and Nakhipot, Lalitpur Ward 14, Nepal",
+  "model_input": {
+    "year": 2024,
+    "month": 9,
+    "day": 28,
+    "region": "Central Region",
+    "district": "Lalitpur",
+    "cause": "HEAVY RAINS"
+  },
+  "actual_labels": {
+    "casualty_or_missing": true,
+    "housing_damage": true,
+    "transport_disruption": true,
+    "severe_impact": true
+  },
+  "evidence": [
+    "https://myrepublica.nagariknetwork.com/news/four-people-missing-after-being-swept-away-by-nakkhu-river",
+    "https://english.khabarhub.com/2024/28/402075/",
+    "https://radionepalonline.com/en/2024/09/30/390445.html",
+    "https://unosat.org/products/3993"
+  ],
+  "warning": "This holdout scores event-level impact categories only. It is not a flood-extent benchmark and cannot validate counterfactual rescue outcomes."
+}
+

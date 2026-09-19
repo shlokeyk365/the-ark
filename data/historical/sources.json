@@ -1,0 +1,21 @@
+{
+  "training_sources": [
+    {
+      "name": "UNDRR DesInventar Nepal",
+      "url": "https://www.desinventar.net/DesInventar/download/DI_export_npl.zip",
+      "record_type": "historical disaster impact datacards",
+      "training_use": "event-level flood impact labels",
+      "limitations": [
+        "Records are administrative event reports, not pixel-level flood maps.",
+        "The Nepal export currently covers 1971 through 2013.",
+        "Zero values can mean either no impact or incomplete reporting."
+      ]
+    }
+  ],
+  "reserved_holdout": {
+    "event_id": "nakkhu-2024",
+    "start_date": "2024-09-27",
+    "rule": "No Nakkhu September 2024 outcome label may be included in training or tuning."
+  }
+}
+

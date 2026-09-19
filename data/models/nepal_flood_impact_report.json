@@ -1,0 +1,327 @@
+{
+  "model_purpose": "Historical event-level flood impact prior",
+  "not_a_flood_extent_model": true,
+  "training": {
+    "record_count": 3953,
+    "event_count": 3953,
+    "year_min": 1971,
+    "year_max": 2013,
+    "source_names": [
+      "UNDRR DesInventar Nepal"
+    ],
+    "holdout_policy": "No event from 2024 or later is allowed in training."
+  },
+  "cross_validation": {
+    "strategy": "grouped by complete event year; no random row split",
+    "folds": [
+      {
+        "fold": 0,
+        "training_events": 3333,
+        "validation_events": 620,
+        "validation_years": [
+          1975,
+          1980,
+          1985,
+          1990,
+          1995,
+          2000,
+          2005,
+          2010
+        ],
+        "metrics": {
+          "casualty_or_missing": {
+            "accuracy": 0.6194,
+            "precision": 0.4116,
+            "recall": 0.6096,
+            "f1": 0.4914,
+            "brier": 0.2347,
+            "support": 620,
+            "positive_rate": 0.3016
+          },
+          "housing_damage": {
+            "accuracy": 0.5887,
+            "precision": 0.5707,
+            "recall": 0.412,
+            "f1": 0.4785,
+            "brier": 0.2452,
+            "support": 620,
+            "positive_rate": 0.4581
+          },
+          "transport_disruption": {
+            "accuracy": 0.6242,
+            "precision": 0.0928,
+            "recall": 0.55,
+            "f1": 0.1588,
+            "brier": 0.2215,
+            "support": 620,
+            "positive_rate": 0.0645
+          },
+          "severe_impact": {
+            "accuracy": 0.4726,
+            "precision": 0.6154,
+            "recall": 0.4134,
+            "f1": 0.4946,
+            "brier": 0.2641,
+            "support": 620,
+            "positive_rate": 0.6242
+          }
+        }
+      },
+      {
+        "fold": 1,
+        "training_events": 3210,
+        "validation_events": 743,
+        "validation_years": [
+          1971,
+          1976,
+          1981,
+          1986,
+          1991,
+          1996,
+          2001,
+          2006,
+          2011
+        ],
+        "metrics": {
+          "casualty_or_missing": {
+            "accuracy": 0.6258,
+            "precision": 0.5438,
+            "recall": 0.4934,
+            "f1": 0.5174,
+            "brier": 0.2349,
+            "support": 743,
+            "positive_rate": 0.4065
+          },
+          "housing_damage": {
+            "accuracy": 0.6205,
+            "precision": 0.4662,
+            "recall": 0.5556,
+            "f1": 0.507,
+            "brier": 0.2339,
+            "support": 743,
+            "positive_rate": 0.3513
+          },
+          "transport_disruption": {
+            "accuracy": 0.6783,
+            "precision": 0.1395,
+            "recall": 0.6792,
+            "f1": 0.2315,
+            "brier": 0.2124,
+            "support": 743,
+            "positive_rate": 0.0713
+          },
+          "severe_impact": {
+            "accuracy": 0.4657,
+            "precision": 0.6606,
+            "recall": 0.3765,
+            "f1": 0.4797,
+            "brier": 0.2648,
+            "support": 743,
+            "positive_rate": 0.6541
+          }
+        }
+      },
+      {
+        "fold": 2,
+        "training_events": 3139,
+        "validation_events": 814,
+        "validation_years": [
+          1972,
+          1977,
+          1982,
+          1987,
+          1992,
+          1997,
+          2002,
+          2007,
+          2012
+        ],
+        "metrics": {
+          "casualty_or_missing": {
+            "accuracy": 0.688,
+            "precision": 0.3929,
+            "recall": 0.567,
+            "f1": 0.4641,
+            "brier": 0.2195,
+            "support": 814,
+            "positive_rate": 0.2383
+          },
+          "housing_damage": {
+            "accuracy": 0.4656,
+            "precision": 0.4847,
+            "recall": 0.2974,
+            "f1": 0.3687,
+            "brier": 0.258,
+            "support": 814,
+            "positive_rate": 0.5246
+          },
+          "transport_disruption": {
+            "accuracy": 0.6683,
+            "precision": 0.0803,
+            "recall": 0.55,
+            "f1": 0.1401,
+            "brier": 0.2158,
+            "support": 814,
+            "positive_rate": 0.0491
+          },
+          "severe_impact": {
+            "accuracy": 0.4275,
+            "precision": 0.5784,
+            "recall": 0.3051,
+            "f1": 0.3995,
+            "brier": 0.2779,
+            "support": 814,
+            "positive_rate": 0.6241
+          }
+        }
+      },
+      {
+        "fold": 3,
+        "training_events": 2858,
+        "validation_events": 1095,
+        "validation_years": [
+          1973,
+          1978,
+          1983,
+          1988,
+          1993,
+          1998,
+          2003,
+          2008,
+          2013
+        ],
+        "metrics": {
+          "casualty_or_missing": {
+            "accuracy": 0.5808,
+            "precision": 0.4229,
+            "recall": 0.6967,
+            "f1": 0.5263,
+            "brier": 0.2494,
+            "support": 1095,
+            "positive_rate": 0.3342
+          },
+          "housing_damage": {
+            "accuracy": 0.5772,
+            "precision": 0.5354,
+            "recall": 0.7104,
+            "f1": 0.6106,
+            "brier": 0.2386,
+            "support": 1095,
+            "positive_rate": 0.4667
+          },
+          "transport_disruption": {
+            "accuracy": 0.7342,
+            "precision": 0.1382,
+            "recall": 0.413,
+            "f1": 0.2071,
+            "brier": 0.1747,
+            "support": 1095,
+            "positive_rate": 0.084
+          },
+          "severe_impact": {
+            "accuracy": 0.579,
+            "precision": 0.7496,
+            "recall": 0.5884,
+            "f1": 0.6593,
+            "brier": 0.2197,
+            "support": 1095,
+            "positive_rate": 0.6922
+          }
+        }
+      },
+      {
+        "fold": 4,
+        "training_events": 3272,
+        "validation_events": 681,
+        "validation_years": [
+          1974,
+          1979,
+          1984,
+          1989,
+          1994,
+          1999,
+          2004,
+          2009
+        ],
+        "metrics": {
+          "casualty_or_missing": {
+            "accuracy": 0.5668,
+            "precision": 0.4419,
+            "recall": 0.529,
+            "f1": 0.4815,
+            "brier": 0.2497,
+            "support": 681,
+            "positive_rate": 0.3803
+          },
+          "housing_damage": {
+            "accuracy": 0.5389,
+            "precision": 0.3394,
+            "recall": 0.4115,
+            "f1": 0.372,
+            "brier": 0.2534,
+            "support": 681,
+            "positive_rate": 0.3319
+          },
+          "transport_disruption": {
+            "accuracy": 0.5918,
+            "precision": 0.1283,
+            "recall": 0.4198,
+            "f1": 0.1965,
+            "brier": 0.2449,
+            "support": 681,
+            "positive_rate": 0.1189
+          },
+          "severe_impact": {
+            "accuracy": 0.4831,
+            "precision": 0.6197,
+            "recall": 0.4447,
+            "f1": 0.5178,
+            "brier": 0.2485,
+            "support": 681,
+            "positive_rate": 0.6241
+          }
+        }
+      }
+    ],
+    "overall": {
+      "casualty_or_missing": {
+        "accuracy": 0.615,
+        "precision": 0.4386,
+        "recall": 0.5849,
+        "f1": 0.5013,
+        "brier": 0.2383,
+        "support": 3953,
+        "positive_rate": 0.3309
+      },
+      "housing_damage": {
+        "accuracy": 0.5576,
+        "precision": 0.4884,
+        "recall": 0.4944,
+        "f1": 0.4914,
+        "brier": 0.2453,
+        "support": 3953,
+        "positive_rate": 0.4323
+      },
+      "transport_disruption": {
+        "accuracy": 0.6684,
+        "precision": 0.1161,
+        "recall": 0.4967,
+        "f1": 0.1882,
+        "brier": 0.2097,
+        "support": 3953,
+        "positive_rate": 0.0774
+      },
+      "severe_impact": {
+        "accuracy": 0.4933,
+        "precision": 0.6645,
+        "recall": 0.4419,
+        "f1": 0.5308,
+        "brier": 0.2521,
+        "support": 3953,
+        "positive_rate": 0.6486
+      },
+      "macro_f1": 0.4279,
+      "mean_accuracy": 0.5836
+    }
+  }
+}
