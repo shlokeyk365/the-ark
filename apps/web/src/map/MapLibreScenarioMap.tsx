@@ -140,7 +140,7 @@ interface MapLibreScenarioMapProps {
 }
 
 const DEFAULT_LAYERS: Record<LayerKey, boolean> = {
-  context: true,
+  context: false,
   floodNow: true,
   floodForecast: true,
   roads: true,
@@ -163,8 +163,8 @@ export function MapLibreScenarioMap({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [ready, setReady] = useState(false);
-  const [layersOpen, setLayersOpen] = useState(true);
-  const [satellite, setSatellite] = useState(true);
+  const [layersOpen, setLayersOpen] = useState(false);
+  const [satellite, setSatellite] = useState(false);
   const [terrain3d, setTerrain3d] = useState(false);
   const [hovered, setHovered] = useState<DerivedEdgeState | null>(null);
   const [diagnostics, setDiagnostics] = useState<string[] | null>(null);

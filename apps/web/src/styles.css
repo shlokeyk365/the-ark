@@ -775,9 +775,28 @@ input:focus-visible,
   min-height: 0;
   overflow: hidden;
   background: #0a1420;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(65, 151, 210, 0.38);
   border-radius: var(--radius);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.38),
+    inset 0 0 34px rgba(0, 133, 214, 0.05);
+}
+
+.maplibre-card::after {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 52% 45%, transparent 48%, rgba(2, 8, 15, 0.26) 100%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(104, 196, 255, 0.018) 0,
+      rgba(104, 196, 255, 0.018) 1px,
+      transparent 1px,
+      transparent 4px
+    );
 }
 
 .scenario-map {
@@ -807,8 +826,10 @@ input:focus-visible,
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.05em;
-  background: rgba(8, 15, 24, 0.86);
-  border: 1px solid var(--border);
+  font-family: var(--mono);
+  text-transform: uppercase;
+  background: rgba(4, 11, 18, 0.91);
+  border: 1px solid rgba(72, 139, 186, 0.34);
   border-radius: var(--radius-sm);
   backdrop-filter: blur(10px);
 }
@@ -850,11 +871,13 @@ input:focus-visible,
   right: 12px;
   width: 196px;
   overflow: hidden;
-  background: rgba(8, 15, 24, 0.9);
-  border: 1px solid var(--border);
+  background: rgba(4, 11, 18, 0.93);
+  border: 1px solid rgba(72, 139, 186, 0.4);
   border-radius: var(--radius-sm);
   backdrop-filter: blur(12px);
 }
+
+.map-layers.closed { width: 132px; }
 
 .map-layers-toggle {
   display: flex;
@@ -863,8 +886,11 @@ input:focus-visible,
   width: 100%;
   padding: 9px 10px;
   color: var(--text);
-  font-size: 10.5px;
+  font-family: var(--mono);
+  font-size: 9.5px;
   font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   background: none;
   border: 0;
 }
@@ -1363,8 +1389,8 @@ input:focus-visible,
 /* Mapbox's own controls, restyled for the dark shell. */
 
 .maplibregl-ctrl-group {
-  background: rgba(8, 15, 24, 0.9) !important;
-  border: 1px solid var(--border) !important;
+  background: rgba(4, 11, 18, 0.93) !important;
+  border: 1px solid rgba(72, 139, 186, 0.42) !important;
   border-radius: var(--radius-sm) !important;
   box-shadow: none !important;
   backdrop-filter: blur(10px);

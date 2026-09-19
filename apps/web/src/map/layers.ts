@@ -22,12 +22,12 @@ export const SOURCE = {
 } as const;
 
 export const COLORS = {
-  open: "#dce8f4",
+  open: "#8fa8bc",
   restricted: "#f0a52a",
   closed: "#f24d63",
-  route: "#5fc4ff",
-  water: "#2aa5ef",
-  forecast: "#7d5cf0",
+  route: "#55d6ff",
+  water: "#009dff",
+  forecast: "#806dff",
   hospital: "#e8536a",
   shelter: "#2eb277",
   community: "#eef5fc",
@@ -77,7 +77,7 @@ export const LAYERS: LayerSpecification[] = [
     id: "ark-flood-forecast-fill",
     type: "fill",
     source: SOURCE.floodForecast,
-    paint: { "fill-color": COLORS.forecast, "fill-opacity": 0.14 },
+    paint: { "fill-color": COLORS.forecast, "fill-opacity": 0.09 },
   },
   {
     id: "ark-flood-forecast-line",
@@ -85,8 +85,8 @@ export const LAYERS: LayerSpecification[] = [
     source: SOURCE.floodForecast,
     paint: {
       "line-color": COLORS.forecast,
-      "line-width": 1.2,
-      "line-opacity": 0.55,
+      "line-width": 1.1,
+      "line-opacity": 0.48,
       "line-dasharray": [3, 2],
     },
   },
@@ -95,19 +95,28 @@ export const LAYERS: LayerSpecification[] = [
     id: "ark-flood-now-fill",
     type: "fill",
     source: SOURCE.floodNow,
-    paint: { "fill-color": COLORS.water, "fill-opacity": 0.32 },
+    paint: {
+      "fill-color": COLORS.water,
+      "fill-opacity": 0.38,
+      "fill-outline-color": "#62d2ff",
+    },
   },
   {
     id: "ark-flood-now-line",
     type: "line",
     source: SOURCE.floodNow,
-    paint: { "line-color": "#8ad6ff", "line-width": 1.4, "line-opacity": 0.7 },
+    paint: {
+      "line-color": "#a9ebff",
+      "line-width": 2,
+      "line-opacity": 0.78,
+      "line-blur": 0.5,
+    },
   },
   {
     id: "ark-channel-line",
     type: "line",
     source: SOURCE.channel,
-    paint: { "line-color": "#bfe8ff", "line-width": 1.2, "line-opacity": 0.45 },
+    paint: { "line-color": "#d9f6ff", "line-width": 1.6, "line-opacity": 0.7 },
   },
   {
     id: "ark-channel-flow-arrows",
@@ -124,10 +133,10 @@ export const LAYERS: LayerSpecification[] = [
       "text-allow-overlap": true,
     },
     paint: {
-      "text-color": "#dff6ff",
-      "text-opacity": 0.82,
-      "text-halo-color": "rgba(25, 126, 194, 0.75)",
-      "text-halo-width": 1.2,
+      "text-color": "#ffffff",
+      "text-opacity": 0.9,
+      "text-halo-color": "rgba(0, 108, 184, 0.88)",
+      "text-halo-width": 1.5,
     },
   },
 
@@ -140,8 +149,8 @@ export const LAYERS: LayerSpecification[] = [
     layout: { "line-cap": "round" },
     paint: {
       "line-color": "#49b6ff",
-      "line-blur": 4,
-      "line-opacity": 0.45,
+      "line-blur": 7,
+      "line-opacity": 0.52,
       "line-width": [
         "interpolate",
         ["linear"],
@@ -171,7 +180,11 @@ export const LAYERS: LayerSpecification[] = [
     source: SOURCE.roads,
     filter: ["==", ["get", "status"], "open"],
     layout: { "line-cap": "round", "line-join": "round" },
-    paint: { "line-color": COLORS.open, "line-width": roadWidth(3.6, 6.5) as never },
+    paint: {
+      "line-color": COLORS.open,
+      "line-opacity": 0.82,
+      "line-width": roadWidth(3.2, 6) as never,
+    },
   },
   {
     id: "ark-roads-restricted",
@@ -205,9 +218,9 @@ export const LAYERS: LayerSpecification[] = [
     layout: { "line-cap": "round", "line-join": "round" },
     paint: {
       "line-color": COLORS.route,
-      "line-width": 15,
-      "line-blur": 11,
-      "line-opacity": 0.4,
+      "line-width": 17,
+      "line-blur": 12,
+      "line-opacity": 0.48,
     },
   },
   {
@@ -217,7 +230,7 @@ export const LAYERS: LayerSpecification[] = [
     layout: { "line-cap": "butt", "line-join": "round" },
     paint: {
       "line-color": COLORS.route,
-      "line-width": 3.4,
+      "line-width": 3.8,
       "line-dasharray": [0.4, 1.6],
     },
   },
@@ -397,7 +410,7 @@ export const LAYERS: LayerSpecification[] = [
         ["get", "percent_label"],
       ],
       "text-font": ["Noto Sans Medium"],
-      "text-size": ["interpolate", ["linear"], ["zoom"], 11, 9, 16, 12],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 11, 9.5, 16, 12.5],
       "text-offset": [0, 1.8],
       "text-anchor": "top",
       "text-allow-overlap": true,
