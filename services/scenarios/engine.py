@@ -93,10 +93,13 @@ class ScenarioService:
         return events
 
     def build_world_state(
-        self, frame_id: str, event_ids: Iterable[str] = ()
+        self,
+        frame_id: str,
+        event_ids: Iterable[str] = (),
+        additional_events: Iterable[Mapping[str, Any]] = (),
     ) -> JsonObject:
         frame = self._frame(frame_id)
-        events = self._events(event_ids)
+        events = self._events(event_ids) + list(additional_events)
         inactive = [
             event["event_id"]
             for event in events

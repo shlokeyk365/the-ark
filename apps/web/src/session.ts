@@ -1,5 +1,11 @@
 /** Client-side audit trail of what the operator did and what it changed. */
-export type LogKind = "frame" | "event" | "recompute" | "reset" | "load";
+export type LogKind =
+  | "frame"
+  | "event"
+  | "recompute"
+  | "reset"
+  | "load"
+  | "intelligence";
 
 export interface LogEntry {
   id: string;

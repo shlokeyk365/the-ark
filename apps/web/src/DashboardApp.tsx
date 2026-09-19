@@ -1,15 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
+  IntelligenceReport,
   PlanMetrics,
   ScenarioBootstrapResponse,
+  WorldStateSnapshot,
 } from "@the-ark/shared-types";
 
-import { applyEvent, getBootstrap, getFrame } from "./api";
+import {
+  applyEvent,
+  decideIntelligenceReport,
+  getBootstrap,
+  getFrame,
+  ingestIntelligenceMessage,
+} from "./api";
 import { eventsActiveAt, formatHours, type FrameSeriesEntry } from "./derive";
 import type { MapSelection } from "./map/selection";
 import { logEntry, type LogEntry } from "./session";
 import { RightRail } from "./components/RightRail";
+import { IncidentCopilot } from "./components/IncidentCopilot";
 import { ReportsPage } from "./components/ReportsPage";
 import { ScenarioMap } from "./components/ScenarioMap";
 import { SelectedAssetPanel } from "./components/SelectedAssetPanel";
@@ -36,6 +45,7 @@ async function loadSeries(
   bootstrap: ScenarioBootstrapResponse,
   eventIds: string[],
   signal?: AbortSignal,
+  intelligenceReportIds: string[] = [],
 ): Promise<FrameSeriesEntry[]> {
   return Promise.all(
     bootstrap.available_frames.map(async (frame) => ({
@@ -45,6 +55,7 @@ async function loadSeries(
         frame.frame_id,
         eventsActiveAt(bootstrap, eventIds, frame.simulation_time_hours),
         signal,
+        intelligenceReportIds,
       ),
     })),
   );
@@ -71,6 +82,14 @@ export function App() {
   const [series, setSeries] = useState<FrameSeriesEntry[]>([]);
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
   const [activeEventIds, setActiveEventIds] = useState<string[]>([]);
+  const [intelligenceReports, setIntelligenceReports] = useState<
+    IntelligenceReport[]
+  >([]);
+  const [confirmedIntelligenceIds, setConfirmedIntelligenceIds] = useState<
+    string[]
+  >([]);
+  const [tentativeWorldState, setTentativeWorldState] =
+    useState<WorldStateSnapshot | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState("ktp-plan-a");
   /*
    * One selection for the whole dashboard.
@@ -192,7 +211,12 @@ export function App() {
       setError(null);
       try {
         const response = await applyEvent(eventId);
-        const entries = await loadSeries(bootstrap, [eventId]);
+        const entries = await loadSeries(
+          bootstrap,
+          [eventId],
+          undefined,
+          confirmedIntelligenceIds,
+        );
         const updated = response.updated_world_state;
 
         setSeries(entries);
@@ -231,7 +255,7 @@ export function App() {
         setBusy(false);
       }
     },
-    [bootstrap, pushLog],
+    [bootstrap, confirmedIntelligenceIds, pushLog],
   );
 
   const onClearEvent = useCallback(async () => {
@@ -240,7 +264,12 @@ export function App() {
     setBusy(true);
     setError(null);
     try {
-      const entries = await loadSeries(bootstrap, []);
+      const entries = await loadSeries(
+        bootstrap,
+        [],
+        undefined,
+        confirmedIntelligenceIds,
+      );
       setSeries(entries);
       setActiveEventIds([]);
       setComparison(undefined);
@@ -264,7 +293,117 @@ export function App() {
     } finally {
       setBusy(false);
     }
-  }, [bootstrap, pushLog, selectedFrameId]);
+  }, [bootstrap, confirmedIntelligenceIds, pushLog, selectedFrameId]);
+
+  const onSubmitIntelligence = useCallback(
+    async (
+      message: string,
+      sourceType: IntelligenceReport["source"]["type"],
+      sourceName: string,
+    ) => {
+      if (!worldState) return;
+      setBusy(true);
+      setError(null);
+      try {
+        const response = await ingestIntelligenceMessage(
+          message,
+          sourceType,
+          sourceName,
+          worldState.frame_id,
+          activeEventIds,
+          confirmedIntelligenceIds,
+        );
+        setIntelligenceReports((current) => [
+          response.report,
+          ...current.filter(
+            (report) => report.report_id !== response.report.report_id,
+          ),
+        ]);
+        setTentativeWorldState(response.tentative_world_state);
+        pushLog(
+          logEntry(
+            "intelligence",
+            `${response.report.status} field report received`,
+            response.report.claim.summary,
+            worldState.world_state_version,
+          ),
+        );
+      } catch (intelligenceError) {
+        setError(
+          intelligenceError instanceof Error
+            ? intelligenceError.message
+            : "Unable to analyze field intelligence",
+        );
+      } finally {
+        setBusy(false);
+      }
+    },
+    [activeEventIds, confirmedIntelligenceIds, pushLog, worldState],
+  );
+
+  const onIntelligenceDecision = useCallback(
+    async (
+      reportId: string,
+      decision: "confirm" | "keep_tentative" | "reject",
+    ) => {
+      if (!bootstrap || !worldState) return;
+      setBusy(true);
+      setError(null);
+      try {
+        const response = await decideIntelligenceReport(
+          reportId,
+          decision,
+          worldState.frame_id,
+          activeEventIds,
+          confirmedIntelligenceIds,
+        );
+        setIntelligenceReports((current) =>
+          current.map((report) =>
+            report.report_id === reportId ? response.report : report,
+          ),
+        );
+        if (decision === "confirm") {
+          const nextIds = Array.from(
+            new Set([...confirmedIntelligenceIds, reportId]),
+          );
+          const entries = await loadSeries(
+            bootstrap,
+            activeEventIds,
+            undefined,
+            nextIds,
+          );
+          setConfirmedIntelligenceIds(nextIds);
+          setSeries(entries);
+          setTentativeWorldState(null);
+          pushLog(
+            logEntry(
+              "intelligence",
+              "Field report confirmed",
+              response.report.claim.summary,
+              response.updated_world_state.world_state_version,
+            ),
+          );
+        } else if (decision === "reject") {
+          setTentativeWorldState(null);
+        }
+      } catch (decisionError) {
+        setError(
+          decisionError instanceof Error
+            ? decisionError.message
+            : "Unable to apply intelligence decision",
+        );
+      } finally {
+        setBusy(false);
+      }
+    },
+    [
+      activeEventIds,
+      bootstrap,
+      confirmedIntelligenceIds,
+      pushLog,
+      worldState,
+    ],
+  );
 
   // Frame playback walks the loaded series and stops at the horizon.
   const seriesRef = useRef(series);
@@ -324,6 +463,10 @@ export function App() {
     comparison && comparison.worldStateVersion === worldState.world_state_version
       ? comparison.metrics
       : undefined;
+  const mapWorldState =
+    tentativeWorldState?.frame_id === worldState.frame_id
+      ? tentativeWorldState
+      : worldState;
 
   return (
     <div className="app-frame">
@@ -355,7 +498,7 @@ export function App() {
             selection={selection}
             horizonState={horizonState}
             selectedPlan={selectedPlan}
-            worldState={worldState}
+            worldState={mapWorldState}
           />
           <TopStatusMetrics worldState={worldState} />
           <TacticalAssetsPanel
@@ -366,6 +509,14 @@ export function App() {
             worldState={worldState}
           />
           <div className="operations-right-stack">
+            <IncidentCopilot
+              baseline={worldState}
+              busy={busy}
+              onDecision={onIntelligenceDecision}
+              onSubmit={onSubmitIntelligence}
+              reports={intelligenceReports}
+              tentative={tentativeWorldState}
+            />
             <SelectedAssetPanel
               activeEventIds={activeEventIds}
               bootstrap={bootstrap}

@@ -17,6 +17,92 @@ class HealthResponse(WireModel):
     status: Literal["ok"]
 
 
+class IntelligenceSource(WireModel):
+    type: Literal["operator", "field_responder", "official", "public", "unknown"]
+    name: str
+
+
+class IntelligenceEvidenceScores(WireModel):
+    source_reliability: float = Field(ge=0, le=1)
+    extraction_confidence: float = Field(ge=0, le=1)
+    location_confidence: float = Field(ge=0, le=1)
+    corroboration: float = Field(ge=0, le=1)
+    freshness: float = Field(ge=0, le=1)
+    physical_plausibility: float = Field(ge=0, le=1)
+    operational_impact: float = Field(ge=0, le=1)
+
+
+class IntelligenceAssetMatch(WireModel):
+    asset_type: Literal["edge"]
+    asset_id: str
+    display_name: str
+    confidence: float = Field(ge=0, le=1)
+
+
+class IntelligenceClaim(WireModel):
+    summary: str
+    water_depth_m: Optional[float]
+    trend: Optional[str]
+
+
+class IntelligenceProposedChange(WireModel):
+    change_type: Literal["close_edge", "restrict_edge", "none"]
+    edge_id: Optional[str]
+    reason: str
+
+
+class IntelligenceReport(WireModel):
+    report_id: str
+    scenario_id: str
+    message: str
+    source: IntelligenceSource
+    frame_id: str
+    status: Literal[
+        "possible",
+        "probable",
+        "confirmed",
+        "unresolved",
+        "disputed",
+        "rejected",
+        "expired",
+    ]
+    asset_match: Optional[IntelligenceAssetMatch]
+    claim: IntelligenceClaim
+    scores: IntelligenceEvidenceScores
+    verification_priority: float = Field(ge=0, le=1)
+    proposed_change: IntelligenceProposedChange
+    requires_operator_confirmation: Literal[True]
+    note: Optional[str]
+
+
+class IntelligenceMessageRequest(WireModel):
+    message: str = Field(min_length=1, max_length=4000)
+    source: IntelligenceSource
+    frame_id: str
+    event_ids: List[str] = Field(default_factory=list)
+    intelligence_report_ids: List[str] = Field(default_factory=list)
+
+
+class IntelligenceMessageResponse(WireModel):
+    report: IntelligenceReport
+    baseline_changed: Literal[False]
+    tentative_world_state: Optional["WorldStateSnapshot"]
+
+
+class IntelligenceDecisionRequest(WireModel):
+    decision: Literal["confirm", "keep_tentative", "reject"]
+    frame_id: str
+    event_ids: List[str] = Field(default_factory=list)
+    intelligence_report_ids: List[str] = Field(default_factory=list)
+    note: Optional[str] = None
+
+
+class IntelligenceDecisionResponse(WireModel):
+    report: IntelligenceReport
+    baseline_changed: bool
+    updated_world_state: "WorldStateSnapshot"
+
+
 class SourceMetadata(WireModel):
     source_type: Literal["modeled_input", "operator_injected", "derived_result"]
     model_name: Optional[str] = None

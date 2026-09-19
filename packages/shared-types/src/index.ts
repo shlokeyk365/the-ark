@@ -19,9 +19,8 @@ export type IntelligenceReportStatus =
   | "expired";
 
 export type IntelligenceChangeType =
-  | "close_route"
-  | "restrict_route"
-  | "add_flood_hazard"
+  | "close_edge"
+  | "restrict_edge"
   | "none";
 
 export interface IntelligenceEvidenceScores {
@@ -35,19 +34,47 @@ export interface IntelligenceEvidenceScores {
 }
 
 export interface IntelligenceReport {
-  id: string;
+  report_id: string;
   scenario_id: string;
-  original_message: string;
-  reported_minute: number;
+  message: string;
+  source: {
+    type: "operator" | "field_responder" | "official" | "public" | "unknown";
+    name: string;
+  };
+  frame_id: string;
   status: IntelligenceReportStatus;
+  asset_match: {
+    asset_type: "edge";
+    asset_id: string;
+    display_name: string;
+    confidence: number;
+  } | null;
+  claim: {
+    summary: string;
+    water_depth_m: number | null;
+    trend: string | null;
+  };
   scores: IntelligenceEvidenceScores;
   verification_priority: number;
   requires_operator_confirmation: true;
   proposed_change: {
     change_type: IntelligenceChangeType;
-    target_id: string | null;
+    edge_id: string | null;
     reason: string;
   };
+  note: string | null;
+}
+
+export interface IntelligenceMessageResponse {
+  report: IntelligenceReport;
+  baseline_changed: false;
+  tentative_world_state: WorldStateSnapshot | null;
+}
+
+export interface IntelligenceDecisionResponse {
+  report: IntelligenceReport;
+  baseline_changed: boolean;
+  updated_world_state: WorldStateSnapshot;
 }
 
 export type Position = [number, number];

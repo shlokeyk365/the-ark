@@ -2,12 +2,10 @@
 
 from fastapi import FastAPI
 
-from ark_api.routes.intelligence import router as intelligence_router
 from ark_api.routes.simulations import router as simulations_router
 
 app = FastAPI(title="Ark API", version="0.1.0")
 app.include_router(simulations_router)
-app.include_router(intelligence_router)
 
 
 @app.get("/health")

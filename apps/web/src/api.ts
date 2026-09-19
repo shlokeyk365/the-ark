@@ -1,5 +1,7 @@
 import type {
   EventRecomputeResponse,
+  IntelligenceDecisionResponse,
+  IntelligenceMessageResponse,
   ScenarioBootstrapResponse,
   SimulationReport,
   SimulationRun,
@@ -89,15 +91,75 @@ export async function getBaseline(signal?: AbortSignal) {
  * that are not yet effective at the frame are rejected by the API, so callers
  * must filter them first.
  */
-export async function getFrame(frameId: string, eventIds: string[] = [], signal?: AbortSignal) {
+export async function getFrame(
+  frameId: string,
+  eventIds: string[] = [],
+  signal?: AbortSignal,
+  intelligenceReportIds: string[] = [],
+) {
   const query = new URLSearchParams();
   eventIds.forEach((eventId) => query.append("events", eventId));
+  intelligenceReportIds.forEach((reportId) =>
+    query.append("intelligence_reports", reportId),
+  );
   const suffix = query.toString() ? `?${query.toString()}` : "";
   const state = await fetchJson<WorldStateSnapshot>(
     `/scenarios/kantipur-river/frames/${encodeURIComponent(frameId)}${suffix}`,
     { signal },
   );
   return normalizeWorldState(state);
+}
+
+export function ingestIntelligenceMessage(
+  message: string,
+  sourceType:
+    | "operator"
+    | "field_responder"
+    | "official"
+    | "public"
+    | "unknown",
+  sourceName: string,
+  frameId: string,
+  eventIds: string[],
+  intelligenceReportIds: string[],
+  signal?: AbortSignal,
+) {
+  return fetchJson<IntelligenceMessageResponse>("/intelligence/messages", {
+    method: "POST",
+    signal,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message,
+      source: { type: sourceType, name: sourceName },
+      frame_id: frameId,
+      event_ids: eventIds,
+      intelligence_report_ids: intelligenceReportIds,
+    }),
+  });
+}
+
+export function decideIntelligenceReport(
+  reportId: string,
+  decision: "confirm" | "keep_tentative" | "reject",
+  frameId: string,
+  eventIds: string[],
+  intelligenceReportIds: string[],
+  signal?: AbortSignal,
+) {
+  return fetchJson<IntelligenceDecisionResponse>(
+    `/intelligence/reports/${encodeURIComponent(reportId)}/decision`,
+    {
+      method: "POST",
+      signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        decision,
+        frame_id: frameId,
+        event_ids: eventIds,
+        intelligence_report_ids: intelligenceReportIds,
+      }),
+    },
+  );
 }
 
 export async function applyEvent(eventId: string, signal?: AbortSignal) {
