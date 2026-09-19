@@ -9,6 +9,7 @@ import { applyEvent, getBootstrap, getFrame } from "./api";
 import { eventsActiveAt, formatHours, type FrameSeriesEntry } from "./derive";
 import { logEntry, type LogEntry } from "./session";
 import { RightRail } from "./components/RightRail";
+import { ReportsPage } from "./components/ReportsPage";
 import { ScenarioMap } from "./components/ScenarioMap";
 import { SelectedAssetPanel } from "./components/SelectedAssetPanel";
 import { StatusBar } from "./components/StatusBar";
@@ -64,6 +65,7 @@ function LoadingScreen() {
 }
 
 export function App() {
+  const [activeView, setActiveView] = useState<"operations" | "reports">("operations");
   const [bootstrap, setBootstrap] = useState<ScenarioBootstrapResponse | null>(null);
   const [series, setSeries] = useState<FrameSeriesEntry[]>([]);
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
@@ -307,7 +309,12 @@ export function App() {
 
   return (
     <div className="app-frame">
-      <TopBar alertCount={worldState.hazards.length} worldState={worldState} />
+      <TopBar
+        activeView={activeView}
+        alertCount={worldState.hazards.length}
+        onNavigate={setActiveView}
+        worldState={worldState}
+      />
 
       {error ? (
         <div className="error-banner" role="alert">
@@ -319,7 +326,9 @@ export function App() {
         </div>
       ) : null}
 
-      <main className="dashboard-grid figma-operations-layout" aria-busy={busy}>
+      {activeView === "reports" ? (
+        <ReportsPage activeEventIds={activeEventIds} scenarioName={bootstrap.name} />
+      ) : <main className="dashboard-grid figma-operations-layout" aria-busy={busy}>
         <section className="map-workspace" aria-label="Operations workspace">
           <ScenarioMap
             bootstrap={bootstrap}
@@ -375,7 +384,7 @@ export function App() {
             worldState={worldState}
           />
         </section>
-      </main>
+      </main>}
 
       <StatusBar
         healthy={error === null}

@@ -4,9 +4,16 @@ import type { WorldStateSnapshot } from "@the-ark/shared-types";
 interface TopBarProps {
   alertCount?: number;
   worldState?: WorldStateSnapshot;
+  activeView?: "operations" | "reports";
+  onNavigate?: (view: "operations" | "reports") => void;
 }
 
-export function TopBar({ alertCount = 0, worldState }: TopBarProps) {
+export function TopBar({
+  alertCount = 0,
+  worldState,
+  activeView = "operations",
+  onNavigate,
+}: TopBarProps) {
   return (
     <header className="topbar">
       <div className="brand" aria-label="the ark flood operations">
@@ -18,10 +25,24 @@ export function TopBar({ alertCount = 0, worldState }: TopBarProps) {
         <span className="brand-context">FLOODWORLD</span>
       </div>
 
-      <div className="command-centre-title">
-        <span>Operational simulation</span>
-        <strong>Kantipur River Command Center</strong>
-      </div>
+      <nav className="command-view-tabs" aria-label="Command center views">
+        <button
+          aria-current={activeView === "operations" ? "page" : undefined}
+          className={activeView === "operations" ? "active" : ""}
+          onClick={() => onNavigate?.("operations")}
+          type="button"
+        >
+          <ShellIcon name="map" size={13} /> Operations
+        </button>
+        <button
+          aria-current={activeView === "reports" ? "page" : undefined}
+          className={activeView === "reports" ? "active" : ""}
+          onClick={() => onNavigate?.("reports")}
+          type="button"
+        >
+          <ShellIcon name="report" size={13} /> Reports
+        </button>
+      </nav>
 
       <div className="command-tools">
         {worldState ? (
