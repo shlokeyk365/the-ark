@@ -73,6 +73,10 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fatal, setFatal] = useState<string | null>(null);
+  const [focusedDestination, setFocusedDestination] = useState<{
+    id: string;
+    edgeIds: string[];
+  } | null>(null);
 
   const pushLog = useCallback((entry: LogEntry) => {
     setLog((current) => [entry, ...current].slice(0, 40));
@@ -127,6 +131,10 @@ export function App() {
       worldState?.plan_results[0],
     [worldState, selectedPlanId],
   );
+
+  useEffect(() => {
+    setFocusedDestination(null);
+  }, [selectedPlan?.plan_id, worldState?.world_state_version]);
 
   const selectFrame = useCallback(
     (frameId: string) => {
@@ -308,6 +316,7 @@ export function App() {
         <section className="map-workspace" aria-label="Operations workspace">
           <ScenarioMap
             bootstrap={bootstrap}
+            focusedRouteEdgeIds={focusedDestination?.edgeIds}
             horizonState={horizonState}
             selectedPlan={selectedPlan}
             worldState={worldState}
@@ -328,8 +337,15 @@ export function App() {
         <RightRail
           bootstrap={bootstrap}
           comparison={activeComparison}
+          focusedDestinationId={focusedDestination?.id ?? null}
           log={log}
-          onSelectPlan={setSelectedPlanId}
+          onFocusDestination={(id, edgeIds) =>
+            setFocusedDestination(id ? { id, edgeIds } : null)
+          }
+          onSelectPlan={(planId) => {
+            setFocusedDestination(null);
+            setSelectedPlanId(planId);
+          }}
           selectedPlanId={selectedPlan?.plan_id ?? selectedPlanId}
           worldState={worldState}
         />

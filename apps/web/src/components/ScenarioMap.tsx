@@ -21,6 +21,7 @@ interface ScenarioMapProps {
   worldState: WorldStateSnapshot;
   horizonState: WorldStateSnapshot | undefined;
   selectedPlan: PlanResult | undefined;
+  focusedRouteEdgeIds?: string[];
 }
 
 function BasemapLoading() {
@@ -46,6 +47,7 @@ export function ScenarioMap({
   worldState,
   horizonState,
   selectedPlan,
+  focusedRouteEdgeIds,
 }: ScenarioMapProps) {
   const [failure, setFailure] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
@@ -62,6 +64,7 @@ export function ScenarioMap({
       <div className="map-fallback-wrap">
         <SchematicMap
           bootstrap={bootstrap}
+          focusedRouteEdgeIds={focusedRouteEdgeIds}
           horizonState={horizonState}
           selectedPlan={selectedPlan}
           worldState={worldState}
@@ -95,6 +98,7 @@ export function ScenarioMap({
     <Suspense fallback={<BasemapLoading />}>
       <MapLibreScenarioMap
         bootstrap={bootstrap}
+        focusedRouteEdgeIds={focusedRouteEdgeIds}
         horizonState={horizonState}
         onFailure={onFailure}
         selectedPlan={selectedPlan}

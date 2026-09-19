@@ -36,6 +36,7 @@ interface SchematicMapProps {
   worldState: WorldStateSnapshot;
   horizonState: WorldStateSnapshot | undefined;
   selectedPlan: PlanResult | undefined;
+  focusedRouteEdgeIds?: string[];
 }
 
 interface Viewport {
@@ -114,6 +115,7 @@ export function SchematicMap({
   worldState,
   horizonState,
   selectedPlan,
+  focusedRouteEdgeIds,
 }: SchematicMapProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const cardRef = useRef<HTMLElement | null>(null);
@@ -204,12 +206,13 @@ export function SchematicMap({
   );
 
   const selectedRouteEdges = useMemo(() => {
+    if (focusedRouteEdgeIds?.length) return new Set(focusedRouteEdgeIds);
     const edgeIds = new Set<string>();
     selectedPlan?.assignment_results.forEach((assignment) => {
       assignment.route?.edge_ids.forEach((edgeId) => edgeIds.add(edgeId));
     });
     return edgeIds;
-  }, [selectedPlan]);
+  }, [focusedRouteEdgeIds, selectedPlan]);
 
   const isolatedCommunities = useMemo(
     () =>

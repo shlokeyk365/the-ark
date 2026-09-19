@@ -10,6 +10,7 @@ import type {
 
 import { assetNames, describeAsset, formatHours } from "../derive";
 import { relativeTime, type LogEntry } from "../session";
+import { ResponderBrief } from "./ResponderBrief";
 import { ShellIcon } from "./ShellIcon";
 
 interface RightRailProps {
@@ -20,6 +21,8 @@ interface RightRailProps {
   /** Pre-event metrics, present only while viewing the recomputed state. */
   comparison: Map<string, PlanMetrics> | undefined;
   log: LogEntry[];
+  focusedDestinationId: string | null;
+  onFocusDestination: (destinationId: string | null, edgeIds: string[]) => void;
 }
 
 const PLAN_LETTERS = ["A", "B", "C"];
@@ -156,6 +159,8 @@ export function RightRail({
   onSelectPlan,
   comparison,
   log,
+  focusedDestinationId,
+  onFocusDestination,
 }: RightRailProps) {
   const names = assetNames(bootstrap);
   const [now, setNow] = useState(() => new Date());
@@ -189,6 +194,16 @@ export function RightRail({
 
   return (
     <aside className="right-rail" aria-label="Response plans, alerts and activity">
+      <ResponderBrief
+        bootstrap={bootstrap}
+        focusedDestinationId={focusedDestinationId}
+        onFocusDestination={onFocusDestination}
+        selectedPlan={worldState.plan_results.find(
+          (result) => result.plan_id === selectedPlanId,
+        )}
+        worldState={worldState}
+      />
+
       <section className="right-section plans-panel panel-shell">
         <div className="section-title-row">
           <h2>

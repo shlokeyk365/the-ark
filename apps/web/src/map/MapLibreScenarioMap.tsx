@@ -264,6 +264,7 @@ interface MapLibreScenarioMapProps {
   /** Last frame in the horizon, used for the predicted-inundation layer. */
   horizonState: WorldStateSnapshot | undefined;
   selectedPlan: PlanResult | undefined;
+  focusedRouteEdgeIds?: string[];
   onFailure: (reason: string) => void;
 }
 
@@ -286,6 +287,7 @@ export function MapLibreScenarioMap({
   worldState,
   horizonState,
   selectedPlan,
+  focusedRouteEdgeIds,
   onFailure,
 }: MapLibreScenarioMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -300,7 +302,13 @@ export function MapLibreScenarioMap({
   const [diagnostics, setDiagnostics] = useState<string[] | null>(null);
   const [layers, setLayers] = useState<Record<LayerKey, boolean>>(DEFAULT_LAYERS);
 
-  const routeEdgeIds = useMemo(() => routeEdgeIdsFor(selectedPlan), [selectedPlan]);
+  const routeEdgeIds = useMemo(
+    () =>
+      focusedRouteEdgeIds?.length
+        ? new Set(focusedRouteEdgeIds)
+        : routeEdgeIdsFor(selectedPlan),
+    [focusedRouteEdgeIds, selectedPlan],
+  );
 
   const floodNow = useMemo(
     () => floodNowCollection(bootstrap, worldState),
