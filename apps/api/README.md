@@ -419,3 +419,97 @@ This scenario is a synthetic operational reconstruction inspired by the Septembe
 2024 Nakkhu River flood near Kantipur Colony and Nakhipot, Lalitpur, Nepal. Exact
 responder positions, population counts, routes, travel times, closure times, and
 outcomes are demonstration assumptions rather than verified historical records.
+
+## Bounded agent proposals (Step 8B)
+
+Agent proposals are untrusted until admitted by Ark's existing deterministic
+validator. MiroFish never controls physics, routes, capacities, time, execution,
+or scoring. The public simulation API is unchanged.
+
+The inspected upstream is [666ghj/MiroFish](https://github.com/666ghj/MiroFish),
+commit `39d849138ef254f6c737ab4c4705e5545dbe31d4`, licensed GNU AGPL v3.
+Stock MiroFish is a Flask/Vue social simulation application using OASIS, model
+providers and Zep Cloud. It has no native rescue actions, typed live Ark state
+synchronization, or supported external Python SDK. Interview responses are
+free-form: JSON adherence, deterministic behavior, calibrated human behavior,
+offline operation and interactive latency are not guaranteed.
+
+Ark uses an optional separate HTTP service boundary, not imported upstream
+source. This is not production or legal approval: review AGPL obligations and
+deployment/data handling with counsel before distribution or operational use.
+The expected commit is a configured compatibility assertion, not remotely
+attested by the interview endpoint.
+
+### Configuration and admission
+
+`agents/contracts.py` defines extra-field-forbidding contracts with strict scalar
+counts and booleans. Requests allow only MOVE, RESCUE and EVACUATE, default to five
+actions and permit at most ten. Trusted configuration supplies fixture paths and
+service URLs; neither comes from a public request. HTTPX is a runtime dependency.
+
+`RuleBasedProviderConfig.strategy` selects an existing candidate plan:
+`immediate-rescue`, `balanced-response`, or `preventive-evacuation` (default:
+balanced). No planner logic is reimplemented. Fixture configuration can require
+request/scenario identity; scenario and snapshot identity are always checked.
+
+The snapshot is SHA-256 of canonical UTF-8 JSON: sorted dictionary keys, sorted
+sets, compact separators, and explicit schema version 1. It includes WorldState
+except free-form metadata, simulation minute, duration, action allowlist/limit,
+objectives and responder selection. List order is preserved, except allowlist
+and responder selection are sorted. Request IDs, paths, credentials and wall-clock
+metadata are excluded. Recompute fixtures whenever relevant inputs change.
+
+Admission uses `ExecutionState.from_world` and `validate_action`, including the
+existing closure-aware router. Private reservation ledgers prevent population
+reuse and shelter overbooking. One assignment per responder per proposal batch
+is deliberately conservative, including later scheduled assignments. The service
+does not execute or score; accepted batches convert to normal READY ResponsePlans,
+which the simulator validates again. Rescue-request populations and community
+populations remain assumed disjoint; they must not describe the same people.
+
+### Experimental live mode and fallback
+
+`MiroFishProviderConfig` requires a trusted credential-free HTTP(S) origin,
+simulation ID, platform, and bounded one-to-one responder/agent mapping. Defaults
+are 2 seconds connect, 20 seconds total batch, five agents/actions, and 64 KiB
+prompt/response limits. Queries run serially in responder-ID order, requesting at
+most one action per responder. Only `data.result.response` in a successful,
+identity-matched interview envelope is parsed. Extra fields, prose/Markdown,
+unknown IDs, stale hashes and invalid scalar values are rejected without repair.
+
+No redirects, environment proxies, or interview retries are enabled. A local
+timeout does not cancel remote model work; late responses are ignored. Raw output
+is omitted by default; explicitly enable `retain_raw_output` only with appropriate
+data handling. Audit records hashes, provenance, rejection codes and fallback
+origin without logging complete incident payloads, prompts or credentials.
+
+Configure provider order in `AgentProposalService`: live development uses
+MiroFish HTTP → fixture → rule-based; demos use fixture → rule-based. Typed provider
+failures and zero accepted proposals trigger fallback by default. Disable via
+`AgentProposalServiceConfig.fallback_enabled` or live config `fallback_enabled`;
+`fallback_on_zero_accepted` controls empty admission. Exhaustion returns a failed
+batch with `fallback_exhausted`. Failed attempts remain in audit, and each provider
+receives a private copy of the original request.
+
+### Demo commands and provenance
+
+From the repository root:
+
+```powershell
+& .\apps\api\.venv\Scripts\python.exe .\apps\api\scripts\run_agent_proposals.py
+```
+
+The default loads the Nepal scenario and the clearly **synthetic** balanced-action
+fixture at `apps/api/tests/fixtures/mirofish/interview_success.json`, validates it,
+executes the normal simulator, and scores the result. No network, Zep or model
+credentials are required. Synthetic fixtures are not live MiroFish results and
+make no claim that MiroFish computed flood physics. `recorded` is reserved for
+actual captured output; `live` and `rule_based` identify those distinct sources.
+An exhausted chain reports provenance `unavailable` and exits nonzero.
+
+To attempt an already running, separately provisioned MiroFish service, set
+`ARK_MIROFISH_BASE_URL`, `ARK_MIROFISH_SIMULATION_ID`, `ARK_MIROFISH_PLATFORM`
+(`twitter` or `reddit`), and `ARK_MIROFISH_AGENT_MAPPING` (JSON mapping Ark responder
+IDs to integer upstream agent IDs), then add `--live` to the command above. Ark
+does not start MiroFish, create its simulations, or manage model/Zep API keys.
+The live provider is experimental; fixture mode is the hackathon default.
