@@ -101,3 +101,120 @@ test("marks an infeasible assignment blocked and never exposes a route", () => {
   assert.match(destination.instruction, /Hold dispatch/);
   assert.ok(destination.rationale[0].includes("No safe route"));
 });
+
+test("orders destinations by operational urgency instead of fixture order", () => {
+  const expandedBootstrap = {
+    ...bootstrap,
+    assets: {
+      features: [
+        ...bootstrap.assets.features,
+        { id: "community-2", properties: { name: "Upland" } },
+      ],
+    },
+  } as unknown as ScenarioBootstrapResponse;
+  const expandedWorld = {
+    ...baseWorld,
+    prediction_signals: [
+      ...baseWorld.prediction_signals,
+      {
+        ping_id: "signal-2",
+        exposure_asset_id: "community-2",
+        priority_score: 20,
+        priority_rank: 8,
+        priority_level: "low",
+        state: "forecast",
+      },
+    ],
+    community_access: [
+      ...baseWorld.community_access,
+      {
+        community_id: "community-2",
+        isolated: false,
+        time_to_isolation_hours: null,
+      },
+    ],
+  } as unknown as WorldStateSnapshot;
+  const lowPriorityAssignment = {
+    ...plan.assignment_results[0],
+    community_id: "community-2",
+  };
+  const reversedFixturePlan = {
+    ...plan,
+    assignment_results: [lowPriorityAssignment, plan.assignment_results[0]],
+  } as unknown as PlanResult;
+
+  const destinations = responseDestinations(
+    expandedBootstrap,
+    expandedWorld,
+    reversedFixturePlan,
+  );
+
+  assert.deepEqual(
+    destinations.map((destination) => destination.communityId),
+    ["community-1", "community-2"],
+  );
+  assert.deepEqual(
+    destinations.map((destination) => destination.rank),
+    [1, 2],
+  );
+});
+
+test("places a blocked high-risk destination behind a reachable movement", () => {
+  const expandedBootstrap = {
+    ...bootstrap,
+    assets: {
+      features: [
+        ...bootstrap.assets.features,
+        { id: "community-2", properties: { name: "Upland" } },
+      ],
+    },
+  } as unknown as ScenarioBootstrapResponse;
+  const expandedWorld = {
+    ...baseWorld,
+    prediction_signals: [
+      ...baseWorld.prediction_signals,
+      {
+        ping_id: "signal-2",
+        exposure_asset_id: "community-2",
+        priority_score: 20,
+        priority_rank: 8,
+        priority_level: "low",
+        state: "forecast",
+      },
+    ],
+    community_access: [
+      ...baseWorld.community_access,
+      {
+        community_id: "community-2",
+        isolated: false,
+        time_to_isolation_hours: null,
+      },
+    ],
+  } as unknown as WorldStateSnapshot;
+  const blockedHighRisk = {
+    ...plan.assignment_results[0],
+    route: null,
+    arrival_minutes: null,
+    meets_deadline: false,
+    people_evacuated: 0,
+  };
+  const reachableLowRisk = {
+    ...plan.assignment_results[0],
+    community_id: "community-2",
+  };
+  const mixedPlan = {
+    ...plan,
+    assignment_results: [blockedHighRisk, reachableLowRisk],
+  } as unknown as PlanResult;
+
+  const destinations = responseDestinations(
+    expandedBootstrap,
+    expandedWorld,
+    mixedPlan,
+  );
+
+  assert.equal(destinations[0].communityId, "community-2");
+  assert.equal(destinations[0].status, "priority");
+  assert.equal(destinations[1].communityId, "community-1");
+  assert.equal(destinations[1].status, "blocked");
+});
