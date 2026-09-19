@@ -171,8 +171,10 @@ export function RightRail({
   }, []);
 
   const connected = worldState.community_access.filter((access) => !access.isolated).length;
+  const predictionSignals = worldState.prediction_signals ?? [];
+  const modelAuc = bootstrap.impact_model?.evaluation?.unseen_district_roc_auc;
   const signalSummaries = Array.from(
-    worldState.prediction_signals.reduce(
+    predictionSignals.reduce(
       (groups, signal) => {
         const current = groups.get(signal.target);
         if (!current) {
@@ -239,9 +241,9 @@ export function RightRail({
       <section className="right-section model-signals-panel panel-shell">
         <div className="section-title-row">
           <h2>Model prediction pings</h2>
-          <span>{bootstrap.impact_model.evaluation.unseen_district_roc_auc.toFixed(2)} AUC</span>
+          <span>{modelAuc === undefined ? "UNAVAILABLE" : `${modelAuc.toFixed(2)} AUC`}</span>
         </div>
-        <div className="model-signal-grid">
+        {signalSummaries.length > 0 ? <div className="model-signal-grid">
           {signalSummaries.map(({ signal, count }) => (
             <article
               className={`model-signal ${signal.target} ${signal.state}`}
@@ -258,7 +260,7 @@ export function RightRail({
               <em>{signal.state}</em>
             </article>
           ))}
-        </div>
+        </div> : <p className="model-signal-note">UNAVAILABLE — no prediction signals in the current API payload.</p>}
         <p className="model-signal-note">
           Local risk combines the event prior with hazard, access, and exposed population.
           Pings remain area indicators, not building-level forecasts. Prototype only—not validated
