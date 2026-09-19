@@ -9,6 +9,47 @@ export interface HealthResponse {
   status: "ok";
 }
 
+export type IntelligenceReportStatus =
+  | "possible"
+  | "probable"
+  | "confirmed"
+  | "unresolved"
+  | "disputed"
+  | "rejected"
+  | "expired";
+
+export type IntelligenceChangeType =
+  | "close_route"
+  | "restrict_route"
+  | "add_flood_hazard"
+  | "none";
+
+export interface IntelligenceEvidenceScores {
+  source_reliability: number;
+  extraction_confidence: number;
+  location_confidence: number;
+  corroboration: number;
+  freshness: number;
+  physical_plausibility: number;
+  operational_impact: number;
+}
+
+export interface IntelligenceReport {
+  id: string;
+  scenario_id: string;
+  original_message: string;
+  reported_minute: number;
+  status: IntelligenceReportStatus;
+  scores: IntelligenceEvidenceScores;
+  verification_priority: number;
+  requires_operator_confirmation: true;
+  proposed_change: {
+    change_type: IntelligenceChangeType;
+    target_id: string | null;
+    reason: string;
+  };
+}
+
 export type Position = [number, number];
 
 export interface PointGeometry {
