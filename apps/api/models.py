@@ -175,14 +175,18 @@ class PredictionSignal(WireModel):
     ]
     label: str
     short_label: str
+    base_probability: float
+    base_percent: int
     probability: float
     percent: int
     geometry: PointGeometry
     anchor_asset_id: Optional[str]
+    anchor_edge_id: str
+    local_flood_depth_m: float
     activation_hours: float
     state: Literal["forecast", "active"]
     recommended_action: str
-    source_type: Literal["model_prediction"]
+    source_type: Literal["scenario_adjusted_model_prior"]
 
 
 class EvacuationAssignment(WireModel):

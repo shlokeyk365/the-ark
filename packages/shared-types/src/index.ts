@@ -184,14 +184,18 @@ export interface PredictionSignal {
   target: ImpactTarget;
   label: string;
   short_label: string;
+  base_probability: number;
+  base_percent: number;
   probability: number;
   percent: number;
   geometry: PointGeometry;
   anchor_asset_id: string | null;
+  anchor_edge_id: string;
+  local_flood_depth_m: number;
   activation_hours: number;
   state: "forecast" | "active";
   recommended_action: string;
-  source_type: "model_prediction";
+  source_type: "scenario_adjusted_model_prior";
 }
 
 export interface DerivedEdgeState {

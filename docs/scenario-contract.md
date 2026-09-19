@@ -81,14 +81,23 @@ routing, isolation, capacity, or plan viability.
 
 `model-impact-prior.json` stores the frozen Nakkhu 2024 event input and four
 probabilities produced by the CatBoost model. `prediction-pings.json` supplies
-display anchors, activation hours, labels, and recommended actions. The scenario
-service joins them by target and returns the result as `prediction_signals`.
+display anchors, nearby network edges, activation hours, labels, and recommended
+actions. The scenario service joins them by target and returns the result as
+`prediction_signals`.
 
-The percentages stay constant across frames because the trained model is an
-event-level impact classifier. The timeline marks each signal `active` once its
-configured activation hour is reached. A ping means “surface this predicted
-event impact near the relevant asset”; it is not a claim that the exact point or
-building has that risk.
+The base percentages stay constant because the trained model is an event-level
+impact classifier. The displayed percentage is a monotonic scenario projection:
+it converts the base probability to cumulative risk using 65% local flood-stage
+progress, 20% elapsed-time progress, and a 15% initial exposure. Local flood
+stage is the anchor edge's current depth divided by its maximum modeled depth in
+the scenario horizon. At the final frame, the displayed value reaches the base
+event probability. The timeline separately marks a signal `active` once its
+configured activation hour is reached.
+
+A ping means “surface this evolving scenario risk near the relevant asset”; it
+is not a claim that the exact point or building has that risk. This deterministic
+adjustment is labeled `scenario_adjusted_model_prior` and must not be described
+as a new hourly ML prediction.
 
 The prediction layer cannot close roads, alter flood depth, change routing, or
 modify plan results. Those continue to come from the deterministic world state.

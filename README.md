@@ -100,9 +100,10 @@ The administrative boundaries are Kathmandu and Lalitpur Metropolitan City,
 visual context only — see `data/scenarios/kantipur-river/SOURCES.md` for
 provenance and licensing. The inundation polygons are a placeholder envelope
 derived from per-edge depth, not a hydraulic solve; `docs/scenario-contract.md`
-carries the fixture contract that will replace them. Prediction percentages are
-event-level impact priors: their map coordinates are visualization anchors, not
-building-level forecasts.
+carries the fixture contract that will replace them. Each timeline percentage
+is a deterministic adjustment of a frozen event-level impact prior using nearby
+modeled depth and elapsed time. Map coordinates remain visualization anchors,
+not building-level forecasts.
 
 Useful endpoints:
 

@@ -23,6 +23,7 @@
       "short_label": "RESCUE",
       "coordinates": [85.31348, 27.64646],
       "anchor_asset_id": "ktp-com-04",
+      "anchor_edge_id": "ktp-road-08",
       "activation_hours": 6,
       "recommended_action": "Stage a rope or boat team near Kantipur Colony before access degrades."
     },
@@ -33,6 +34,7 @@
       "short_label": "HOUSING",
       "coordinates": [85.3215, 27.6575],
       "anchor_asset_id": "ktp-com-04",
+      "anchor_edge_id": "ktp-road-07",
       "activation_hours": 6,
       "recommended_action": "Issue targeted evacuation guidance for low-lying homes."
     },
@@ -43,6 +45,7 @@
       "short_label": "ROAD",
       "coordinates": [85.317, 27.675],
       "anchor_asset_id": "ktp-bridge-01",
+      "anchor_edge_id": "ktp-bridge-01",
       "activation_hours": 12,
       "recommended_action": "Move response vehicles across the bridge before the modeled closure window."
     },
@@ -53,6 +56,7 @@
       "short_label": "SEVERE",
       "coordinates": [85.342, 27.664],
       "anchor_asset_id": "ktp-com-05",
+      "anchor_edge_id": "ktp-road-10",
       "activation_hours": 12,
       "recommended_action": "Prioritize the low-lying riverbend for early warning and rescue coverage."
     }

@@ -141,6 +141,7 @@ def validate_scenario_fixtures(
     _validate_prediction_pings(
         scenario_id,
         asset_ids,
+        edge_ids,
         impact_prior,
         prediction_pings,
     )
@@ -182,6 +183,7 @@ def _validate_context_boundaries(
 def _validate_prediction_pings(
     scenario_id: str,
     asset_ids: set[str],
+    edge_ids: set[str],
     impact_prior: Mapping[str, Any],
     prediction_pings: Mapping[str, Any],
 ) -> None:
@@ -208,6 +210,10 @@ def _validate_prediction_pings(
         if ping.get("anchor_asset_id") not in asset_ids:
             raise ScenarioValidationError(
                 f"Prediction ping {ping['ping_id']} references an unknown asset"
+            )
+        if ping.get("anchor_edge_id") not in edge_ids:
+            raise ScenarioValidationError(
+                f"Prediction ping {ping['ping_id']} references an unknown edge"
             )
         longitude, latitude = ping["coordinates"]
         if not (80 <= longitude <= 90 and 25 <= latitude <= 31):

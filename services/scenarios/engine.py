@@ -135,7 +135,8 @@ class ScenarioService:
             "edge_states": list(edge_states_by_id.values()),
             "community_access": community_access,
             "prediction_signals": self._prediction_signals(
-                frame["simulation_time_hours"]
+                frame,
+                edge_states_by_id,
             ),
         }
         state["hazards"] = self._hazards(state)
@@ -145,29 +146,67 @@ class ScenarioService:
         ]
         return state
 
-    def _prediction_signals(self, simulation_time_hours: float) -> List[JsonObject]:
-        """Project the frozen event-level model output onto map annotations.
+    def _prediction_signals(
+        self,
+        frame: Mapping[str, Any],
+        edge_states_by_id: Mapping[str, Mapping[str, Any]],
+    ) -> List[JsonObject]:
+        """Turn event priors into cumulative, frame-specific risk indicators.
 
-        The probabilities remain fixed because the trained model predicts a
-        whole-event impact prior, not an hourly physical state. The scenario
-        timeline only changes whether a signal is still forecast or has become
-        active according to the deterministic flood frame.
+        The CatBoost values remain immutable as ``base_probability``. A
+        transparent deterministic projection scales each prior by the nearby
+        edge's progress toward its maximum modeled depth (65%), elapsed scenario
+        time (20%), and initial exposure (15%). This creates monotonic timeline
+        values without presenting them as fresh ML inference.
         """
 
+        simulation_time_hours = frame["simulation_time_hours"]
+        horizon_hours = self.manifest["evaluation_horizon_hours"]
+        time_progress = min(1.0, simulation_time_hours / horizon_hours)
         probabilities = self.impact_prior["impactProbabilities"]
-        return [
-            {
+        max_depth_by_edge: Dict[str, float] = {}
+        for modeled_frame in self.flood_frames["frames"]:
+            for condition in modeled_frame["edge_conditions"]:
+                edge_id = condition["edge_id"]
+                max_depth_by_edge[edge_id] = max(
+                    max_depth_by_edge.get(edge_id, 0.0),
+                    condition["flood_depth_m"],
+                )
+
+        signals: List[JsonObject] = []
+        for ping in self.prediction_pings["pings"]:
+            base_probability = probabilities[ping["target"]]
+            anchor_edge_id = ping["anchor_edge_id"]
+            local_depth = edge_states_by_id[anchor_edge_id]["flood_depth_m"]
+            maximum_depth = max_depth_by_edge[anchor_edge_id]
+            local_stage = (
+                min(1.0, local_depth / maximum_depth)
+                if maximum_depth > 0
+                else time_progress
+            )
+            cumulative_exposure = min(
+                1.0,
+                0.15 + (0.65 * local_stage) + (0.20 * time_progress),
+            )
+            adjusted_probability = 1 - (
+                (1 - base_probability) ** cumulative_exposure
+            )
+            signals.append({
                 "ping_id": ping["ping_id"],
                 "target": ping["target"],
                 "label": ping["label"],
                 "short_label": ping["short_label"],
-                "probability": probabilities[ping["target"]],
-                "percent": round(probabilities[ping["target"]] * 100),
+                "base_probability": base_probability,
+                "base_percent": round(base_probability * 100),
+                "probability": round(adjusted_probability, 6),
+                "percent": round(adjusted_probability * 100),
                 "geometry": {
                     "type": "Point",
                     "coordinates": ping["coordinates"],
                 },
                 "anchor_asset_id": ping.get("anchor_asset_id"),
+                "anchor_edge_id": anchor_edge_id,
+                "local_flood_depth_m": local_depth,
                 "activation_hours": ping["activation_hours"],
                 "state": (
                     "active"
@@ -175,10 +214,9 @@ class ScenarioService:
                     else "forecast"
                 ),
                 "recommended_action": ping["recommended_action"],
-                "source_type": "model_prediction",
-            }
-            for ping in self.prediction_pings["pings"]
-        ]
+                "source_type": "scenario_adjusted_model_prior",
+            })
+        return signals
 
     def _impact_model_summary(self) -> JsonObject:
         model = self.prediction_pings["model"]

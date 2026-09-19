@@ -215,14 +215,15 @@ export function RightRail({
               <i />
               <div>
                 <strong>{signal.percent}%</strong>
-                <span>{signal.label}</span>
+                <span>{signal.label} · prior {signal.base_percent}%</span>
               </div>
               <em>{signal.state}</em>
             </article>
           ))}
         </div>
         <p className="model-signal-note">
-          Event-level predictions · map pings are localized indicators, not building-level forecasts.
+          Timeline risk combines the event prior with nearby modeled flood depth and scenario stage.
+          Pings remain area indicators, not building-level forecasts.
         </p>
       </section>
 

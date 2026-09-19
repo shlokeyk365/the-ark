@@ -31,10 +31,10 @@ Every snapshot contains:
 | `operational_use` | boolean | Always `false` for the Kantipur demo. |
 
 Every snapshot also carries `prediction_signals`. These are separately labeled
-`model_prediction` interpretations from the frozen event-impact model. Their
-probabilities do not mutate as the deterministic flood timeline advances; only
-their `forecast`/`active` display state changes at the configured activation
-hour.
+`scenario_adjusted_model_prior` interpretations. Each retains the frozen
+event-impact `base_probability`, while its displayed probability increases with
+the anchor edge's modeled flood-stage progress and elapsed scenario time. Its
+`forecast`/`active` state changes separately at the configured activation hour.
 
 World-state versions are append-only. Applying an event creates a new version;
 it never edits an earlier snapshot in place.

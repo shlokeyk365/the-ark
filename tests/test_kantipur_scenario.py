@@ -161,7 +161,7 @@ def test_bootstrap_supplies_frontend_geometry_and_controls() -> None:
     assert payload["impact_model"]["training_events"] == 4869
 
 
-def test_model_prediction_pings_are_fixed_probabilities_with_timeline_state() -> None:
+def test_model_prediction_pings_increase_with_local_flood_stage() -> None:
     service = _service()
     expected = {
         "casualty_or_missing": 0.489031,
@@ -170,17 +170,38 @@ def test_model_prediction_pings_are_fixed_probabilities_with_timeline_state() ->
         "severe_impact": 0.364804,
     }
 
-    now = service.build_world_state("ktp-frame-now")["prediction_signals"]
-    plus_six = service.build_world_state("ktp-frame-plus-6h")["prediction_signals"]
-    plus_twelve = service.build_world_state("ktp-frame-plus-12h")[
-        "prediction_signals"
+    frames = [
+        service.build_world_state(frame_id)["prediction_signals"]
+        for frame_id in (
+            "ktp-frame-now",
+            "ktp-frame-plus-6h",
+            "ktp-frame-plus-12h",
+            "ktp-frame-plus-24h",
+        )
     ]
+    now, plus_six, plus_twelve, horizon = frames
 
-    assert {signal["target"]: signal["probability"] for signal in now} == expected
+    assert {signal["target"]: signal["base_probability"] for signal in now} == expected
+    for target, base_probability in expected.items():
+        values = [
+            next(signal for signal in signals if signal["target"] == target)[
+                "probability"
+            ]
+            for signals in frames
+        ]
+        assert values == sorted(values)
+        assert len(set(values)) == len(values)
+        assert values[-1] == base_probability
+
     assert all(signal["state"] == "forecast" for signal in now)
     assert sum(signal["state"] == "active" for signal in plus_six) == 2
     assert all(signal["state"] == "active" for signal in plus_twelve)
-    assert all(signal["source_type"] == "model_prediction" for signal in now)
+    assert all(signal["state"] == "active" for signal in horizon)
+    assert all(
+        signal["source_type"] == "scenario_adjusted_model_prior"
+        for signal in now
+    )
+    assert all(signal["anchor_edge_id"].startswith("ktp-") for signal in now)
 
 
 def test_wire_models_validate_all_service_responses_and_reject_drift() -> None:
