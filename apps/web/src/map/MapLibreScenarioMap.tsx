@@ -58,6 +58,7 @@ import {
 
 const FIT_PADDING = { top: 78, right: 230, bottom: 74, left: 70 };
 const LOAD_TIMEOUT_MS = 15000;
+const BUILDING_3D_LAYER_ID = "basemap-buildings-3d";
 
 /** Registered once per page; the protocol object is stateless across maps. */
 let protocolRegistered = false;
@@ -86,6 +87,12 @@ const basemapLabelIds = new Set(
 function buildStyle(): StyleSpecification {
   return {
     version: 8,
+    light: {
+      anchor: "map",
+      color: "#8ed8ff",
+      intensity: 0.38,
+      position: [1.15, 205, 35],
+    },
     glyphs: BASEMAP_GLYPHS,
     sprite: BASEMAP_SPRITE,
     sources: {
@@ -125,6 +132,49 @@ function buildStyle(): StyleSpecification {
         paint: { "raster-opacity": 1, "raster-fade-duration": 250 },
       },
       ...basemapLayers,
+      {
+        id: BUILDING_3D_LAYER_ID,
+        type: "fill-extrusion",
+        source: BASEMAP_SOURCE_ID,
+        "source-layer": "buildings",
+        minzoom: 13,
+        filter: ["in", "kind", "building", "building_part"],
+        paint: {
+          "fill-extrusion-color": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            13,
+            "#132839",
+            16,
+            "#2c536a",
+          ],
+          "fill-extrusion-height": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            13,
+            0,
+            13.6,
+            [
+              "case",
+              ["has", "height"],
+              ["to-number", ["get", "height"]],
+              ["has", "levels"],
+              ["*", ["to-number", ["get", "levels"]], 3],
+              8,
+            ],
+          ],
+          "fill-extrusion-base": [
+            "case",
+            ["has", "min_height"],
+            ["to-number", ["get", "min_height"]],
+            0,
+          ],
+          "fill-extrusion-opacity": 0.78,
+          "fill-extrusion-vertical-gradient": true,
+        },
+      },
       ...LAYERS,
     ],
   };
@@ -165,7 +215,7 @@ export function MapLibreScenarioMap({
   const [ready, setReady] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
   const [satellite, setSatellite] = useState(false);
-  const [terrain3d, setTerrain3d] = useState(false);
+  const [terrain3d, setTerrain3d] = useState(true);
   const [hovered, setHovered] = useState<DerivedEdgeState | null>(null);
   const [diagnostics, setDiagnostics] = useState<string[] | null>(null);
   const [layers, setLayers] = useState<Record<LayerKey, boolean>>(DEFAULT_LAYERS);
@@ -437,6 +487,14 @@ export function MapLibreScenarioMap({
     const map = mapRef.current;
     if (!map || !ready) return;
 
+    if (map.getLayer(BUILDING_3D_LAYER_ID)) {
+      map.setLayoutProperty(
+        BUILDING_3D_LAYER_ID,
+        "visibility",
+        terrain3d ? "visible" : "none",
+      );
+    }
+
     if (terrain3d) {
       map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration: 1.4 });
       map.setSky({
@@ -447,7 +505,7 @@ export function MapLibreScenarioMap({
         "horizon-fog-blend": 0.5,
         "fog-ground-blend": 0.2,
       });
-      map.easeTo({ pitch: 55, duration: 900 });
+      map.easeTo({ pitch: 52, bearing: -18, duration: 900 });
     } else {
       map.setTerrain(null);
       map.easeTo({ pitch: 0, bearing: 0, duration: 700 });
@@ -539,7 +597,7 @@ export function MapLibreScenarioMap({
                 type="checkbox"
               />
               <span className="layer-swatch terrain" aria-hidden="true" />
-              3D terrain
+              3D terrain & buildings
             </label>
 
             <button className="layer-reset" type="button" onClick={resetView}>
