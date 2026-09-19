@@ -513,3 +513,131 @@ To attempt an already running, separately provisioned MiroFish service, set
 IDs to integer upstream agent IDs), then add `--live` to the command above. Ark
 does not start MiroFish, create its simulations, or manage model/Zep API keys.
 The live provider is experimental; fixture mode is the hackathon default.
+
+## Deterministic robustness and sensitivity (Step 9)
+
+Robustness tests how already constructed response plans behave under changed
+scenario assumptions. It does not predict future events. Robustness rates and
+recommendation stability are not probabilities or AI confidence. Synthetic Nepal
+variations are not historical reconstructions. MiroFish and other agent/model
+providers are never called during robustness trials; generate/admit plans first.
+
+The baseline is simulated and ranked normally, separately from the configured
+number of perturbed trials. Every plan receives exactly the same perturbed world
+in each trial. The existing engine validates every action, enforces physics,
+routes and reservations, and records rejected actions; the original plans are
+neither edited nor regenerated to improve trial outcomes. The existing scorer
+and viability/ranking rules remain authoritative. Input worlds, plans, policies
+and baseline results are not mutated. Trial contracts are frozen, with tuple
+collections and frozen nested metrics/audits.
+
+### Configuration and API
+
+`POST /api/v1/simulate-response` accepts an optional `robustness` configuration.
+Omitting it or setting `enabled: false` performs no trials, preserves baseline
+values and returns a documented `robustness: null` response field. All existing
+20-plan/1,440-minute limits and 400/422/500 error behavior remain in place. Invalid
+physical plans still produce normal outcomes, not request failures.
+
+Add this member to an existing valid SimulationRequest JSON object:
+
+```json
+"robustness": {
+  "enabled": true,
+  "trial_count": 20,
+  "seed": 42,
+  "route_closure_shift_minutes": [-15, 15],
+  "travel_time_increase_percent": [0, 40],
+  "responder_unavailability_count": 1,
+  "shelter_capacity_reduction_percent": [0, 40],
+  "request_reporting_delay_minutes": [0, 15],
+  "additional_request_count": 1
+}
+```
+
+Defaults are disabled, 20 trials, seed 42, the ranges shown above, **zero**
+unavailable responders and **zero** additional requests. Ranges are inclusive
+integer pairs `[minimum, maximum]`. Set both endpoints equal for a fixed change.
+Trial counts must be 1–100, including disabled configurations; seeds must be
+integers from 0 through 2^63−1. Closure shifts are within −15..15 minutes, travel
+and capacity percentages within 0..40, and reporting delays within 0..15 minutes.
+Unavailability is 0–20 and cannot exceed currently available, unassigned
+responders (structured 400 when it does). Additional requests are limited to 0–3.
+Unknown fields, coercible strings/booleans, inverted ranges and out-of-bound
+values are rejected. No new dependency is required.
+
+### Variations and reproducibility
+
+Each integer draw comes from SHA-256 of compact UTF-8 JSON containing algorithm
+version `ark-robustness-v1`, seed, zero-based trial index, category and entity ID;
+the hash integer is mapped modulo the inclusive range width. This is a repeatable
+sensitivity sampling convention, not a calibrated distribution. Global random
+state is unused. Trial IDs are scoped to scenario ID, seed and trial index.
+Audits and output plans/reasons are sorted deterministically. Identical inputs
+produce identical JSON, independent of submitted plan order.
+
+| Variation | Rule |
+|---|---|
+| Closure timing | Shift future scheduled closures; clamp to the snapshot minute. Missing/past/already closed routes are audited as skipped. |
+| Travel time | Increase durations using exact integer ceiling: `(minutes * (100 + percent) + 99) // 100`. Never faster. |
+| Responder availability | Select by stable hashed priority, then mark unavailable. Keep actions intact so existing admission records `responder_unavailable`. |
+| Shelter capacity | Floor `capacity * (100 - percent) / 100`, clamped to existing occupancy and the schema minimum of one; record clamps. |
+| Reporting delay | Delay pending requests reported at/after the snapshot. Previously reported or non-pending requests are skipped; never move a report earlier. |
+| New requests | Add one-person, urgency-four hypothetical cohorts at distinct unused non-safe nodes, reported within the horizon. IDs and provenance are deterministic. |
+
+Additional cohorts are explicitly assumed disjoint from every existing request
+and community population. Nodes occupied by any request, community or shelter
+are excluded, as are safe nodes. The schema has no individual-person registry,
+so this is a conservative synthetic assumption, not verified identity matching.
+If no eligible node exists, skip with `no_disjoint_non_safe_node`; ID collisions
+are skipped with `synthetic_id_collision`. No populations are cloned or reduced
+to fabricate new people. Synthetic provenance lives in the audit and private
+world metadata because RescueRequest has no metadata field. The Nepal fixture
+has no eligible additional-request nodes, so its requested additions are skipped.
+
+### Interpreting output
+
+The separate `robustness` block includes per-trial audits, terminal per-plan
+outcomes, structured action failure/rejection reasons and trial rankings.
+Summaries count every completed terminal trial, including failed/cancelled and
+nonviable outcomes. They expose viable/nonviable counts, viable-trial fraction,
+score ranges/mean/median, rescue/evacuation ranges, worst isolation/unanswered
+calls/stranding, reason counts and best/worst numeric trial IDs.
+
+Negative and nonviable scores remain in distributions. Missing numeric scores
+remain null with `numeric_score_unavailable`; numeric summaries exclude only
+those missing values and become null if none exist. Means and medians use exact
+Fraction arithmetic on decimal score representations and convert to floats once.
+An even median averages the two middle values. Numeric ties for best/worst trial
+use the lexicographically smallest trial ID. Reason counts count events plus
+explicit nonviability/missing-score reasons, not unique failed trials.
+
+`robustness_order` is informational: higher viable fraction, then higher median,
+higher minimum score, higher baseline score, then ascending plan ID. Missing
+scores sort last at the applicable tie-breaker. This never overwrites the normal
+`recommended_plan_id`. `first_place_trial_count` uses the existing ranking in each
+trial, even if its first plan is nonviable. Recommendation stability is the number
+of matched trials where the baseline-recommended plan ranks first divided by
+completed matched trials; it is null when no baseline recommendation exists.
+High viability alone can coexist with poor rescue/evacuation outcomes: read the
+metrics and scores alongside the rate.
+
+### Nepal robustness demo and runtime limits
+
+```powershell
+& .\apps\api\.venv\Scripts\python.exe .\apps\api\scripts\run_nepal_robustness_demo.py
+```
+
+This explicitly runs 20 matched trials at seed 42 with one responder unavailable
+and one attempted synthetic addition per trial. It prints baseline ranks/scores,
+trial viability, median/worst score, first-place counts, sensitivity ranking,
+recommendation stability and the synthetic-sensitivity disclaimer. Repeated runs
+produce identical output. The ordinary Nepal demo remains baseline-only.
+
+Execution is synchronous: cost scales with plans × trials × duration, in addition
+to baseline cost. The maximum permits 2,000 trial simulations at 1,440 minutes
+each and can be expensive; use small trials for interactive demonstrations.
+Audits/outcomes also increase response size. There is no background job system,
+model call, timing guarantee or operational approval. Expected action failures
+do not stop other plans/trials; unexpected programming errors use the existing
+sanitized 500 response.

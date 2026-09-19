@@ -15,6 +15,7 @@ from ark_api.simulation.models import (
     SimulationResponse,
 )
 from ark_api.simulation.plans import generate_candidate_plans
+from ark_api.simulation.robustness import RobustnessInputError, analyze_robustness
 from ark_api.simulation.scoring import rank_scenario_results, recommend_plan_id
 
 MODEL_VERSION = "ark-response-simulator/0.1.0"
@@ -112,11 +113,27 @@ def run_response_simulation(request: SimulationRequest) -> SimulationResponse:
             ErrorCode.DOMAIN_VALIDATION_FAILED,
             "The scenario results could not be ranked.",
         ) from error
+    robustness = None
+    if request.robustness is not None and request.robustness.enabled:
+        try:
+            robustness = analyze_robustness(
+                request.world_state,
+                plans,
+                request.duration_minutes,
+                request.robustness,
+                baseline_results=ranked,
+            )
+        except RobustnessInputError as error:
+            raise SimulationClientError(
+                ErrorCode.DOMAIN_VALIDATION_FAILED,
+                str(error),
+            ) from error
     return SimulationResponse(
         recommended_plan_id=recommended,
         results=ranked,
         disclaimer=DISCLAIMER,
         model_version=MODEL_VERSION,
+        robustness=robustness,
     )
 
 

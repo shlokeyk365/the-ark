@@ -361,11 +361,165 @@ class ScenarioResult(ContractModel):
     simulation_minutes: NonnegativeInt
 
 
+class FrozenRobustnessModel(ContractModel):
+    model_config = ConfigDict(
+        extra="forbid", frozen=True, validate_default=True, allow_inf_nan=False
+    )
+
+
+ClosureShift = Annotated[int, Field(strict=True, ge=-15, le=15)]
+DegradationPercent = Annotated[int, Field(strict=True, ge=0, le=40)]
+ReportingDelay = Annotated[int, Field(strict=True, ge=0, le=15)]
+
+
+class RobustnessConfig(FrozenRobustnessModel):
+    enabled: Annotated[bool, Field(strict=True)] = False
+    trial_count: Annotated[int, Field(strict=True, ge=1, le=100)] = 20
+    seed: Annotated[int, Field(strict=True, ge=0, le=2**63 - 1)] = 42
+    route_closure_shift_minutes: tuple[ClosureShift, ClosureShift] = (-15, 15)
+    travel_time_increase_percent: tuple[DegradationPercent, DegradationPercent] = (
+        0,
+        40,
+    )
+    responder_unavailability_count: Annotated[int, Field(strict=True, ge=0, le=20)] = 0
+    shelter_capacity_reduction_percent: tuple[
+        DegradationPercent, DegradationPercent
+    ] = (0, 40)
+    request_reporting_delay_minutes: tuple[ReportingDelay, ReportingDelay] = (0, 15)
+    additional_request_count: Annotated[int, Field(strict=True, ge=0, le=3)] = 0
+
+    @field_validator(
+        "route_closure_shift_minutes",
+        "travel_time_increase_percent",
+        "shelter_capacity_reduction_percent",
+        "request_reporting_delay_minutes",
+    )
+    @classmethod
+    def ordered_range(cls, value):
+        if value[0] > value[1]:
+            raise ValueError("Range minimum must not exceed maximum")
+        return value
+
+
+class PerturbationChange(FrozenRobustnessModel):
+    entity_id: NonemptyString
+    original: NonnegativeInt
+    perturbed: NonnegativeInt
+    sampled_value: Annotated[int, Field(strict=True)]
+    clamped: Annotated[bool, Field(strict=True)] = False
+    reason_code: NonemptyString | None = None
+
+
+class SkippedPerturbation(FrozenRobustnessModel):
+    category: NonemptyString
+    entity_id: NonemptyString
+    reason_code: NonemptyString
+
+
+class PerturbationAudit(FrozenRobustnessModel):
+    trial_index: NonnegativeInt
+    trial_id: NonemptyString
+    seed: Annotated[int, Field(strict=True)]
+    route_changes: tuple[PerturbationChange, ...] = ()
+    travel_time_changes: tuple[PerturbationChange, ...] = ()
+    unavailable_responder_ids: tuple[NonemptyString, ...] = ()
+    shelter_capacity_changes: tuple[PerturbationChange, ...] = ()
+    request_reporting_delays: tuple[PerturbationChange, ...] = ()
+    synthetic_additional_request_ids: tuple[NonemptyString, ...] = ()
+    skipped: tuple[SkippedPerturbation, ...] = ()
+    synthetic_provenance: NonemptyString = (
+        "Hypothetical disjoint additional cohorts; not historical people."
+    )
+
+
+class RobustnessMetrics(ScenarioMetrics):
+    model_config = ConfigDict(extra="forbid", frozen=True, validate_default=True)
+
+
+class TrialFailureReason(FrozenRobustnessModel):
+    action_id: NonemptyString | None = None
+    responder_id: NonemptyString | None = None
+    reason_code: NonemptyString
+
+
+class RobustnessTrialOutcome(FrozenRobustnessModel):
+    trial_id: NonemptyString
+    plan_id: NonemptyString
+    status: PlanStatus
+    viable: Annotated[bool, Field(strict=True)]
+    score: FiniteFloat | None
+    score_unavailable_reason: NonemptyString | None = None
+    metrics: RobustnessMetrics
+    violations: tuple[NonemptyString, ...] = ()
+    nonviable_reasons: tuple[NonemptyString, ...] = ()
+    failure_reasons: tuple[TrialFailureReason, ...] = ()
+
+    @field_validator("status")
+    @classmethod
+    def terminal(cls, value):
+        if value not in {PlanStatus.COMPLETED, PlanStatus.FAILED, PlanStatus.CANCELLED}:
+            raise ValueError("A trial outcome must be terminal")
+        return value
+
+
+class RobustnessTrial(FrozenRobustnessModel):
+    audit: PerturbationAudit
+    outcomes: tuple[RobustnessTrialOutcome, ...]
+    ranking: tuple[NonemptyString, ...]
+
+
+class ReasonCount(FrozenRobustnessModel):
+    reason_code: NonemptyString
+    count: NonnegativeInt
+
+
+class PlanRobustnessSummary(FrozenRobustnessModel):
+    plan_id: NonemptyString
+    completed_trial_count: NonnegativeInt
+    viable_trial_count: NonnegativeInt
+    nonviable_trial_count: NonnegativeInt
+    viability_rate: Annotated[FiniteFloat, Field(ge=0, le=1)]
+    baseline_score: FiniteFloat | None
+    minimum_score: FiniteFloat | None
+    median_score: FiniteFloat | None
+    maximum_score: FiniteFloat | None
+    mean_score: FiniteFloat | None
+    minimum_rescued: NonnegativeInt
+    median_rescued: FiniteFloat
+    maximum_rescued: NonnegativeInt
+    minimum_evacuated: NonnegativeInt
+    median_evacuated: FiniteFloat
+    maximum_evacuated: NonnegativeInt
+    maximum_isolated_population: NonnegativeInt
+    maximum_unanswered_critical_requests: NonnegativeInt
+    maximum_stranded_responders: NonnegativeInt
+    reason_counts: tuple[ReasonCount, ...]
+    best_trial_id: NonemptyString | None
+    worst_trial_id: NonemptyString | None
+    first_place_trial_count: NonnegativeInt
+
+
+class RobustnessResult(FrozenRobustnessModel):
+    seed: Annotated[int, Field(strict=True)]
+    trial_count: PositiveInt
+    completed_matched_trials: NonnegativeInt
+    baseline_recommended_plan_id: NonemptyString | None
+    recommendation_stability_rate: Annotated[FiniteFloat, Field(ge=0, le=1)] | None
+    robustness_order: tuple[NonemptyString, ...]
+    summaries: tuple[PlanRobustnessSummary, ...]
+    trials: tuple[RobustnessTrial, ...]
+    disclaimer: NonemptyString = (
+        "Synthetic sensitivity tests, not outcome probabilities or AI confidence. "
+        "Scenario variations are not historical reconstructions."
+    )
+
+
 class SimulationRequest(ContractModel):
     world_state: WorldState
     plans: list[ResponsePlan] | None = None
     duration_minutes: PositiveInt = 60
     random_seed: Annotated[int, Field(strict=True)] = 42
+    robustness: RobustnessConfig | None = None
 
 
 class SimulationResponse(ContractModel):
@@ -373,3 +527,4 @@ class SimulationResponse(ContractModel):
     results: list[ScenarioResult]
     disclaimer: NonemptyString
     model_version: NonemptyString
+    robustness: RobustnessResult | None = None
