@@ -1,32 +1,32 @@
 {
   "holdout_id": "nakkhu-2024",
-  "classification_accuracy_percent": 75.0,
-  "probabilistic_match_percent": 63.36,
-  "mean_squared_error": 0.3664,
-  "root_mean_squared_error": 0.6053,
+  "classification_accuracy_percent": 50.0,
+  "probabilistic_match_percent": 61.7,
+  "mean_squared_error": 0.383,
+  "root_mean_squared_error": 0.6188,
   "roc_auc": null,
   "roc_auc_note": "ROC-AUC is undefined for one event whose four observed labels are all positive.",
   "components": {
     "casualty_or_missing": {
-      "probability": 0.508687,
+      "probability": 0.505351,
       "predicted_label": 1,
       "actual_label": 1,
       "correct": true
     },
     "housing_damage": {
-      "probability": 0.739612,
-      "predicted_label": 1,
+      "probability": 0.484837,
+      "predicted_label": 0,
       "actual_label": 1,
-      "correct": true
+      "correct": false
     },
     "transport_disruption": {
-      "probability": 0.044924,
+      "probability": 0.074537,
       "predicted_label": 0,
       "actual_label": 1,
       "correct": false
     },
     "severe_impact": {
-      "probability": 0.505826,
+      "probability": 0.593414,
       "predicted_label": 1,
       "actual_label": 1,
       "correct": true

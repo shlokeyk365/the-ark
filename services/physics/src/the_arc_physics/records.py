@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable, List, Mapping, Sequence
+from typing import Iterable, List, Mapping, Optional, Sequence
 
 
 TARGET_NAMES = (
@@ -36,6 +36,24 @@ class FloodEventRecord:
     evacuated: int
     roads_damaged_km: float
     transport_affected: bool
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    district_area_sq_km: Optional[float] = None
+    elevation_m: Optional[float] = None
+    terrain_relief_m: Optional[float] = None
+    households_2011: Optional[float] = None
+    population_2011: Optional[float] = None
+    population_density_2011: Optional[float] = None
+    rainfall_1d_mm: Optional[float] = None
+    rainfall_3d_mm: Optional[float] = None
+    rainfall_7d_mm: Optional[float] = None
+    rainfall_30d_mm: Optional[float] = None
+    rainy_days_7d: Optional[float] = None
+    rainfall_7d_anomaly: Optional[float] = None
+    casualty_label_known: bool = True
+    housing_label_known: bool = True
+    transport_label_known: bool = True
+    severe_label_known: bool = True
 
     @property
     def targets(self) -> Mapping[str, int]:
@@ -54,6 +72,15 @@ class FloodEventRecord:
             ),
         }
 
+    @property
+    def target_known(self) -> Mapping[str, bool]:
+        return {
+            "casualty_or_missing": self.casualty_label_known,
+            "housing_damage": self.housing_label_known,
+            "transport_disruption": self.transport_label_known,
+            "severe_impact": self.severe_label_known,
+        }
+
 
 CSV_FIELDS = tuple(FloodEventRecord.__dataclass_fields__.keys())
 
@@ -62,7 +89,7 @@ def write_records(path: Path, records: Iterable[FloodEventRecord]) -> int:
     path.parent.mkdir(parents=True, exist_ok=True)
     count = 0
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS)
+        writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS, lineterminator="\n")
         writer.writeheader()
         for record in records:
             writer.writerow(asdict(record))
@@ -94,6 +121,38 @@ def read_records(path: Path) -> List[FloodEventRecord]:
                     evacuated=int(row["evacuated"]),
                     roads_damaged_km=float(row["roads_damaged_km"]),
                     transport_affected=_to_bool(row["transport_affected"]),
+                    latitude=_optional_number(row.get("latitude")),
+                    longitude=_optional_number(row.get("longitude")),
+                    district_area_sq_km=_optional_number(
+                        row.get("district_area_sq_km")
+                    ),
+                    elevation_m=_optional_number(row.get("elevation_m")),
+                    terrain_relief_m=_optional_number(row.get("terrain_relief_m")),
+                    households_2011=_optional_number(row.get("households_2011")),
+                    population_2011=_optional_number(row.get("population_2011")),
+                    population_density_2011=_optional_number(
+                        row.get("population_density_2011")
+                    ),
+                    rainfall_1d_mm=_optional_number(row.get("rainfall_1d_mm")),
+                    rainfall_3d_mm=_optional_number(row.get("rainfall_3d_mm")),
+                    rainfall_7d_mm=_optional_number(row.get("rainfall_7d_mm")),
+                    rainfall_30d_mm=_optional_number(row.get("rainfall_30d_mm")),
+                    rainy_days_7d=_optional_number(row.get("rainy_days_7d")),
+                    rainfall_7d_anomaly=_optional_number(
+                        row.get("rainfall_7d_anomaly")
+                    ),
+                    casualty_label_known=_optional_bool(
+                        row.get("casualty_label_known"), default=True
+                    ),
+                    housing_label_known=_optional_bool(
+                        row.get("housing_label_known"), default=True
+                    ),
+                    transport_label_known=_optional_bool(
+                        row.get("transport_label_known"), default=True
+                    ),
+                    severe_label_known=_optional_bool(
+                        row.get("severe_label_known"), default=True
+                    ),
                 )
             )
     return records
@@ -125,3 +184,18 @@ def validate_training_records(
 def _to_bool(value: str) -> bool:
     return value.strip().lower() in {"1", "true", "yes"}
 
+
+def _optional_bool(value: Optional[str], default: bool) -> bool:
+    if value is None or not value.strip():
+        return default
+    return _to_bool(value)
+
+
+def _optional_number(value: Optional[str]) -> Optional[float]:
+    if value is None or not value.strip():
+        return None
+    try:
+        parsed = float(value)
+    except ValueError:
+        return None
+    return parsed if parsed > -900.0 else None

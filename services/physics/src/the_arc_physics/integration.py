@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from .features import EventInput
+from .features import NUMERIC_FIELDS, EventInput
 from .model import MultiLabelFloodImpactModel
 
 
@@ -26,6 +26,7 @@ def simulation_impact_prior(
             "region": event.region,
             "district": event.district,
             "cause": event.cause,
+            **{field: getattr(event, field) for field in NUMERIC_FIELDS},
         },
         "impactProbabilities": model.predict(event),
         "trainingMetadata": dict(model.training_metadata),
@@ -35,4 +36,3 @@ def simulation_impact_prior(
             "Counterfactual rescue outcomes cannot be validated by this model.",
         ],
     }
-

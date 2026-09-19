@@ -6,7 +6,20 @@
     "day": 28,
     "region": "Central Region",
     "district": "Lalitpur",
-    "cause": "HEAVY RAINS"
+    "cause": "HEAVY RAINS",
+    "latitude": 27.538177,
+    "longitude": 85.344818,
+    "district_area_sq_km": 397.01,
+    "elevation_m": 1963.0,
+    "terrain_relief_m": 1139.0,
+    "households_2011": 109797.0,
+    "population_2011": 468132.0,
+    "population_density_2011": 1179.1441,
+    "rainfall_1d_mm": 52.03,
+    "rainfall_3d_mm": 185.25,
+    "rainfall_7d_mm": 291.41,
+    "rainfall_30d_mm": 347.78,
+    "rainy_days_7d": 6.0,
+    "rainfall_7d_anomaly": 11.184
   }
 }
-

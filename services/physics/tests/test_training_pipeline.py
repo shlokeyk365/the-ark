@@ -6,13 +6,19 @@ from pathlib import Path
 
 import numpy as np
 
+from the_arc_physics.bipad import read_bipad_floods
 from the_arc_physics.desinventar import read_desinventar_floods
-from the_arc_physics.features import EventInput
+from the_arc_physics.features import EventInput, FeatureEncoder
 from the_arc_physics.integration import simulation_impact_prior
 from the_arc_physics.metrics import binary_metrics, grouped_roc_auc_interval, roc_auc
 from the_arc_physics.model import MultiLabelFloodImpactModel
 from the_arc_physics.pipeline import evaluate_locked_holdout, grouped_cross_validation
-from the_arc_physics.records import FloodEventRecord, validate_training_records
+from the_arc_physics.records import (
+    FloodEventRecord,
+    read_records,
+    validate_training_records,
+    write_records,
+)
 
 
 def sample_records(count=120):
@@ -45,6 +51,15 @@ def sample_records(count=120):
 
 
 class TrainingPipelineTests(unittest.TestCase):
+    def test_bipad_import_cannot_cross_locked_holdout_boundary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "must end before"):
+                list(
+                    read_bipad_floods(
+                        Path(directory), sample_records(), end_year=2024
+                    )
+                )
+
     def test_rejects_holdout_leakage(self):
         records = sample_records()
         records[-1] = FloodEventRecord(**{**records[-1].__dict__, "year": 2024})
@@ -69,6 +84,75 @@ class TrainingPipelineTests(unittest.TestCase):
         self.assertIn("macro_roc_auc", report["overall"])
         self.assertIn("prevalence_baseline", report["overall"]["housing_damage"])
         self.assertIn("validation_gate", report)
+
+    def test_feature_encoder_excludes_city_and_district_identity(self):
+        rows = [
+            EventInput(2001, 7, 1, "Central", "Lalitpur", "HEAVY RAINS"),
+            EventInput(2002, 8, 2, "Eastern", "Jhapa", "RAIN"),
+        ]
+        encoder = FeatureEncoder.fit(rows)
+        names = " ".join(encoder.feature_names).lower()
+        self.assertNotIn("lalitpur", names)
+        self.assertNotIn("jhapa", names)
+        self.assertNotIn("district=", names)
+
+    def test_district_grouped_folds_hold_out_complete_districts(self):
+        records = sample_records(150)
+        districts = [
+            "Achham",
+            "Bara",
+            "Chitwan",
+            "Dhading",
+            "Ilam",
+            "Jhapa",
+            "Kaski",
+            "Lalitpur",
+            "Morang",
+            "Sunsari",
+        ]
+        records = [
+            FloodEventRecord(
+                **{**record.__dict__, "district": districts[index % len(districts)]}
+            )
+            for index, record in enumerate(records)
+        ]
+        report = grouped_cross_validation(records, folds=5, grouping="district")
+        seen = []
+        for fold in report["folds"]:
+            seen.extend(fold["validation_districts"])
+        self.assertEqual(sorted(seen), sorted(districts))
+
+    def test_enriched_fields_round_trip_through_csv(self):
+        record = FloodEventRecord(
+            **{
+                **sample_records(1)[0].__dict__,
+                "latitude": 27.5,
+                "rainfall_7d_mm": 123.4,
+                "population_density_2011": 456.7,
+            }
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "events.csv"
+            write_records(path, [record])
+            restored = read_records(path)[0]
+        self.assertEqual(restored.latitude, 27.5)
+        self.assertEqual(restored.rainfall_7d_mm, 123.4)
+        self.assertEqual(restored.population_density_2011, 456.7)
+
+    def test_unknown_target_labels_are_excluded_from_metrics(self):
+        records = sample_records(120)
+        records = [
+            FloodEventRecord(
+                **{
+                    **record.__dict__,
+                    "transport_label_known": index >= 20,
+                }
+            )
+            for index, record in enumerate(records)
+        ]
+        report = grouped_cross_validation(records, folds=5)
+        self.assertEqual(report["overall"]["transport_disruption"]["support"], 100)
+        self.assertEqual(report["overall"]["housing_damage"]["support"], 120)
 
     def test_roc_auc_distinguishes_signal_from_guessing(self):
         labels = np.asarray([0, 0, 1, 1], dtype=float)

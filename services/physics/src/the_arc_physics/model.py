@@ -30,8 +30,15 @@ class MultiLabelFloodImpactModel:
         matrix = encoder.transform(inputs)
         classifiers: Dict[str, BinaryLogisticRegression] = {}
         for target in TARGET_NAMES:
-            labels = np.asarray([record.targets[target] for record in records], dtype=float)
-            classifiers[target] = BinaryLogisticRegression().fit(matrix, labels)
+            known = np.asarray(
+                [record.target_known[target] for record in records], dtype=bool
+            )
+            labels = np.asarray(
+                [record.targets[target] for record in records], dtype=float
+            )
+            classifiers[target] = BinaryLogisticRegression().fit(
+                matrix[known], labels[known]
+            )
         return cls(
             encoder=encoder,
             classifiers=classifiers,
@@ -77,4 +84,3 @@ class MultiLabelFloodImpactModel:
             },
             training_metadata=payload["training_metadata"],
         )
-

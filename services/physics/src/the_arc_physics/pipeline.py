@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 from statistics import mean
-from typing import Any, Dict, List, Mapping, Sequence
+from typing import Any, Callable, Dict, List, Mapping, Sequence
 
 import numpy as np
 
 from .features import EventInput, FeatureEncoder, event_inputs
+from .geography import normalize_district
 from .logistic import BinaryLogisticRegression
 from .metrics import binary_metrics, grouped_roc_auc_interval
 from .model import MultiLabelFloodImpactModel
@@ -23,11 +25,18 @@ def train_and_evaluate(
     folds: int = 5,
 ) -> Mapping[str, Any]:
     validate_training_records(records)
-    cross_validation = grouped_cross_validation(records, folds=folds)
+    cross_validation = grouped_cross_validation(records, folds=folds, grouping="year")
+    district_generalization = grouped_cross_validation(
+        records, folds=folds, grouping="district"
+    )
+    validation_gate = combined_validation_gate(
+        cross_validation, district_generalization
+    )
     model = MultiLabelFloodImpactModel.fit(records)
     model.training_metadata = {
         **model.training_metadata,
-        "validation_gate": cross_validation["validation_gate"],
+        "feature_policy": "city and district identity excluded from predictors",
+        "validation_gate": validation_gate,
     }
     model.save(model_path)
     report = {
@@ -35,6 +44,8 @@ def train_and_evaluate(
         "not_a_flood_extent_model": True,
         "training": dict(model.training_metadata),
         "cross_validation": cross_validation,
+        "district_generalization": district_generalization,
+        "validation_gate": validation_gate,
     }
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
@@ -44,20 +55,29 @@ def train_and_evaluate(
 def grouped_cross_validation(
     records: Sequence[FloodEventRecord],
     folds: int = 5,
+    grouping: str = "year",
+    classifier_factory: Callable[[], Any] = BinaryLogisticRegression,
+    model_name: str = "logistic_regression",
 ) -> Mapping[str, Any]:
     if folds < 2:
         raise ValueError("at least two folds are required")
     fold_reports: List[Mapping[str, Any]] = []
     out_of_fold = {
-        target: np.zeros(len(records), dtype=float) for target in TARGET_NAMES
+        target: np.full(len(records), np.nan, dtype=float) for target in TARGET_NAMES
     }
     baseline_out_of_fold = {
-        target: np.zeros(len(records), dtype=float) for target in TARGET_NAMES
+        target: np.full(len(records), np.nan, dtype=float) for target in TARGET_NAMES
     }
 
+    fold_assignments = _fold_assignments(records, folds, grouping)
+    if len(set(fold_assignments)) != folds:
+        raise ValueError(
+            f"{grouping}-grouped validation needs at least one group in every fold"
+        )
     for fold in range(folds):
         test_indices = [
-            index for index, record in enumerate(records) if record.year % folds == fold
+            index for index, assigned_fold in enumerate(fold_assignments)
+            if assigned_fold == fold
         ]
         train_indices = [index for index in range(len(records)) if index not in test_indices]
         train_records = [records[index] for index in train_indices]
@@ -68,19 +88,38 @@ def grouped_cross_validation(
         target_metrics: Dict[str, Any] = {}
 
         for target in TARGET_NAMES:
+            train_known_positions = [
+                index
+                for index, record in enumerate(train_records)
+                if record.target_known[target]
+            ]
+            test_known_positions = [
+                index
+                for index, record in enumerate(test_records)
+                if record.target_known[target]
+            ]
             train_labels = np.asarray(
-                [record.targets[target] for record in train_records], dtype=float
+                [train_records[index].targets[target] for index in train_known_positions],
+                dtype=float,
             )
             test_labels = np.asarray(
-                [record.targets[target] for record in test_records], dtype=float
+                [test_records[index].targets[target] for index in test_known_positions],
+                dtype=float,
             )
-            classifier = BinaryLogisticRegression().fit(train_matrix, train_labels)
-            probabilities = classifier.predict_proba(test_matrix)
+            classifier = classifier_factory().fit(
+                train_matrix[train_known_positions], train_labels
+            )
+            probabilities = np.asarray(
+                classifier.predict_proba(test_matrix[test_known_positions])
+            )
+            if probabilities.ndim == 2:
+                probabilities = probabilities[:, 1]
             target_metrics[target] = binary_metrics(test_labels, probabilities)
             baseline_probability = float(np.mean(train_labels))
-            for index, probability in zip(test_indices, probabilities):
-                out_of_fold[target][index] = probability
-                baseline_out_of_fold[target][index] = baseline_probability
+            for position, probability in zip(test_known_positions, probabilities):
+                record_index = test_indices[position]
+                out_of_fold[target][record_index] = probability
+                baseline_out_of_fold[target][record_index] = baseline_probability
 
         fold_reports.append(
             {
@@ -88,17 +127,38 @@ def grouped_cross_validation(
                 "training_events": len(train_records),
                 "validation_events": len(test_records),
                 "validation_years": sorted({record.year for record in test_records}),
+                "validation_districts": sorted(
+                    {record.district for record in test_records}
+                ),
                 "metrics": target_metrics,
             }
         )
 
     overall: Dict[str, Any] = {}
-    years = [record.year for record in records]
+    bootstrap_groups = [
+        normalize_district(record.district)
+        if grouping == "district"
+        else record.year
+        for record in records
+    ]
     for target in TARGET_NAMES:
-        labels = np.asarray([record.targets[target] for record in records], dtype=float)
-        model_metrics = binary_metrics(labels, out_of_fold[target])
-        baseline_metrics = binary_metrics(labels, baseline_out_of_fold[target])
-        interval = grouped_roc_auc_interval(labels, out_of_fold[target], years)
+        known = np.asarray(
+            [record.target_known[target] for record in records], dtype=bool
+        )
+        labels = np.asarray(
+            [record.targets[target] for record in records], dtype=float
+        )[known]
+        probabilities = out_of_fold[target][known]
+        baseline_probabilities = baseline_out_of_fold[target][known]
+        if np.any(np.isnan(probabilities)) or np.any(np.isnan(baseline_probabilities)):
+            raise RuntimeError(f"missing out-of-fold predictions for {target}")
+        model_metrics = binary_metrics(labels, probabilities)
+        baseline_metrics = binary_metrics(labels, baseline_probabilities)
+        interval = grouped_roc_auc_interval(
+            labels,
+            probabilities,
+            np.asarray(bootstrap_groups)[known].tolist(),
+        )
         model_mse = float(model_metrics["mse"])
         baseline_mse = float(baseline_metrics["mse"])
         mse_skill = (
@@ -163,7 +223,12 @@ def grouped_cross_validation(
         "targets": target_gates,
     }
     return {
-        "strategy": "grouped by complete event year; no random row split",
+        "model": model_name,
+        "grouping": grouping,
+        "strategy": (
+            f"grouped by complete {grouping}; no random row split and no "
+            "city/district identity predictor"
+        ),
         "baseline_strategy": (
             "Each validation event receives only its training fold's target prevalence."
         ),
@@ -171,6 +236,69 @@ def grouped_cross_validation(
         "overall": overall,
         "validation_gate": validation_gate,
     }
+
+
+def combined_validation_gate(
+    year_report: Mapping[str, Any],
+    district_report: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    targets = {}
+    for target in TARGET_NAMES:
+        year_metrics = year_report["overall"][target]
+        district_metrics = district_report["overall"][target]
+        passes = bool(
+            year_metrics["roc_auc"] >= 0.65
+            and district_metrics["roc_auc"] >= 0.65
+            and year_metrics["mse_skill_vs_prevalence"] > 0.0
+            and district_metrics["mse_skill_vs_prevalence"] > 0.0
+        )
+        targets[target] = {
+            "year_grouped_roc_auc": year_metrics["roc_auc"],
+            "district_grouped_roc_auc": district_metrics["roc_auc"],
+            "positive_mse_skill_in_both": bool(
+                year_metrics["mse_skill_vs_prevalence"] > 0.0
+                and district_metrics["mse_skill_vs_prevalence"] > 0.0
+            ),
+            "passes": passes,
+        }
+    ready = all(value["passes"] for value in targets.values())
+    return {
+        "deployment_ready": ready,
+        "status": "validated" if ready else "research_only",
+        "policy": (
+            "Every target must achieve ROC-AUC >= 0.65 and positive MSE skill "
+            "in both year-held-out and district-held-out evaluation."
+        ),
+        "targets": targets,
+    }
+
+
+def _fold_assignments(
+    records: Sequence[FloodEventRecord], folds: int, grouping: str
+) -> List[int]:
+    if grouping not in {"year", "district"}:
+        raise ValueError("grouping must be 'year' or 'district'")
+    if grouping == "year":
+        return [record.year % folds for record in records]
+
+    group_counts: Dict[str, int] = {}
+    for record in records:
+        district = normalize_district(record.district)
+        group_counts[district] = group_counts.get(district, 0) + 1
+    fold_sizes = [0] * folds
+    group_to_fold = {}
+    ordered_groups = sorted(
+        group_counts,
+        key=lambda value: (
+            -group_counts[value],
+            hashlib.sha256(value.encode("utf-8")).hexdigest(),
+        ),
+    )
+    for group in ordered_groups:
+        fold = min(range(folds), key=lambda value: (fold_sizes[value], value))
+        group_to_fold[group] = fold
+        fold_sizes[fold] += group_counts[group]
+    return [group_to_fold[normalize_district(record.district)] for record in records]
 
 
 def evaluate_locked_holdout(
