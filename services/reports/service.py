@@ -20,11 +20,12 @@ FIXTURE_FILES = (
     "assets.geojson",
     "road-network.geojson",
     "flood-frames.json",
-    "flood-polygons.geojson",
     "response-plans.json",
     "event-stream.json",
     "context-boundaries.geojson",
 )
+
+OPTIONAL_FIXTURE_FILES = ("flood-polygons.geojson",)
 
 
 def _utc_now() -> str:
@@ -54,8 +55,14 @@ class SimulationReportService:
         started_at = _utc_now()
         events = self.scenario_service._events(event_ids)
         canonical_event_ids = [event["event_id"] for event in events]
+        fixture_files = list(FIXTURE_FILES)
+        fixture_files.extend(
+            filename
+            for filename in OPTIONAL_FIXTURE_FILES
+            if (self.scenario_service.fixture_directory / filename).exists()
+        )
         fixture_sha256 = _sha256_files(
-            self.scenario_service.fixture_directory, FIXTURE_FILES
+            self.scenario_service.fixture_directory, fixture_files
         )
         impact_prior_path = (
             self.scenario_service.fixture_directory / "model-impact-prior.json"
