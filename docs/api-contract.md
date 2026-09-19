@@ -96,6 +96,34 @@ Returns `EventRecomputeResponse`, containing:
 The MVP endpoint is deterministic and stateless. Repeating the same request
 replays the same named event rather than mutating server-global state.
 
+## Simulation runs and reports
+
+`POST /scenarios/kantipur-river/runs`
+
+Accepts an optional ordered `event_ids` array. The service validates the IDs,
+freezes the inputs, evaluates every frame, persists the complete run, and
+returns `SimulationRun`. A run receives a unique `run_id` and `report_id`; the
+SHA-256 `input_fingerprint` remains stable when the scenario fixtures and event
+set are identical.
+
+Ordinary frame reads and timeline playback do not create runs or reports.
+
+- `GET /scenarios/kantipur-river/runs` returns newest-first summaries.
+- `GET /scenarios/kantipur-river/runs/{run_id}` returns the frozen snapshots and
+  report for one run.
+- `GET /reports/{report_id}` returns the immutable report.
+- `GET /reports/{report_id}/export?format=json|csv|html` renders the stored
+  report without recomputing its findings. The HTML export is print-styled for
+  browser PDF output.
+
+Reports contain headline metrics, deterministic narrative, adjacent-frame
+changes, event-versus-baseline effects, community impact, plan analysis,
+assumptions, limitations, and provenance. The historical impact prior is marked
+`impact_prior_used: false`; external news is not part of report calculation.
+
+Persistence defaults to `data/runtime/the-ark.sqlite3`. Override it with
+`THE_ARK_REPORT_DB_PATH`.
+
 ## Health and discovery
 
 - `GET /health`

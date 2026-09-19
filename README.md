@@ -23,12 +23,14 @@ The fixture is synthetic demonstration data and is not operational guidance.
   recomputed for that event set.
 - A frozen CatBoost impact prior trained on 4,869 historical Nepal flood events,
   projected across ten research-only operational POIs on the timeline and map.
+- Durable full-horizon simulation runs with one immutable analysis report per
+  run, including timeline and event-counterfactual changes.
+- Report archive with JSON, CSV, and printable HTML/PDF exports.
 
 ## Verify
 
 ```bash
-PYTHONPYCACHEPREFIX=/private/tmp/pycache-the-ark \
-PYTHONPATH=services/physics/src .venv/bin/python -m pytest -q
+npm test
 ```
 
 ## Run the API
@@ -59,6 +61,12 @@ The dashboard loads every modeled frame on start, so scrubbing the timeline and
 frame playback are instant and the sparklines plot real per-frame values. All
 domain results come from the API; the browser derives no routing or plan logic.
 Playback advances one 3-hour frame every 2.4 seconds.
+
+The Reports tab creates explicit full-horizon runs. Browsing or scrubbing a
+frame does not create a report. Every completed run freezes its event set and
+fixture digest, persists all four world-state snapshots in SQLite, and creates
+one report from those stored results. Set `THE_ARK_REPORT_DB_PATH` to override
+the default `data/runtime/the-ark.sqlite3` location.
 
 ### Basemap
 
@@ -124,6 +132,11 @@ Useful endpoints:
 - `GET /scenarios/kantipur-river/frames/ktp-frame-plus-12h`
 - `GET /scenarios/kantipur-river/frames/ktp-frame-plus-24h?events=ktp-event-bridge-02-failure`
 - `POST /scenarios/kantipur-river/events/ktp-event-bridge-02-failure`
+- `POST /scenarios/kantipur-river/runs`
+- `GET /scenarios/kantipur-river/runs`
+- `GET /scenarios/kantipur-river/runs/{run_id}`
+- `GET /reports/{report_id}`
+- `GET /reports/{report_id}/export?format=json|csv|html`
 - `GET /docs`
 - `GET /openapi.json`
 
