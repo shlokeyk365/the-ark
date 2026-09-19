@@ -10,6 +10,7 @@ import { eventsActiveAt, formatHours, type FrameSeriesEntry } from "./derive";
 import { logEntry, type LogEntry } from "./session";
 import { IncidentSidebar } from "./components/IncidentSidebar";
 import { RightRail } from "./components/RightRail";
+import { ReportsPage } from "./components/ReportsPage";
 import { ScenarioMap } from "./components/ScenarioMap";
 import { StatusBar } from "./components/StatusBar";
 import { Timeline } from "./components/Timeline";
@@ -62,6 +63,7 @@ function LoadingScreen() {
 }
 
 export function App() {
+  const [activeView, setActiveView] = useState<"operations" | "reports">("operations");
   const [bootstrap, setBootstrap] = useState<ScenarioBootstrapResponse | null>(null);
   const [series, setSeries] = useState<FrameSeriesEntry[]>([]);
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
@@ -272,7 +274,7 @@ export function App() {
   if (fatal) {
     return (
       <div className="app-frame">
-        <TopBar />
+        <TopBar activeView={activeView} onNavigate={setActiveView} />
         <main className="fatal-error" role="alert">
           <strong>Dashboard initialization failed</strong>
           <span>{fatal}</span>
@@ -285,7 +287,7 @@ export function App() {
   if (!bootstrap || !worldState) {
     return (
       <div className="app-frame">
-        <TopBar />
+        <TopBar activeView={activeView} onNavigate={setActiveView} />
         <LoadingScreen />
       </div>
     );
@@ -296,9 +298,34 @@ export function App() {
       ? comparison.metrics
       : undefined;
 
+  if (activeView === "reports") {
+    return (
+      <div className="app-frame">
+        <TopBar
+          activeView={activeView}
+          alertCount={worldState.hazards.length}
+          onNavigate={setActiveView}
+        />
+        <ReportsPage
+          activeEventIds={activeEventIds}
+          scenarioName={bootstrap.name}
+        />
+        <StatusBar
+          healthy={error === null}
+          scenarioId={worldState.scenario_id}
+          worldStateVersion={worldState.world_state_version}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="app-frame">
-      <TopBar alertCount={worldState.hazards.length} />
+      <TopBar
+        activeView={activeView}
+        alertCount={worldState.hazards.length}
+        onNavigate={setActiveView}
+      />
 
       {error ? (
         <div className="error-banner" role="alert">

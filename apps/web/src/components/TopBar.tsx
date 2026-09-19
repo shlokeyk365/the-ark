@@ -2,9 +2,15 @@ import { ShellIcon } from "./ShellIcon";
 
 interface TopBarProps {
   alertCount?: number;
+  activeView?: "operations" | "reports";
+  onNavigate?: (view: "operations" | "reports") => void;
 }
 
-export function TopBar({ alertCount = 0 }: TopBarProps) {
+export function TopBar({
+  alertCount = 0,
+  activeView = "operations",
+  onNavigate,
+}: TopBarProps) {
   return (
     <header className="topbar">
       <div className="brand" aria-label="the ark flood operations">
@@ -22,13 +28,23 @@ export function TopBar({ alertCount = 0 }: TopBarProps) {
       </div>
 
       <nav className="primary-nav" aria-label="Primary navigation">
-        <button className="nav-item active" type="button">
+        <button
+          className={`nav-item ${activeView === "operations" ? "active" : ""}`}
+          type="button"
+          aria-current={activeView === "operations" ? "page" : undefined}
+          onClick={() => onNavigate?.("operations")}
+        >
           <ShellIcon name="map" size={15} /> Operations
         </button>
         <button className="nav-item" type="button" disabled title="Not part of the MVP slice">
           <ShellIcon name="layers" size={15} /> Scenarios
         </button>
-        <button className="nav-item" type="button" disabled title="Not part of the MVP slice">
+        <button
+          className={`nav-item ${activeView === "reports" ? "active" : ""}`}
+          type="button"
+          aria-current={activeView === "reports" ? "page" : undefined}
+          onClick={() => onNavigate?.("reports")}
+        >
           <ShellIcon name="report" size={15} /> Reports
         </button>
       </nav>

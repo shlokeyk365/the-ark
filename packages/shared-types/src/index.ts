@@ -391,3 +391,119 @@ export interface EventRecomputeResponse {
   stale_plan_results: PlanResult[];
   recomputed_plan_results: PlanResult[];
 }
+
+export interface SimulationRunRequest {
+  event_ids: string[];
+}
+
+export interface SimulationRunInput {
+  scenario_id: string;
+  event_ids: string[];
+  evaluation_horizon_hours: number;
+  fixture_sha256: string;
+  impact_prior_sha256: string | null;
+  impact_prior_used: false;
+}
+
+export interface ReportSummaryMetrics {
+  peak_flood_depth_m: number;
+  peak_isolated_people: number;
+  peak_isolated_communities: number;
+  peak_critical_routes_lost: number;
+  first_isolation_hours: number | null;
+  viable_plans_at_horizon: number;
+}
+
+export interface ReportChange {
+  change_id: string;
+  at_hours: number;
+  category: "infrastructure" | "community" | "plan" | "event";
+  subject_id: string;
+  subject_name: string;
+  description: string;
+  before_value: string;
+  after_value: string;
+  comparison: "timeline" | "baseline_counterfactual";
+  source_event_id: string | null;
+}
+
+export interface CommunityImpactReport {
+  community_id: string;
+  community_name: string;
+  population: number;
+  first_isolated_at_hours: number | null;
+  hospital_access_lost_at_hours: number | null;
+  horizon_isolated: boolean;
+  horizon_hospital_accessible: boolean;
+  horizon_reachable_shelter_ids: string[];
+  analysis: string;
+}
+
+export interface PlanAnalysisReport {
+  plan_id: string;
+  plan_name: string;
+  baseline_metrics: PlanMetrics;
+  horizon_metrics: PlanMetrics;
+  people_evacuated_change: number;
+  people_isolated_change: number;
+  critical_routes_lost_change: number;
+  shelter_overload_change: number;
+  viability_changed: boolean;
+  analysis: string;
+}
+
+export interface ReportProvenance {
+  input_fingerprint: string;
+  fixture_sha256: string;
+  impact_prior_sha256: string | null;
+  impact_prior_used: false;
+  world_state_versions: string[];
+  engine_version: "reports-1.0.0";
+  data_classification: "modeled_synthetic_demo";
+  operational_use: false;
+}
+
+export interface SimulationReport {
+  schema_version: "1.0.0";
+  report_id: string;
+  run_id: string;
+  scenario_id: string;
+  status: "completed";
+  generated_at: string;
+  title: string;
+  event_ids: string[];
+  summary: ReportSummaryMetrics;
+  narrative: string[];
+  changes: ReportChange[];
+  community_impacts: CommunityImpactReport[];
+  plan_analysis: PlanAnalysisReport[];
+  assumptions: string[];
+  limitations: string[];
+  provenance: ReportProvenance;
+}
+
+export interface SimulationRun {
+  schema_version: "1.0.0";
+  run_id: string;
+  report_id: string;
+  scenario_id: string;
+  status: "completed";
+  started_at: string;
+  completed_at: string;
+  input: SimulationRunInput;
+  input_fingerprint: string;
+  snapshots: WorldStateSnapshot[];
+  report: SimulationReport;
+}
+
+export interface SimulationRunSummary {
+  run_id: string;
+  report_id: string;
+  scenario_id: string;
+  status: "completed";
+  completed_at: string;
+  title: string;
+  event_ids: string[];
+  input_fingerprint: string;
+  summary: ReportSummaryMetrics;
+}
