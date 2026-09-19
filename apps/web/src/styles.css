@@ -919,18 +919,29 @@ input:focus-visible,
   vector-effect: non-scaling-stroke;
 }
 
-.flood-outer {
-  fill: rgba(43, 143, 224, 0.07);
-  stroke: none;
-}
-
-.flood-band {
-  stroke: rgba(95, 196, 255, 0.28);
+.flood-depth-band {
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
+  cursor: crosshair;
+  animation: flood-band-in 320ms ease both;
 }
 
-.river-water { stroke: none; }
+.flood-depth-band.depth-1 { fill: #8adfff; stroke: #8adfff; }
+.flood-depth-band.depth-2 { fill: #43bdf4; stroke: #43bdf4; }
+.flood-depth-band.depth-3 { fill: #167fd1; stroke: #167fd1; }
+.flood-depth-band.depth-4 { fill: #09509f; stroke: #09509f; }
+.flood-depth-band.current { fill-opacity: 0.44; stroke-opacity: 0.88; }
+.flood-depth-band.forecast {
+  fill-opacity: 0.08;
+  stroke: #8e75f6;
+  stroke-dasharray: 5 4;
+  stroke-opacity: 0.66;
+}
+
+@keyframes flood-band-in {
+  from { opacity: 0.08; }
+  to { opacity: 1; }
+}
 
 .river-centreline {
   fill: none;
@@ -1165,6 +1176,7 @@ input:focus-visible,
 .inspector-status.open { color: #a8e6c8; background: rgba(47, 201, 142, 0.16); }
 .inspector-status.restricted { color: #ffd08a; background: rgba(240, 165, 42, 0.16); }
 .inspector-status.closed { color: #ffb0ba; background: rgba(242, 77, 99, 0.18); }
+.inspector-status.flood { color: #a9e4ff; background: rgba(56, 168, 240, 0.16); }
 
 .inspector-critical {
   color: #ffb0ba !important;
@@ -1301,6 +1313,65 @@ input:focus-visible,
 }
 
 .layer-swatch.terrain { background: linear-gradient(135deg, #3f6b52, #7d6a48); }
+
+.flood-legend {
+  position: absolute;
+  z-index: 4;
+  bottom: 43px;
+  left: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 5px 12px;
+  min-width: 176px;
+  padding: 9px 10px;
+  color: var(--muted);
+  font-size: 8.5px;
+  font-variant-numeric: tabular-nums;
+  background: rgba(8, 15, 24, 0.86);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(9px);
+  pointer-events: none;
+}
+
+.flood-legend strong {
+  grid-column: 1 / -1;
+  color: #dbeaf7;
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.flood-legend span {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.flood-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+
+.flood-legend i.depth-1 { background: #8adfff; }
+.flood-legend i.depth-2 { background: #43bdf4; }
+.flood-legend i.depth-3 { background: #167fd1; }
+.flood-legend i.depth-4 { background: #09509f; }
+.flood-legend .forecast-key {
+  grid-column: 1 / -1;
+  padding-top: 2px;
+  color: var(--faint);
+  border-top: 1px solid rgba(101, 132, 162, 0.22);
+}
+.flood-legend .forecast-key i {
+  height: 0;
+  background: none;
+  border-top: 1px dashed #8e75f6;
+  border-radius: 0;
+}
 
 .layer-reset {
   display: flex;

@@ -50,6 +50,7 @@ def test_fixture_shape_and_capacity_are_coherent() -> None:
     assert sum(asset["capacity"] for asset in assets if asset["asset_type"] == "shelter") == 3000
     assert len(service.network["features"]) == 12
     assert [frame["simulation_time_hours"] for frame in service.flood_frames["frames"]] == [0, 6, 12, 24]
+    assert len(service.flood_polygons["features"]) == 11
 
 
 def test_baseline_is_reachable_and_has_expected_routes() -> None:
@@ -147,6 +148,16 @@ def test_bootstrap_supplies_frontend_geometry_and_controls() -> None:
     assert payload["initial_frame_id"] == "ktp-frame-now"
     assert len(payload["assets"]["features"]) == 10
     assert len(payload["road_network"]["features"]) == 12
+    assert payload["flood_polygons"]["operational_use"] is False
+    assert {
+        feature["properties"]["frame_id"]
+        for feature in payload["flood_polygons"]["features"]
+    } == {
+        "ktp-frame-now",
+        "ktp-frame-plus-6h",
+        "ktp-frame-plus-12h",
+        "ktp-frame-plus-24h",
+    }
     assert [frame["simulation_time_hours"] for frame in payload["available_frames"]] == [0, 6, 12, 24]
     assert [event["event_id"] for event in payload["events"]] == [
         "ktp-event-bridge-02-failure"
@@ -304,7 +315,40 @@ def test_context_boundaries_flagged_as_domain_input_are_rejected() -> None:
             service.assets,
             service.network,
             service.flood_frames,
+            service.flood_polygons,
             service.response_plans,
             service.event_stream,
             tampered,
+        )
+
+
+def test_flood_polygon_contract_rejects_unknown_frames_and_open_rings() -> None:
+    service = _service()
+
+    unknown_frame = copy.deepcopy(service.flood_polygons)
+    unknown_frame["features"][0]["properties"]["frame_id"] = "missing-frame"
+    with pytest.raises(ScenarioValidationError, match="unknown frame"):
+        validate_scenario_fixtures(
+            service.manifest,
+            service.assets,
+            service.network,
+            service.flood_frames,
+            unknown_frame,
+            service.response_plans,
+            service.event_stream,
+            service.context_boundaries,
+        )
+
+    open_ring = copy.deepcopy(service.flood_polygons)
+    open_ring["features"][0]["geometry"]["coordinates"][0][-1] = [85.29, 27.69]
+    with pytest.raises(ScenarioValidationError, match="closed rings"):
+        validate_scenario_fixtures(
+            service.manifest,
+            service.assets,
+            service.network,
+            service.flood_frames,
+            open_ring,
+            service.response_plans,
+            service.event_stream,
+            service.context_boundaries,
         )

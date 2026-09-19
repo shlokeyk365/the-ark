@@ -139,6 +139,36 @@ class RoadFeatureCollection(WireModel):
     features: List[RoadFeature]
 
 
+class FloodPolygonProperties(WireModel):
+    id: str
+    frame_id: str
+    simulation_time_hours: float
+    depth_min_m: float
+    depth_max_m: float
+    band_label: str
+    surface_kind: Literal["curated_synthetic_surface"]
+    source_type: Literal["modeled_input"]
+
+
+class FloodPolygonFeature(WireModel):
+    type: Literal["Feature"]
+    id: str
+    properties: FloodPolygonProperties
+    geometry: PolygonGeometry
+
+
+class FloodPolygonCollection(WireModel):
+    """Synthetic situational-awareness surface; never a routing input."""
+
+    type: Literal["FeatureCollection"]
+    name: str
+    scenario_id: str
+    data_classification: Literal["modeled_synthetic_demo"]
+    operational_use: Literal[False]
+    source: SourceMetadata
+    features: List[FloodPolygonFeature]
+
+
 class FloodFrameSummary(WireModel):
     frame_id: str
     simulation_time_hours: float
@@ -192,6 +222,7 @@ class ScenarioBootstrapResponse(WireModel):
     evaluation_horizon_hours: float
     assets: AssetFeatureCollection
     road_network: RoadFeatureCollection
+    flood_polygons: FloodPolygonCollection
     context_boundaries: ContextBoundaryCollection
     available_frames: List[FloodFrameSummary]
     events: List[IncidentEvent]

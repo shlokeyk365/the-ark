@@ -132,6 +132,35 @@ export interface SourceMetadata {
   description: string;
 }
 
+export interface FloodPolygonProperties {
+  id: string;
+  frame_id: string;
+  simulation_time_hours: number;
+  depth_min_m: number;
+  depth_max_m: number;
+  band_label: string;
+  surface_kind: "curated_synthetic_surface";
+  source_type: "modeled_input";
+}
+
+export interface FloodPolygonFeature {
+  type: "Feature";
+  id: string;
+  properties: FloodPolygonProperties;
+  geometry: PolygonGeometry;
+}
+
+/** Synthetic situational-awareness surface; never a routing input. */
+export interface FloodPolygonCollection {
+  type: "FeatureCollection";
+  name: string;
+  scenario_id: string;
+  data_classification: "modeled_synthetic_demo";
+  operational_use: false;
+  source: SourceMetadata;
+  features: FloodPolygonFeature[];
+}
+
 export interface FloodEdgeCondition {
   edge_id: string;
   flood_depth_m: number;
@@ -294,6 +323,7 @@ export interface ScenarioBootstrapResponse {
   evaluation_horizon_hours: number;
   assets: AssetFeatureCollection;
   road_network: RoadFeatureCollection;
+  flood_polygons: FloodPolygonCollection;
   context_boundaries: ContextBoundaryCollection;
   available_frames: FloodFrameSummary[];
   events: IncidentEvent[];

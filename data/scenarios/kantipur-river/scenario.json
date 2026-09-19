@@ -13,6 +13,7 @@
     "assets": "assets.geojson",
     "road_network": "road-network.geojson",
     "flood_frames": "flood-frames.json",
+    "flood_polygons": "flood-polygons.geojson",
     "response_plans": "response-plans.json",
     "events": "event-stream.json",
     "context_boundaries": "context-boundaries.geojson"

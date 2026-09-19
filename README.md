@@ -87,17 +87,18 @@ back to a self-contained SVG schematic of the same derived state and says why,
 so the scenario stays inspectable offline and in CI. MapLibre is code-split, so
 that path stays light.
 
-Map layers follow the operator list: flood inundation (now), predicted
-inundation, roads, evacuation routes, hospitals and shelters, bridges, river
+Map layers follow the operator list: modeled depth bands, 24h forecast extent,
+roads, evacuation routes, hospitals and shelters, bridges, river
 gauges, alerts, community labels, and administrative context — plus satellite
 and 3D terrain toggles. River gauges are listed but disabled: the fixture has no
 gauge observations yet.
 
 The administrative boundaries are Kathmandu and Lalitpur Metropolitan City,
 visual context only — see `data/scenarios/kantipur-river/SOURCES.md` for
-provenance and licensing. The inundation polygons are a placeholder envelope
-derived from per-edge depth, not a hydraulic solve; `docs/scenario-contract.md`
-carries the fixture contract that will replace them.
+provenance and licensing. The flood surface is a curated synthetic depth-band
+fixture, not a hydraulic solve or operational forecast. Route safety still
+comes from the canonical per-edge flood conditions; see
+`docs/scenario-contract.md` for the separation of concerns.
 
 Useful endpoints:
 

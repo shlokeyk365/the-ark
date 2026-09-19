@@ -76,21 +76,19 @@ The API returns already-derived results:
 The frontend may sort, filter, and visualize these fields but must not recompute
 routing, isolation, capacity, or plan viability.
 
-## Planned: flood inundation polygons
+## Flood depth polygons
 
-Status: not implemented. This section is the handoff contract for
-`services/physics`, so the map layer can be swapped without frontend rework.
+`flood-polygons.geojson` provides a curated, synthetic depth surface for every
+timeline frame. It is referenced by `scenario.json`, validated during scenario
+load, and served in the bootstrap response as `flood_polygons`.
 
-The scenario currently carries flood depth **per network edge** only. The map's
-inundation layers therefore render a placeholder envelope — the channel
-centreline widened in proportion to the frame's peak modeled depth. It conveys
-extent and growth and nothing more. It is generated in
-`apps/web/src/map/scenarioSources.ts` and marked
-`provenance: "modeled_envelope_placeholder"` on every feature.
+The collection is a **rendering and situational-awareness input**. Routing,
+closures, isolation, and plan scoring continue to derive from the frame's
+`edge_conditions`; the polygon geometry is never used as a safety constraint.
+This boundary keeps the deterministic engine authoritative while allowing the
+map to show a coherent surface.
 
-When the solver can publish a surface, add `flood-polygons.geojson` to
-`data/scenarios/kantipur-river/` and reference it from `scenario.json`'s
-`fixture_files`. Expected shape:
+Shape:
 
 ```json
 {
@@ -105,9 +103,12 @@ When the solver can publish a surface, add `flood-polygons.geojson` to
       "id": "ktp-flood-ktp-frame-plus-12h-0",
       "properties": {
         "frame_id": "ktp-frame-plus-12h",
-        "depth_band_m_min": 0.3,
-        "depth_band_m_max": 0.6,
-        "provenance": "modeled_input"
+        "simulation_time_hours": 12,
+        "depth_min_m": 0.3,
+        "depth_max_m": 0.5,
+        "band_label": "0.30–0.50 m",
+        "surface_kind": "curated_synthetic_surface",
+        "source_type": "modeled_input"
       },
       "geometry": { "type": "Polygon", "coordinates": [[[85.31, 27.69], "..."]] }
     }
@@ -115,20 +116,18 @@ When the solver can publish a surface, add `flood-polygons.geojson` to
 }
 ```
 
-Requirements:
+Validation guarantees:
 
 - One or more polygons per `frame_id`, banded by depth so the map can shade by
   severity rather than drawing a single flat extent.
-- Every `frame_id` must exist in `flood-frames.json`; validation should reject
-  polygons that reference an unknown frame.
-- Polygons are a **rendering and situational-awareness input**. Edge closure and
-  travel penalties continue to derive from `edge_conditions`, not from polygon
-  containment, unless the routing contract is changed deliberately.
-- Serve the collection through the bootstrap response next to
-  `context_boundaries`, and the frontend replaces the placeholder source data
-  with it.
+- Every frame has a surface, and every referenced `frame_id` exists in
+  `flood-frames.json`.
+- Bands begin at zero, are contiguous, and cover the frame's peak edge depth.
+- Rings are closed and remain within the scenario's Nepal coordinate bounds.
+- Classification remains synthetic/modelled and `operational_use` remains
+  `false`.
 
-Animation of the inundation layers (dash offset on the channel, growth
-transitions between frames) belongs to the same phase and should use MapLibre
-runtime styling — `setPaintProperty` on a `requestAnimationFrame` loop — so the
-geometry stays declarative. See <https://maplibre.org/maplibre-gl-js/docs/>.
+The frontend renders the selected frame with a shared depth ramp, overlays the
+last horizon frame as a faint dashed extent, exposes provenance on hover, and
+uses a short opacity transition when the frame changes. The surface is labeled
+as curated synthetic data and not as a hydraulic solve or operational forecast.

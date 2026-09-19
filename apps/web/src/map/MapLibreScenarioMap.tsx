@@ -33,6 +33,9 @@ import {
   pmtilesUrl,
 } from "./basemap";
 import {
+  CURRENT_FLOOD_OPACITY,
+  FORECAST_FLOOD_OPACITY,
+  HOVERABLE_FLOOD_LAYERS,
   HOVERABLE_ROAD_LAYERS,
   LAYERS,
   LAYER_CONTROLS,
@@ -57,6 +60,29 @@ import {
 
 const FIT_PADDING = { top: 78, right: 230, bottom: 74, left: 70 };
 const LOAD_TIMEOUT_MS = 15000;
+
+interface FloodHover {
+  bandLabel: string;
+  displayState: "current" | "forecast";
+  simulationTimeHours: number;
+  surfaceKind: string;
+}
+
+function floodHoverFromFeature(
+  feature: maplibregl.MapGeoJSONFeature | undefined,
+): FloodHover | null {
+  const properties = feature?.properties;
+  if (!properties) return null;
+  const displayState = properties.display_state;
+  if (displayState !== "current" && displayState !== "forecast") return null;
+
+  return {
+    bandLabel: String(properties.band_label ?? "Modeled depth"),
+    displayState,
+    simulationTimeHours: Number(properties.simulation_time_hours ?? 0),
+    surfaceKind: String(properties.surface_kind ?? "curated_synthetic_surface"),
+  };
+}
 
 /** Registered once per page; the protocol object is stateless across maps. */
 let protocolRegistered = false;
@@ -165,16 +191,26 @@ export function MapLibreScenarioMap({
   const [satellite, setSatellite] = useState(true);
   const [terrain3d, setTerrain3d] = useState(false);
   const [hovered, setHovered] = useState<DerivedEdgeState | null>(null);
+  const [hoveredFlood, setHoveredFlood] = useState<FloodHover | null>(null);
   const [diagnostics, setDiagnostics] = useState<string[] | null>(null);
   const [layers, setLayers] = useState<Record<LayerKey, boolean>>(DEFAULT_LAYERS);
 
   const routeEdgeIds = useMemo(() => routeEdgeIdsFor(selectedPlan), [selectedPlan]);
 
+  const floodNow = useMemo(
+    () => floodNowCollection(bootstrap, worldState),
+    [bootstrap, worldState.frame_id],
+  );
+  const floodForecast = useMemo(
+    () => floodForecastCollection(bootstrap, worldState, horizonState),
+    [bootstrap, horizonState?.frame_id, worldState.frame_id],
+  );
+
   const collections = useMemo(
     (): Record<string, MapFeatureCollection> => ({
       [SOURCE.context]: contextCollection(bootstrap),
-      [SOURCE.floodForecast]: floodForecastCollection(horizonState),
-      [SOURCE.floodNow]: floodNowCollection(worldState),
+      [SOURCE.floodForecast]: floodForecast,
+      [SOURCE.floodNow]: floodNow,
       [SOURCE.channel]: channelCollection(),
       [SOURCE.roads]: roadsCollection(bootstrap, worldState, routeEdgeIds),
       [SOURCE.route]: routeCollection(bootstrap, routeEdgeIds),
@@ -182,7 +218,7 @@ export function MapLibreScenarioMap({
       [SOURCE.bridges]: bridgesCollection(bootstrap, worldState),
       [SOURCE.hazards]: hazardsCollection(bootstrap, worldState),
     }),
-    [bootstrap, horizonState, routeEdgeIds, worldState],
+    [bootstrap, floodForecast, floodNow, routeEdgeIds, worldState],
   );
 
   const edgeStateById = useMemo(
@@ -275,7 +311,10 @@ export function MapLibreScenarioMap({
     };
     const move = (event: maplibregl.MapLayerMouseEvent) => {
       const id = event.features?.[0]?.properties?.id;
-      if (typeof id === "string") setHovered(edgeStateRef.current.get(id) ?? null);
+      if (typeof id === "string") {
+        setHoveredFlood(null);
+        setHovered(edgeStateRef.current.get(id) ?? null);
+      }
     };
     const leave = () => {
       map.getCanvas().style.cursor = "";
@@ -286,6 +325,21 @@ export function MapLibreScenarioMap({
       map.on("mouseenter", layerId, enter);
       map.on("mousemove", layerId, move);
       map.on("mouseleave", layerId, leave);
+    });
+
+    const moveFlood = (event: maplibregl.MapLayerMouseEvent) => {
+      setHovered(null);
+      setHoveredFlood(floodHoverFromFeature(event.features?.[0]));
+    };
+    const leaveFlood = () => {
+      map.getCanvas().style.cursor = "";
+      setHoveredFlood(null);
+    };
+
+    HOVERABLE_FLOOD_LAYERS.forEach((layerId) => {
+      map.on("mouseenter", layerId, enter);
+      map.on("mousemove", layerId, moveFlood);
+      map.on("mouseleave", layerId, leaveFlood);
     });
 
     return () => {
@@ -354,6 +408,7 @@ export function MapLibreScenarioMap({
     if (!map || !ready) return;
 
     Object.entries(collections).forEach(([id, data]) => {
+      if (id === SOURCE.floodNow || id === SOURCE.floodForecast) return;
       const source = map.getSource(id);
       if (source && "setData" in source) {
         (source as maplibregl.GeoJSONSource).setData(
@@ -362,6 +417,41 @@ export function MapLibreScenarioMap({
       }
     });
   }, [collections, ready]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return undefined;
+
+    map.setPaintProperty("ark-flood-now-fill", "fill-opacity", 0.08);
+    map.setPaintProperty("ark-flood-forecast-fill", "fill-opacity", 0.015);
+
+    const restore = window.setTimeout(() => {
+      const currentSource = map.getSource(SOURCE.floodNow);
+      const forecastSource = map.getSource(SOURCE.floodForecast);
+      if (currentSource && "setData" in currentSource) {
+        (currentSource as maplibregl.GeoJSONSource).setData(
+          floodNow as unknown as GeoJSON.FeatureCollection,
+        );
+      }
+      if (forecastSource && "setData" in forecastSource) {
+        (forecastSource as maplibregl.GeoJSONSource).setData(
+          floodForecast as unknown as GeoJSON.FeatureCollection,
+        );
+      }
+      map.setPaintProperty(
+        "ark-flood-now-fill",
+        "fill-opacity",
+        CURRENT_FLOOD_OPACITY,
+      );
+      map.setPaintProperty(
+        "ark-flood-forecast-fill",
+        "fill-opacity",
+        FORECAST_FLOOD_OPACITY,
+      );
+    }, 70);
+
+    return () => window.clearTimeout(restore);
+  }, [floodForecast, floodNow, ready]);
 
   /* ---------------------------------------------------- layer visibility */
 
@@ -525,7 +615,10 @@ export function MapLibreScenarioMap({
         ) : null}
       </div>
 
-      <div className={`edge-inspector ${hovered ? "visible" : ""}`} role="status">
+      <div
+        className={`edge-inspector ${hovered || hoveredFlood ? "visible" : ""}`}
+        role="status"
+      >
         {hovered ? (
           <>
             <strong>{hovered.edge_id}</strong>
@@ -538,9 +631,27 @@ export function MapLibreScenarioMap({
             </span>
             {hovered.critical ? <span className="inspector-critical">critical</span> : null}
           </>
+        ) : hoveredFlood ? (
+          <>
+            <strong>{hoveredFlood.bandLabel}</strong>
+            <span className="inspector-status flood">
+              {hoveredFlood.displayState === "current" ? "current" : "forecast"}
+            </span>
+            <span>+{hoveredFlood.simulationTimeHours}h frame</span>
+            <span>{hoveredFlood.surfaceKind.replaceAll("_", " ")}</span>
+          </>
         ) : (
-          <span className="inspector-hint">Hover a road or bridge for derived state</span>
+          <span className="inspector-hint">Hover a depth band, road, or bridge</span>
         )}
+      </div>
+
+      <div className="flood-legend" aria-label="Modeled flood depth legend">
+        <strong>Modeled depth</strong>
+        <span><i className="depth-1" />0–0.10 m</span>
+        <span><i className="depth-2" />0.10–0.20 m</span>
+        <span><i className="depth-3" />0.20–0.30 m</span>
+        <span><i className="depth-4" />0.30–0.50 m</span>
+        <span className="forecast-key"><i />24h extent</span>
       </div>
 
       {diagnostics ? (
@@ -556,7 +667,7 @@ export function MapLibreScenarioMap({
       ) : null}
 
       <div className="map-provenance">
-        Inundation polygons are a modeled envelope from edge depth, not a hydraulic solve.
+        Curated synthetic depth surface for situational awareness · not a hydraulic solve or operational forecast.
       </div>
     </section>
   );

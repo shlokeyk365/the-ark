@@ -31,8 +31,6 @@ export interface MapFeatureCollection {
 
 export const EMPTY: MapFeatureCollection = { type: "FeatureCollection", features: [] };
 
-const KM_PER_DEG_LAT = 110.574;
-
 function midpoint(coordinates: Position[]): Position {
   if (coordinates.length === 0) return [0, 0];
   if (coordinates.length === 1) return coordinates[0];
@@ -225,30 +223,16 @@ export function hazardsCollection(
 
 /* ------------------------------------------------------------------ flood */
 
-/**
- * PLACEHOLDER GEOMETRY — replace with solver output.
- *
- * The scenario fixture carries flood depth per network edge, not an inundation
- * surface. Until `services/physics` publishes a flood polygon fixture, these
- * envelopes are drawn from the channel centreline widened by the frame's peak
- * modeled depth. They communicate extent and growth; they are not a
- * hydraulic result and must never be read as one.
- *
- * See docs/scenario-contract.md for the flood-polygon fixture this will
- * consume instead.
- */
 const CHANNEL_CENTRELINE: Position[] = [
-  [85.262, 27.6955],
-  [85.29, 27.6884],
-  [85.317, 27.6906],
-  [85.334, 27.6872],
-  [85.352, 27.6913],
-  [85.378, 27.6858],
+  [85.289, 27.688],
+  [85.301, 27.685],
+  [85.311, 27.686],
+  [85.321, 27.689],
+  [85.332, 27.687],
+  [85.343, 27.688],
+  [85.354, 27.682],
+  [85.368, 27.684],
 ];
-
-const CHANNEL_HALF_WIDTH_KM = 0.22;
-/** Kilometres of lateral spread modeled per metre of peak depth. */
-const SPREAD_KM_PER_METRE = 2.9;
 
 /** Catmull-Rom resampling so the rendered bank reads as a river, not a polyline. */
 function smoothCentreline(points: Position[], samplesPerSegment = 14): Position[] {
@@ -278,74 +262,45 @@ function smoothCentreline(points: Position[], samplesPerSegment = 14): Position[
 
 const SMOOTHED_CENTRELINE = smoothCentreline(CHANNEL_CENTRELINE);
 
-function envelopeRing(halfWidthKm: number): Position[] {
-  const offset = halfWidthKm / KM_PER_DEG_LAT;
-  const north: Position[] = SMOOTHED_CENTRELINE.map(([lon, lat]) => [lon, lat + offset]);
-  const south: Position[] = [...SMOOTHED_CENTRELINE]
-    .reverse()
-    .map(([lon, lat]) => [lon, lat - offset]);
-  return [...north, ...south, north[0]];
-}
-
-export function peakDepth(worldState: WorldStateSnapshot): number {
-  return worldState.edge_states.reduce(
-    (highest, edge) => Math.max(highest, edge.flood_depth_m),
-    0,
-  );
-}
-
-function envelopeFeature(
-  id: string,
-  halfWidthKm: number,
-  depth: number,
-  label: string,
-): MapFeature {
-  return {
-    type: "Feature",
-    id,
-    geometry: { type: "Polygon", coordinates: [envelopeRing(halfWidthKm)] },
-    properties: {
-      id,
-      label,
-      peak_depth_m: Number(depth.toFixed(2)),
-      provenance: "modeled_envelope_placeholder",
-    },
-  };
-}
-
-/** Inundation implied by the frame currently on screen. */
-export function floodNowCollection(worldState: WorldStateSnapshot): MapFeatureCollection {
-  const depth = peakDepth(worldState);
+function floodCollectionForFrame(
+  bootstrap: ScenarioBootstrapResponse,
+  frameId: string,
+  displayState: "current" | "forecast",
+): MapFeatureCollection {
   return {
     type: "FeatureCollection",
-    features: [
-      envelopeFeature(
-        "flood-now",
-        CHANNEL_HALF_WIDTH_KM + depth * SPREAD_KM_PER_METRE,
-        depth,
-        "Modeled inundation (current frame)",
-      ),
-    ],
+    features: bootstrap.flood_polygons.features
+      .filter((feature) => feature.properties.frame_id === frameId)
+      .map((feature) => ({
+        type: "Feature",
+        id: `${displayState}-${feature.id}`,
+        geometry: feature.geometry,
+        properties: {
+          ...feature.properties,
+          display_state: displayState,
+          provenance: feature.properties.surface_kind,
+          source_description: bootstrap.flood_polygons.source.description,
+        },
+      })),
   };
 }
 
-/** Inundation implied by the last frame in the horizon. */
+/** Curated depth bands for the frame currently on screen. */
+export function floodNowCollection(
+  bootstrap: ScenarioBootstrapResponse,
+  worldState: WorldStateSnapshot,
+): MapFeatureCollection {
+  return floodCollectionForFrame(bootstrap, worldState.frame_id, "current");
+}
+
+/** Curated depth bands for the last frame in the horizon. */
 export function floodForecastCollection(
+  bootstrap: ScenarioBootstrapResponse,
+  worldState: WorldStateSnapshot,
   horizonState: WorldStateSnapshot | undefined,
 ): MapFeatureCollection {
-  if (!horizonState) return EMPTY;
-  const depth = peakDepth(horizonState);
-  return {
-    type: "FeatureCollection",
-    features: [
-      envelopeFeature(
-        "flood-forecast",
-        CHANNEL_HALF_WIDTH_KM + depth * SPREAD_KM_PER_METRE,
-        depth,
-        "Modeled inundation (horizon)",
-      ),
-    ],
-  };
+  if (!horizonState || horizonState.frame_id === worldState.frame_id) return EMPTY;
+  return floodCollectionForFrame(bootstrap, horizonState.frame_id, "forecast");
 }
 
 export function channelCollection(): MapFeatureCollection {
@@ -396,6 +351,9 @@ export function scenarioBounds(
     } else {
       positions.push(...(feature.geometry.coordinates as Position[]));
     }
+  });
+  bootstrap.flood_polygons.features.forEach((feature) => {
+    feature.geometry.coordinates.forEach((ring) => positions.push(...ring));
   });
 
   const longitudes = positions.map(([longitude]) => longitude);
