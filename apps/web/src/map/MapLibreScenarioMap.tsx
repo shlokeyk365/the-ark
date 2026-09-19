@@ -52,6 +52,7 @@ import {
 } from "./layers";
 import { registerMarkerImages } from "./markerImages";
 import { buildFocus, type MapSelection } from "./selection";
+import { useFullscreen } from "./useFullscreen";
 import {
   alternateRouteCollection,
   assetsCollection,
@@ -287,6 +288,7 @@ export function MapLibreScenarioMap({
   onSelect,
   onFailure,
 }: MapLibreScenarioMapProps) {
+  const cardRef = useRef<HTMLElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const animatorRef = useRef<MapAnimator | null>(null);
@@ -302,6 +304,8 @@ export function MapLibreScenarioMap({
   const [layers, setLayers] = useState<Record<LayerKey, boolean>>(DEFAULT_LAYERS);
 
   // A rail-focused destination overrides the selected plan's own route set.
+  const fullscreen = useFullscreen(cardRef);
+
   const routeEdgeIds = useMemo(
     () =>
       focusedRouteEdgeIds?.length
@@ -1095,8 +1099,9 @@ export function MapLibreScenarioMap({
 
   return (
     <section
-      className={`map-card maplibre-card ${focus ? "focused" : ""}`}
       aria-label="Kantipur River scenario map"
+      className={`map-card maplibre-card ${focus ? "focused" : ""}`}
+      ref={cardRef}
     >
       <div className="map-canvas" ref={containerRef} />
       {!ready ? (
@@ -1117,6 +1122,15 @@ export function MapLibreScenarioMap({
             : `+${worldState.simulation_time_hours}h modeled`}
         </span>
         <span className="state-version">{worldState.world_state_version}</span>
+        <button
+            className={`fullscreen-toggle ${fullscreen.active ? "active" : ""}`}
+            onClick={fullscreen.toggle}
+            title={fullscreen.active ? "Exit fullscreen (F)" : "Fullscreen map (F)"}
+            type="button"
+          >
+            <ShellIcon name={fullscreen.active ? "minus" : "plus"} size={11} />
+          <kbd>F</kbd>
+        </button>
       </div>
 
       <div className={`map-layers ${layersOpen ? "open" : "closed"}`}>

@@ -152,6 +152,14 @@ full nine-frame baseline fires twice. Both effects share one animation frame
 loop that parks itself when idle, and neither runs under
 `prefers-reduced-motion` — teams are placed but held still.
 
+Press **F** to fullscreen the dashboard, or use the toggle in the map toolbar.
+It expands the whole shell rather than the map panel alone, so the tactical
+list, the asset panel and the timeline stay put and only the browser chrome is
+reclaimed. Where the Fullscreen API is refused — an embedded pane, a kiosk
+frame, anywhere a Permissions-Policy withholds it — the shell expands to fill
+the viewport instead, so the shortcut always does something. Escape leaves
+either mode.
+
 Clicking a community, road, bridge or hazard — on the map or in either rail —
 enters incident focus. The camera frames the affected area, everything outside
 the incident dims, and a panel states the affected population, the nearest
