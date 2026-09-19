@@ -103,7 +103,7 @@ function PlanCard({
       <div className="plan-heading">
         <span className="plan-letter">{PLAN_LETTERS[index] ?? index + 1}</span>
         <div>
-          <strong>{result.plan_name.replace(/^Plan [A-C] — /, "")}</strong>
+          <strong title={result.plan_name}>{result.plan_name.replace(/^Plan [A-C] — /, "")}</strong>
           <span className={result.status === "stale" ? "stale" : ""}>
             {result.status === "stale" ? "Stale — awaiting recompute" : "Current result"}
           </span>

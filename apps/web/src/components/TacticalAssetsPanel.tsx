@@ -38,7 +38,7 @@ function AssetRow({
       type="button"
     >
       <i aria-hidden="true" />
-      <strong>{label}</strong>
+      <strong title={label}>{label}</strong>
       <em>{state}</em>
     </button>
   );

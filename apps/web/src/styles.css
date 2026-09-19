@@ -3538,6 +3538,150 @@ input:focus-visible,
   .report-summary-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .report-plan-grid { grid-template-columns: 1fr; }
 }
+
+/* ------------------------------------------------ readability audit fixes */
+
+/* Command chrome */
+.command-centre-title span {
+  color: #959b97;
+  font-size: 9px;
+  line-height: 1.35;
+}
+.command-centre-title strong { font-size: 11px; line-height: 1.35; }
+.command-title strong { font-size: 10px; line-height: 1.35; }
+.command-title span {
+  color: #929895;
+  font-size: 9px;
+  line-height: 1.4;
+}
+.command-view-tabs button { min-height: 30px; font-size: 9px; }
+
+/* Status strip */
+.figma-operations-layout .top-status-title span { font-size: 10px; }
+.figma-operations-layout .top-status-title small {
+  color: #969c98;
+  font-size: 9px;
+  line-height: 1.35;
+}
+.figma-operations-layout .top-status-card span:not(.top-status-icon),
+.figma-operations-layout .top-status-card small {
+  color: #929895;
+  font-size: 8.5px;
+  line-height: 1.35;
+}
+
+/* Timeline and map furniture */
+.figma-operations-layout .timeline-context,
+.figma-operations-layout .event-caption {
+  color: #969c98;
+  font-size: 9.5px;
+  line-height: 1.4;
+}
+.figma-operations-layout .timeline-current,
+.figma-operations-layout .live-state { font-size: 9.5px; }
+.figma-operations-layout .timeline-footnote {
+  color: #929895;
+  font-size: 9px;
+  line-height: 1.45;
+}
+.figma-operations-layout .time-label,
+.figma-operations-layout .state-version { font-size: 9px; }
+.figma-operations-layout .map-layers-toggle,
+.figma-operations-layout .layer-toggle { font-size: 10px; }
+.figma-operations-layout .map-provenance {
+  color: #9ba19d;
+  font-size: 8.5px;
+  line-height: 1.45;
+}
+
+/* Sidebars */
+.figma-operations-layout .tactical-row strong {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+.figma-operations-layout .plan-heading strong { white-space: normal; }
+.figma-operations-layout .plan-metric small { font-size: 8.5px; }
+.figma-operations-layout .brief-summary small { font-size: 9px; }
+.figma-operations-layout .destination-title-row span,
+.figma-operations-layout .destination-title-row em,
+.figma-operations-layout .destination-transfer,
+.figma-operations-layout .destination-metrics,
+.figma-operations-layout .destination-rationale { font-size: 9px; }
+.figma-operations-layout .brief-disclaimer {
+  color: #929895;
+  font-size: 9.5px;
+  line-height: 1.6;
+}
+.figma-operations-layout .model-signal span,
+.figma-operations-layout .model-signal em { font-size: 9px; }
+.figma-operations-layout .model-signal-note { font-size: 10px; }
+
+/* Reports workspace */
+.create-report-button strong { font-size: 11px; }
+.create-report-button small,
+.report-run-card small,
+.report-run-card em {
+  color: #969c98;
+  font-size: 9px;
+  line-height: 1.4;
+}
+.report-error { font-size: 10px; line-height: 1.45; }
+.report-run-card { padding: 11px; }
+.report-run-card strong { font-size: 10.5px; line-height: 1.4; }
+.report-run-card code {
+  color: #929895;
+  font: 8.5px/1.4 var(--mono);
+}
+.report-empty-library strong { font-size: 11px; }
+.report-empty-library span,
+.report-empty-detail p { font-size: 10px; line-height: 1.55; }
+.report-detail-heading p { color: #969c98; font-size: 9px; line-height: 1.45; }
+.report-export-actions a { font-size: 9px; }
+.report-disclaimer { font-size: 9.5px; line-height: 1.5; }
+.report-summary-card small {
+  color: #969c98;
+  font-size: 9px;
+  line-height: 1.35;
+}
+.report-section-heading > div > span,
+.report-section-heading code,
+.report-section-heading em {
+  color: #969c98;
+  font: 9px/1.4 var(--mono);
+}
+.report-section-heading h3 { font-size: 11px; }
+.report-executive li,
+.report-governance li { font-size: 10px; line-height: 1.55; }
+.change-time { color: #969c98; font-size: 9px; }
+.change-label { font-size: 8.5px; }
+.report-change strong { font-size: 10.5px; }
+.report-change p { font-size: 9.5px; line-height: 1.5; }
+.report-change code { color: #929895; font: 8.5px/1.4 var(--mono); }
+.report-plan strong { font-size: 10.5px; }
+.report-plan p { font-size: 9.5px; line-height: 1.5; }
+.report-plan dt {
+  color: #929895;
+  font-size: 8.5px;
+  line-height: 1.35;
+}
+.report-plan dd { font-size: 10px; }
+.report-community-grid strong { font-size: 10px; }
+.report-community-grid span { color: #929895; font-size: 9px; }
+.report-community-grid p { font-size: 9.5px; line-height: 1.5; }
+.report-governance h4 { font-size: 10px; }
+.report-provenance dt {
+  color: #929895;
+  font-size: 8.5px;
+}
+.report-provenance dd {
+  overflow: visible;
+  color: #a5aaa7;
+  font: 9px/1.45 var(--mono);
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
 @media (max-width: 760px) {
   .reports-workspace { display: block; overflow: visible; }
   .report-library { max-height: 360px; margin-bottom: 8px; }
