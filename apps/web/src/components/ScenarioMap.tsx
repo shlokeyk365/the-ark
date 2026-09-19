@@ -6,6 +6,7 @@ import type {
   WorldStateSnapshot,
 } from "@the-ark/shared-types";
 
+import type { MapSelection } from "../map/selection";
 import { SchematicMap } from "./SchematicMap";
 import { ShellIcon } from "./ShellIcon";
 
@@ -21,6 +22,8 @@ interface ScenarioMapProps {
   worldState: WorldStateSnapshot;
   horizonState: WorldStateSnapshot | undefined;
   selectedPlan: PlanResult | undefined;
+  selection: MapSelection | null;
+  onSelect: (selection: MapSelection | null) => void;
 }
 
 function BasemapLoading() {
@@ -46,6 +49,8 @@ export function ScenarioMap({
   worldState,
   horizonState,
   selectedPlan,
+  selection,
+  onSelect,
 }: ScenarioMapProps) {
   const [failure, setFailure] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
@@ -97,7 +102,9 @@ export function ScenarioMap({
         bootstrap={bootstrap}
         horizonState={horizonState}
         onFailure={onFailure}
+        onSelect={onSelect}
         selectedPlan={selectedPlan}
+        selection={selection}
         worldState={worldState}
       />
     </Suspense>

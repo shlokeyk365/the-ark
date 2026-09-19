@@ -794,13 +794,18 @@ export function SchematicMap({
         )}
       </div>
 
-      <div className="flood-legend" aria-label="Modeled flood depth legend">
-        <strong>Modeled depth</strong>
-        <span><i className="depth-1" />0–0.10 m</span>
-        <span><i className="depth-2" />0.10–0.20 m</span>
-        <span><i className="depth-3" />0.20–0.30 m</span>
-        <span><i className="depth-4" />0.30–0.50 m</span>
-        <span className="forecast-key"><i />24h extent</span>
+      <div className="map-legend" aria-label="Modeled flood depth legend">
+        <div className="legend-block">
+          <strong>Flood depth</strong>
+          <span><i className="depth-1" />0–0.10 m</span>
+          <span><i className="depth-2" />0.10–0.20 m</span>
+          <span><i className="depth-3" />0.20–0.30 m</span>
+          <span><i className="depth-4" />0.30–0.50 m</span>
+        </div>
+        <div className="legend-block wide">
+          <span><i className="rule current" />Current</span>
+          <span><i className="rule modeled" />Modeled +24h</span>
+        </div>
       </div>
 
       <div className="map-provenance">

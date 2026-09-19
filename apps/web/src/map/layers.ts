@@ -1,11 +1,25 @@
-import type { LayerSpecification } from "maplibre-gl";
+import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
 
 /**
  * MapLibre layer stack for the Kantipur operations map.
  *
- * Order here is paint order (first = bottom). The layer-panel grouping below
- * mirrors the operator-facing list, which is deliberately coarser: one toggle
- * can drive several paint layers.
+ * Order here is paint order (first = bottom), and the grouping follows the way
+ * an operator reads the map: environment, then infrastructure, then operations,
+ * then labels. The layer-panel list below is deliberately coarser — one toggle
+ * usually drives several paint layers.
+ *
+ * Three conventions run through the whole stack:
+ *
+ * - **Shape is type, colour is status.** A shelter is a house whether it is
+ *   reachable or not; the fill says which.
+ * - **Solid is now, dashed is modeled.** Current flood extent, current routes
+ *   and confirmed closures are solid. The +24h envelope and alternate plans are
+ *   dashed. Operator-injected state is amber.
+ * - **Hazards sit on the thing that is hazardous.** A blocked road is drawn on
+ *   the road; a failed bridge is drawn on the span.
+ *
+ * Emphasis is carried by `feature-state` rather than by rebuilding sources, so
+ * hover, selection and incident focus cost no GeoJSON churn.
  */
 
 export const SOURCE = {
@@ -14,63 +28,157 @@ export const SOURCE = {
   floodNow: "ark-flood-now",
   channel: "ark-channel",
   roads: "ark-roads",
+  bridgeLines: "ark-bridge-lines",
+  roadHazards: "ark-road-hazards",
   route: "ark-route",
+  routeAlternate: "ark-route-alternate",
+  teams: "ark-teams",
   assets: "ark-assets",
   bridges: "ark-bridges",
   hazards: "ark-hazards",
 } as const;
 
 export const COLORS = {
-  open: "#dce8f4",
+  open: "#b9cde0",
   restricted: "#f0a52a",
   closed: "#f24d63",
   route: "#5fc4ff",
+  routeAlt: "#8ba0b8",
   water: "#2aa5ef",
   forecast: "#7d5cf0",
   hospital: "#e8536a",
   shelter: "#2eb277",
   community: "#eef5fc",
   isolated: "#f24d63",
+  injected: "#f5b54a",
   context: "#9dc4e8",
+  casing: "#040a12",
 } as const;
 
-export const CURRENT_FLOOD_OPACITY = 0.44;
-export const FORECAST_FLOOD_OPACITY = 0.08;
+export const CURRENT_FLOOD_OPACITY = 0.72;
+export const FORECAST_FLOOD_OPACITY = 0.1;
 
-/** Shared modeled-depth ramp. Forecast state is distinguished by opacity and outline. */
-const floodDepthColor = [
-  "step",
-  ["get", "depth_max_m"],
-  "#8adfff",
-  0.1,
-  "#43bdf4",
-  0.2,
-  "#167fd1",
-  0.3,
-  "#09509f",
-] as never;
+const TEXT_HALO = "rgba(4, 9, 16, 0.92)";
+const FONT_MEDIUM = ["Noto Sans Medium"];
+const FONT_REGULAR = ["Noto Sans Regular"];
 
-const isBridge = ["==", ["get", "edge_type"], "bridge"];
+/* ------------------------------------------------------------ emphasis */
 
-/** Road width in screen pixels, wider for bridges, scaled by zoom. */
-const roadWidth = (base: number, bridge: number): unknown => [
-  "interpolate",
-  ["linear"],
-  ["zoom"],
-  11,
-  ["case", isBridge, bridge * 0.45, base * 0.45],
-  14,
-  ["case", isBridge, bridge, base],
-  17,
-  ["case", isBridge, bridge * 2.2, base * 2.2],
+/**
+ * Fade a feature that is not part of the focused incident.
+ *
+ * `dim` is set on features outside the focus set; everything else keeps its
+ * normal weight, so focus mode reads as "the rest recedes" rather than "the
+ * selection glows".
+ */
+function dimmed(base: number, floor = 0.16): ExpressionSpecification {
+  return [
+    "case",
+    ["boolean", ["feature-state", "dim"], false],
+    base * floor,
+    base,
+  ] as ExpressionSpecification;
+}
+
+const isHovered: ExpressionSpecification = [
+  "boolean",
+  ["feature-state", "hover"],
+  false,
+];
+const isSelected: ExpressionSpecification = [
+  "boolean",
+  ["feature-state", "selected"],
+  false,
 ];
 
+/**
+ * Opacity for a selection/hover ring.
+ *
+ * Icons cannot respond to `feature-state` — MapLibre forbids it in layout
+ * properties, and `icon-size` is layout — so emphasis on a point symbol is
+ * carried by a ring drawn beneath it, which is paint and therefore can.
+ */
+function ringOpacity(selected: number, hovered: number): ExpressionSpecification {
+  return [
+    "case",
+    isSelected,
+    selected,
+    isHovered,
+    hovered,
+    0,
+  ] as ExpressionSpecification;
+}
+
+/**
+ * One line of secondary label text, or nothing.
+ *
+ * `text-field` allows only a single zoom-based expression at the top level, so
+ * the newline has to be added inside the branch rather than by nesting another
+ * step.
+ */
+function labelLine(property: string): ExpressionSpecification {
+  return [
+    "case",
+    ["==", ["get", property], ""],
+    "",
+    ["concat", "\n", ["get", property]],
+  ] as ExpressionSpecification;
+}
+
+/** Widen a line on hover, wider still on selection. */
+function emphasised(base: number, hover: number, selected: number): ExpressionSpecification {
+  return [
+    "case",
+    isSelected,
+    selected,
+    isHovered,
+    hover,
+    base,
+  ] as ExpressionSpecification;
+}
+
+/* --------------------------------------------------------------- flood */
+
+/** Shared modeled-depth ramp. Forecast state is distinguished by opacity and outline. */
+const floodDepthColor: ExpressionSpecification = [
+  "step",
+  ["get", "depth_max_m"],
+  "#86c5e4",
+  0.1,
+  "#4e9ccd",
+  0.2,
+  "#2b6ca8",
+  0.3,
+  "#17427a",
+];
+
+/* --------------------------------------------------------------- roads */
+
+const isBridge: ExpressionSpecification = ["==", ["get", "edge_type"], "bridge"];
+
+/** Road width in screen pixels, wider for bridges, scaled by zoom. */
+function roadWidth(base: number, bridge: number): ExpressionSpecification {
+  return [
+    "interpolate",
+    ["linear"],
+    ["zoom"],
+    11,
+    ["case", isBridge, bridge * 0.45, base * 0.45],
+    14,
+    ["case", isBridge, bridge, base],
+    17,
+    ["case", isBridge, bridge * 2.2, base * 2.2],
+  ] as ExpressionSpecification;
+}
+
 export const LAYERS: LayerSpecification[] = [
+  /* ============================================================ context */
+
   {
     id: "ark-context-fill",
     type: "fill",
     source: SOURCE.context,
-    paint: { "fill-color": COLORS.context, "fill-opacity": 0.05 },
+    paint: { "fill-color": COLORS.context, "fill-opacity": 0.04 },
   },
   {
     id: "ark-context-line",
@@ -78,14 +186,17 @@ export const LAYERS: LayerSpecification[] = [
     source: SOURCE.context,
     paint: {
       "line-color": COLORS.context,
-      "line-width": 1.4,
-      "line-opacity": 0.5,
+      "line-width": 1.2,
+      "line-opacity": 0.38,
       "line-dasharray": [4, 3],
     },
   },
 
+  /* ====================================================== flood surface */
+
+  // Modeled +24h envelope: translucent fill, dashed violet boundary.
   {
-    id: "ark-flood-forecast-fill",
+    id: "flood-modeled-fill",
     type: "fill",
     source: SOURCE.floodForecast,
     layout: { "fill-sort-key": ["get", "depth_min_m"] as never },
@@ -95,174 +206,392 @@ export const LAYERS: LayerSpecification[] = [
       "fill-opacity-transition": { duration: 320, delay: 0 },
     },
   },
+  // Only the outermost band is outlined. Tracing all four produced a dense
+  // violet crinkle around the water that read as damage rather than as a
+  // forecast boundary.
   {
-    id: "ark-flood-forecast-line",
+    id: "flood-modeled-outline",
     type: "line",
     source: SOURCE.floodForecast,
+    filter: ["==", ["get", "depth_min_m"], 0],
     paint: {
       "line-color": COLORS.forecast,
-      "line-width": 1.2,
-      "line-opacity": 0.55,
-      "line-dasharray": [3, 2],
+      "line-width": 1.1,
+      "line-opacity": 0.45,
+      "line-dasharray": [3, 2.5],
     },
   },
 
+  // Current extent: the dominant layer on the map. Shallow bands stay
+  // translucent enough to read the road network through them.
   {
-    id: "ark-flood-now-fill",
+    id: "flood-current-fill",
     type: "fill",
     source: SOURCE.floodNow,
     layout: { "fill-sort-key": ["get", "depth_min_m"] as never },
     paint: {
       "fill-color": floodDepthColor,
-      "fill-opacity": CURRENT_FLOOD_OPACITY,
+      // Shallow water stays sheer enough to read the street grid through it;
+      // deep water is where the fill is allowed to take over.
+      "fill-opacity": [
+        "interpolate",
+        ["linear"],
+        ["get", "depth_max_m"],
+        0.1,
+        0.34,
+        0.3,
+        0.58,
+        0.5,
+        0.72,
+      ],
       "fill-opacity-transition": { duration: 320, delay: 0 },
     },
   },
+  // A thin band boundary is what separates one depth from the next; without it
+  // overlapping translucent fills read as a single smear.
   {
-    id: "ark-flood-now-line",
+    id: "flood-current-outline",
     type: "line",
     source: SOURCE.floodNow,
+    minzoom: 12.5,
     paint: {
       "line-color": floodDepthColor,
-      "line-width": 1.2,
-      "line-opacity": 0.88,
+      "line-width": 0.8,
+      "line-opacity": 0.4,
       "line-opacity-transition": { duration: 320, delay: 0 },
     },
   },
+
   {
     id: "ark-channel-line",
     type: "line",
     source: SOURCE.channel,
-    paint: { "line-color": "#bfe8ff", "line-width": 1.2, "line-opacity": 0.45 },
+    paint: { "line-color": "#8fd4ff", "line-width": 1.1, "line-opacity": 0.35 },
+  },
+  // Downstream direction. Sparse and low-contrast: it should be noticed on a
+  // second look, not compete with the depth bands.
+  {
+    id: "flood-flow-arrows",
+    type: "symbol",
+    source: SOURCE.channel,
+    minzoom: 12,
+    layout: {
+      "icon-image": "ark-route-arrow-alt",
+      "icon-size": 0.72,
+      "symbol-placement": "line",
+      "symbol-spacing": 120,
+      "icon-rotation-alignment": "map",
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true,
+    },
+    paint: { "icon-opacity": 0.42 },
   },
 
-  // Depth read directly off each edge — this part is model output, not an envelope.
+  /* ==================================================== infrastructure */
+
+  // Standing water on the carriageway, read straight off the edge state. Kept
+  // tight to the road rather than bloomed into a halo.
   {
-    id: "ark-depth-halo",
+    id: "roads-submerged",
     type: "line",
     source: SOURCE.roads,
-    filter: [">", ["get", "flood_depth_m"], 0],
+    filter: ["==", ["get", "submerged"], true],
     layout: { "line-cap": "round" },
     paint: {
-      "line-color": "#49b6ff",
-      "line-blur": 4,
-      "line-opacity": 0.45,
+      "line-color": "#3aa9ef",
+      "line-blur": 1.5,
+      "line-opacity": dimmed(0.4),
       "line-width": [
         "interpolate",
         ["linear"],
         ["zoom"],
         11,
-        ["*", ["get", "flood_depth_m"], 26],
+        ["min", ["*", ["get", "flood_depth_m"], 18], 9],
         16,
-        ["*", ["get", "flood_depth_m"], 120],
+        ["min", ["*", ["get", "flood_depth_m"], 64], 30],
       ],
     },
   },
 
   {
-    id: "ark-roads-casing",
+    id: "roads-base-casing",
     type: "line",
     source: SOURCE.roads,
     layout: { "line-cap": "round", "line-join": "round" },
     paint: {
-      "line-color": "#050b12",
-      "line-opacity": 0.8,
-      "line-width": roadWidth(7, 11) as never,
+      "line-color": COLORS.casing,
+      "line-opacity": dimmed(0.85),
+      "line-width": roadWidth(5.2, 8),
     },
   },
   {
-    id: "ark-roads-open",
+    id: "roads-base",
     type: "line",
     source: SOURCE.roads,
-    filter: ["==", ["get", "status"], "open"],
+    filter: ["==", ["get", "risk"], "clear"],
     layout: { "line-cap": "round", "line-join": "round" },
-    paint: { "line-color": COLORS.open, "line-width": roadWidth(3.6, 6.5) as never },
+    paint: {
+      "line-color": COLORS.open,
+      "line-opacity": dimmed(0.92),
+      "line-width": roadWidth(2.5, 4.4),
+    },
+  },
+
+  // Affected segments get a heavier casing so the hazard reads as a property of
+  // the road, not as something drawn near it.
+  {
+    id: "roads-affected-casing",
+    type: "line",
+    source: SOURCE.roads,
+    filter: ["in", ["get", "risk"], ["literal", ["impaired", "blocked"]]],
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": [
+        "case",
+        ["==", ["get", "risk"], "blocked"],
+        "#3a0d16",
+        "#33230a",
+      ],
+      "line-opacity": dimmed(0.95),
+      "line-width": roadWidth(7, 10),
+    },
   },
   {
-    id: "ark-roads-restricted",
+    id: "roads-affected",
     type: "line",
     source: SOURCE.roads,
-    filter: ["==", ["get", "status"], "restricted"],
-    layout: { "line-cap": "butt", "line-join": "round" },
+    filter: ["==", ["get", "risk"], "impaired"],
+    layout: { "line-cap": "round", "line-join": "round" },
     paint: {
       "line-color": COLORS.restricted,
-      "line-width": roadWidth(3.6, 6.5) as never,
-      "line-dasharray": [2, 1.4],
+      "line-opacity": dimmed(1),
+      "line-width": emphasised(3, 4.2, 5),
     },
   },
   {
-    id: "ark-roads-closed",
+    id: "roads-blocked",
     type: "line",
     source: SOURCE.roads,
-    filter: ["==", ["get", "status"], "closed"],
+    filter: ["==", ["get", "risk"], "blocked"],
     layout: { "line-cap": "butt", "line-join": "round" },
     paint: {
       "line-color": COLORS.closed,
-      "line-width": roadWidth(3.6, 6.5) as never,
-      "line-dasharray": [1, 1.5],
+      "line-opacity": dimmed(1),
+      "line-width": emphasised(3.2, 4.4, 5.2),
+      "line-dasharray": [1.4, 1.1],
     },
   },
 
+  // Bridges are drawn from their own geometry so a span failure can be shown on
+  // the span rather than inherited from the road class.
   {
-    id: "ark-route-glow",
+    id: "bridge-casing",
+    type: "line",
+    source: SOURCE.bridgeLines,
+    layout: { "line-cap": "butt", "line-join": "round" },
+    paint: {
+      "line-color": COLORS.casing,
+      "line-opacity": dimmed(0.92),
+      "line-width": ["interpolate", ["linear"], ["zoom"], 11, 7, 16, 16],
+    },
+  },
+  {
+    id: "bridge-deck",
+    type: "line",
+    source: SOURCE.bridgeLines,
+    layout: { "line-cap": "butt", "line-join": "round" },
+    paint: {
+      "line-color": [
+        "match",
+        ["get", "risk"],
+        "blocked",
+        COLORS.closed,
+        "impaired",
+        COLORS.restricted,
+        "#cfe2f4",
+      ],
+      "line-opacity": dimmed(1),
+      "line-width": emphasised(4.5, 5.8, 6.8),
+    },
+  },
+
+  /* ========================================================= operations */
+
+  // Alternate plans: dashed, desaturated, and below the active route.
+  {
+    id: "route-alternate-casing",
+    type: "line",
+    source: SOURCE.routeAlternate,
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": COLORS.casing,
+      "line-opacity": dimmed(0.6),
+      "line-width": 6,
+    },
+  },
+  {
+    id: "route-alternate-line",
+    type: "line",
+    source: SOURCE.routeAlternate,
+    layout: { "line-cap": "butt", "line-join": "round" },
+    paint: {
+      "line-color": COLORS.routeAlt,
+      "line-opacity": dimmed(0.72),
+      "line-width": 2.2,
+      "line-dasharray": [2.4, 2],
+    },
+  },
+  {
+    id: "route-alternate-arrows",
+    type: "symbol",
+    source: SOURCE.routeAlternate,
+    minzoom: 12.5,
+    layout: {
+      "icon-image": "ark-route-arrow-alt",
+      "icon-size": 0.72,
+      "symbol-placement": "line",
+      "symbol-spacing": 110,
+      "icon-rotation-alignment": "map",
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true,
+    },
+    paint: { "icon-opacity": dimmed(0.7) },
+  },
+
+  // Active plan: dark casing, bright core, chevrons in travel direction.
+  {
+    id: "route-casing",
     type: "line",
     source: SOURCE.route,
     layout: { "line-cap": "round", "line-join": "round" },
     paint: {
-      "line-color": COLORS.route,
-      "line-width": 15,
-      "line-blur": 11,
-      "line-opacity": 0.4,
+      "line-color": COLORS.casing,
+      "line-opacity": dimmed(0.92),
+      "line-width": emphasised(7, 8.5, 9.5),
     },
   },
   {
-    id: "ark-route-line",
+    id: "route-line",
     type: "line",
     source: SOURCE.route,
-    layout: { "line-cap": "butt", "line-join": "round" },
+    layout: { "line-cap": "round", "line-join": "round" },
     paint: {
-      "line-color": COLORS.route,
-      "line-width": 3.4,
-      "line-dasharray": [0.4, 1.6],
-    },
-  },
-
-  {
-    id: "ark-bridges-marker",
-    type: "circle",
-    source: SOURCE.bridges,
-    paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 3.5, 16, 8],
-      "circle-color": [
-        "match",
-        ["get", "status"],
-        "closed",
+      "line-color": [
+        "case",
+        ["==", ["get", "role"], "blocked"],
         COLORS.closed,
-        "restricted",
-        COLORS.restricted,
-        "#0b1726",
+        COLORS.route,
       ],
-      "circle-stroke-color": "#cddcea",
-      "circle-stroke-width": 1.6,
+      "line-opacity": dimmed(1),
+      "line-width": emphasised(3.2, 4.2, 5),
+      // A route that crosses a failed edge is shown broken, not quietly redrawn.
+      "line-dasharray": [
+        "case",
+        ["==", ["get", "role"], "blocked"],
+        ["literal", [1.6, 1.2]],
+        ["literal", [1, 0]],
+      ] as never,
+    },
+  },
+  {
+    id: "route-arrows",
+    type: "symbol",
+    source: SOURCE.route,
+    minzoom: 11.5,
+    layout: {
+      "icon-image": "ark-route-arrow",
+      "icon-size": 0.95,
+      "symbol-placement": "line",
+      "symbol-spacing": 78,
+      "icon-rotation-alignment": "map",
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true,
+    },
+    paint: { "icon-opacity": dimmed(0.9) },
+  },
+
+  // Response teams in transit. Driven by the animation loop, which rewrites the
+  // source each frame; everything here is static styling.
+  {
+    id: "response-teams",
+    type: "symbol",
+    source: SOURCE.teams,
+    // The scenario's default extent sits near z11.3, so anything stricter than
+    // this would hide the teams on the view the dashboard opens with.
+    minzoom: 10.5,
+    layout: {
+      "icon-image": "ark-team",
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 10.5, 0.62, 15, 1],
+      "icon-rotate": ["get", "bearing"],
+      "icon-rotation-alignment": "map",
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true,
+      // Empty unless the route is focused, so only one ETA is ever on screen.
+      "text-field": ["get", "label"],
+      "text-font": FONT_MEDIUM,
+      "text-size": 9.5,
+      "text-offset": [0, 1.3],
+      "text-anchor": "top",
+      "text-optional": true,
+    },
+    paint: {
+      "icon-opacity": dimmed(1),
+      "text-color": "#d6f0ff",
+      "text-opacity": dimmed(1),
+      "text-halo-color": TEXT_HALO,
+      "text-halo-width": 1.8,
     },
   },
 
+  /* ============================================ hazards on the geometry */
+
   {
-    id: "ark-assets-halo",
-    type: "circle",
-    source: SOURCE.assets,
-    filter: ["==", ["get", "isolated"], true],
-    paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 14, 16, 34],
-      "circle-color": COLORS.isolated,
-      "circle-opacity": 0.18,
-      "circle-stroke-color": COLORS.isolated,
-      "circle-stroke-width": 1.5,
-      "circle-stroke-opacity": 0.7,
+    id: "road-hazard-icons",
+    type: "symbol",
+    source: SOURCE.roadHazards,
+    minzoom: 11.5,
+    layout: {
+      "icon-image": [
+        "case",
+        ["==", ["get", "risk"], "blocked"],
+        "ark-closure",
+        "ark-closure-restricted",
+      ],
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.7, 15, 1],
+      "icon-allow-overlap": true,
+      "symbol-sort-key": 1,
     },
+    paint: { "icon-opacity": dimmed(1) },
   },
+
   {
-    id: "ark-assets-circle",
+    id: "bridge-hazards",
+    type: "symbol",
+    source: SOURCE.bridges,
+    layout: {
+      "icon-image": [
+        "match",
+        ["get", "risk"],
+        "blocked",
+        "ark-bridge-closed",
+        "impaired",
+        "ark-bridge-restricted",
+        "ark-bridge",
+      ],
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.7, 15, 1],
+      "icon-allow-overlap": true,
+      "symbol-sort-key": 0,
+    },
+    paint: { "icon-opacity": dimmed(1) },
+  },
+
+  /* ============================================== communities and sites */
+
+  // Hover and selection emphasis for every point symbol. Normal objects carry
+  // no ring at all — it appears only for the feature under the cursor or the
+  // one the operator has focused.
+  {
+    id: "asset-selection-ring",
     type: "circle",
     source: SOURCE.assets,
     paint: {
@@ -271,86 +600,405 @@ export const LAYERS: LayerSpecification[] = [
         ["linear"],
         ["zoom"],
         11,
-        ["case", ["==", ["get", "asset_type"], "community"], 4.5, 6],
+        ["case", isSelected, 13, 10],
         16,
-        ["case", ["==", ["get", "asset_type"], "community"], 9, 13],
+        ["case", isSelected, 24, 19],
       ],
-      "circle-color": [
-        "case",
-        ["==", ["get", "isolated"], true],
-        COLORS.isolated,
-        [
-          "match",
-          ["get", "asset_type"],
-          "hospital",
-          COLORS.hospital,
-          "shelter",
-          COLORS.shelter,
-          COLORS.community,
-        ],
-      ],
-      "circle-stroke-color": "#091421",
-      "circle-stroke-width": 2,
+      "circle-color": COLORS.route,
+      "circle-opacity": ringOpacity(0.16, 0.08),
+      "circle-stroke-color": COLORS.route,
+      "circle-stroke-width": ["case", isSelected, 1.8, 1.1],
+      "circle-stroke-opacity": ringOpacity(0.9, 0.5),
     },
   },
   {
-    id: "ark-assets-glyph",
-    type: "symbol",
-    source: SOURCE.assets,
-    minzoom: 12,
-    filter: ["in", ["get", "asset_type"], ["literal", ["hospital", "shelter"]]],
-    layout: {
-      "text-field": ["case", ["==", ["get", "asset_type"], "hospital"], "H", "S"],
-      "text-font": ["Noto Sans Medium"],
-      "text-size": 11,
-      "text-allow-overlap": true,
-      "text-ignore-placement": true,
+    id: "bridge-selection-ring",
+    type: "circle",
+    source: SOURCE.bridges,
+    paint: {
+      "circle-radius": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        11,
+        ["case", isSelected, 13, 10],
+        16,
+        ["case", isSelected, 24, 19],
+      ],
+      "circle-color": COLORS.route,
+      "circle-opacity": ringOpacity(0.16, 0.08),
+      "circle-stroke-color": COLORS.route,
+      "circle-stroke-width": ["case", isSelected, 1.8, 1.1],
+      "circle-stroke-opacity": ringOpacity(0.9, 0.5),
     },
-    paint: { "text-color": "#ffffff" },
   },
 
   {
-    id: "ark-hazards",
+    id: "shelter-icons",
+    type: "symbol",
+    source: SOURCE.assets,
+    filter: ["==", ["get", "asset_type"], "shelter"],
+    layout: {
+      "icon-image": [
+        "case",
+        ["==", ["get", "reachable"], false],
+        "ark-shelter-unreachable",
+        "ark-shelter",
+      ],
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.75, 15, 1],
+      "icon-allow-overlap": true,
+    },
+    paint: { "icon-opacity": dimmed(1) },
+  },
+  {
+    id: "hospital-icons",
+    type: "symbol",
+    source: SOURCE.assets,
+    filter: ["==", ["get", "asset_type"], "hospital"],
+    layout: {
+      "icon-image": [
+        "case",
+        ["==", ["get", "reachable"], false],
+        "ark-hospital-unreachable",
+        "ark-hospital",
+      ],
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.75, 15, 1],
+      "icon-allow-overlap": true,
+    },
+    paint: { "icon-opacity": dimmed(1) },
+  },
+  // Only a community that has actually lost every exit carries a ring, and only
+  // one ring is ever on screen at a time for that reason.
+  {
+    id: "community-alert-ring",
+    type: "circle",
+    source: SOURCE.assets,
+    filter: [
+      "all",
+      ["==", ["get", "asset_type"], "community"],
+      ["==", ["get", "isolated"], true],
+    ],
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 11, 16, 22],
+      "circle-color": "transparent",
+      "circle-stroke-color": COLORS.isolated,
+      "circle-stroke-width": 1.4,
+      "circle-stroke-opacity": dimmed(0.65),
+    },
+  },
+  {
+    id: "community-icons",
+    type: "symbol",
+    source: SOURCE.assets,
+    filter: ["==", ["get", "asset_type"], "community"],
+    layout: {
+      "icon-image": [
+        "match",
+        ["get", "risk"],
+        "isolated",
+        "ark-community-isolated",
+        "at_risk",
+        "ark-community-at-risk",
+        "ark-community",
+      ],
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.7, 15, 1],
+      "icon-allow-overlap": true,
+    },
+    paint: { "icon-opacity": dimmed(1) },
+  },
+
+  /* ============================================================ hazards */
+
+  // Critical hazards are never zoom-gated; lower priorities wait for a zoom
+  // where they will not crowd the map.
+  /*
+   * Escalation pulse.
+   *
+   * Filtered to nothing until a hazard actually escalates, then animated by the
+   * animation loop for a few seconds and filtered back out. It is the only
+   * pulsing thing the map ever draws, and only ever one at a time.
+   */
+  {
+    id: "hazard-escalation-pulse",
+    type: "circle",
+    source: SOURCE.hazards,
+    filter: ["==", ["get", "hazard_id"], "__none__"],
+    paint: {
+      "circle-radius": 11,
+      "circle-color": COLORS.closed,
+      "circle-opacity": 0,
+      "circle-stroke-color": COLORS.closed,
+      "circle-stroke-width": 1.6,
+      "circle-stroke-opacity": 0,
+      "circle-translate": [0, -16],
+    },
+  },
+
+  {
+    id: "hazard-icons-critical",
     type: "symbol",
     source: SOURCE.hazards,
+    filter: ["==", ["get", "priority"], "critical"],
     layout: {
-      "text-field": "!",
-      "text-font": ["Noto Sans Medium"],
-      "text-size": 13,
-      "text-offset": [0, -1.5],
-      "text-allow-overlap": true,
+      "icon-image": [
+        "case",
+        ["==", ["get", "operator_injected"], true],
+        "ark-hazard-injected",
+        "ark-hazard-critical",
+      ],
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.72, 15, 1],
+      "icon-offset": [0, -16],
+      "icon-allow-overlap": true,
+      "symbol-sort-key": -2,
+    },
+    paint: { "icon-opacity": dimmed(1) },
+  },
+  {
+    id: "hazard-icons",
+    type: "symbol",
+    source: SOURCE.hazards,
+    minzoom: 12.5,
+    filter: ["!=", ["get", "priority"], "critical"],
+    layout: {
+      "icon-image": [
+        "case",
+        ["==", ["get", "operator_injected"], true],
+        "ark-hazard-injected",
+        ["==", ["get", "priority"], "high"],
+        "ark-hazard-high",
+        "ark-hazard-medium",
+      ],
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 12.5, 0.75, 15, 0.95],
+      "icon-offset": [0, -16],
+      "icon-allow-overlap": true,
+      "symbol-sort-key": -1,
+    },
+    paint: { "icon-opacity": dimmed(1) },
+  },
+
+  /* ============================================================= labels */
+
+  // Band label on the water itself, close zoom only.
+  {
+    id: "flood-depth-labels",
+    type: "symbol",
+    source: SOURCE.floodNow,
+    minzoom: 14,
+    layout: {
+      "text-field": ["get", "band_label"],
+      "text-font": FONT_REGULAR,
+      "text-size": 9.5,
+      "text-letter-spacing": 0.05,
+      "text-optional": true,
+    },
+    paint: {
+      "text-color": "#bfe4ff",
+      "text-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 14.8, 0.8],
+      "text-halo-color": TEXT_HALO,
+      "text-halo-width": 1.5,
+    },
+  },
+
+  // Status reads along the affected segment, so the words sit on the road.
+  {
+    id: "road-status-labels",
+    type: "symbol",
+    source: SOURCE.roads,
+    minzoom: 13,
+    filter: ["!=", ["get", "risk"], "clear"],
+    layout: {
+      "text-field": ["get", "status_label"],
+      "text-font": FONT_MEDIUM,
+      "text-size": 9,
+      "text-letter-spacing": 0.1,
+      "symbol-placement": "line-center",
+      "text-offset": [0, -1.1],
+      "text-optional": true,
+    },
+    paint: {
+      "text-color": [
+        "case",
+        ["==", ["get", "risk"], "blocked"],
+        "#ffc3cb",
+        "#ffd79a",
+      ],
+      "text-opacity": dimmed(1),
+      "text-halo-color": TEXT_HALO,
+      "text-halo-width": 1.8,
+    },
+  },
+
+  {
+    id: "bridge-labels",
+    type: "symbol",
+    source: SOURCE.bridges,
+    minzoom: 12,
+    layout: {
+      // Status and depth appear once the operator is close enough to act.
+      // MapLibre allows one zoom expression per `text-field`, so the zoom steps
+      // choose between whole label forms rather than nesting per line.
+      "text-field": [
+        "step",
+        ["zoom"],
+        ["format", ["get", "name"], { "font-scale": 1 }],
+        13,
+        [
+          "format",
+          ["get", "name"],
+          { "font-scale": 1 },
+          labelLine("status_label"),
+          { "font-scale": 0.8 },
+        ],
+        14,
+        [
+          "format",
+          ["get", "name"],
+          { "font-scale": 1 },
+          labelLine("status_label"),
+          { "font-scale": 0.8 },
+          labelLine("depth_label"),
+          { "font-scale": 0.78 },
+        ],
+      ],
+      "text-font": FONT_MEDIUM,
+      "text-size": ["interpolate", ["linear"], ["zoom"], 12, 10, 16, 12.5],
+      "text-offset": [0, 1.3],
+      "text-anchor": "top",
+      "text-optional": true,
+      "symbol-sort-key": 0,
     },
     paint: {
       "text-color": [
         "match",
-        ["get", "priority"],
-        "critical",
-        COLORS.closed,
-        "high",
-        COLORS.restricted,
-        "#7fc4ff",
+        ["get", "risk"],
+        "blocked",
+        "#ffc3cb",
+        "impaired",
+        "#ffd79a",
+        "#d8e7f5",
       ],
-      "text-halo-color": "#050b12",
-      "text-halo-width": 1.6,
+      "text-opacity": dimmed(1),
+      "text-halo-color": TEXT_HALO,
+      "text-halo-width": 1.8,
     },
   },
 
   {
-    id: "ark-asset-labels",
+    id: "facility-labels",
     type: "symbol",
     source: SOURCE.assets,
+    minzoom: 12.5,
+    filter: ["in", ["get", "asset_type"], ["literal", ["hospital", "shelter"]]],
     layout: {
-      "text-field": ["get", "name"],
-      "text-font": ["Noto Sans Medium"],
-      "text-size": ["interpolate", ["linear"], ["zoom"], 11, 10, 16, 14],
-      "text-offset": [0, 1.4],
+      "text-field": [
+        "step",
+        ["zoom"],
+        ["format", ["get", "name"], { "font-scale": 1 }],
+        14,
+        [
+          "format",
+          ["get", "name"],
+          { "font-scale": 1 },
+          labelLine("detail_label"),
+          { "font-scale": 0.8 },
+        ],
+      ],
+      "text-font": FONT_MEDIUM,
+      "text-size": ["interpolate", ["linear"], ["zoom"], 12.5, 10, 16, 12.5],
+      "text-offset": [0, 1.2],
       "text-anchor": "top",
       "text-optional": true,
+      // Facilities win a collision against a community label.
+      "symbol-sort-key": 1,
     },
     paint: {
-      "text-color": "#f1f7fc",
-      "text-halo-color": "rgba(5, 11, 18, 0.92)",
-      "text-halo-width": 1.7,
+      "text-color": [
+        "case",
+        ["==", ["get", "reachable"], false],
+        "#93a7b9",
+        "#e6f1fb",
+      ],
+      "text-opacity": dimmed(1),
+      "text-halo-color": TEXT_HALO,
+      "text-halo-width": 1.8,
+    },
+  },
+
+  {
+    id: "community-labels",
+    type: "symbol",
+    source: SOURCE.assets,
+    minzoom: 11,
+    filter: ["==", ["get", "asset_type"], "community"],
+    layout: {
+      // Population is detail, not headline: it waits for a closer zoom, and a
+      // community that has lost its exits says so one zoom earlier.
+      "text-field": [
+        "step",
+        ["zoom"],
+        ["format", ["get", "name"], { "font-scale": 1 }],
+        12.5,
+        [
+          "format",
+          ["get", "name"],
+          { "font-scale": 1 },
+          labelLine("status_label"),
+          { "font-scale": 0.78 },
+        ],
+        13.5,
+        [
+          "format",
+          ["get", "name"],
+          { "font-scale": 1 },
+          labelLine("detail_label"),
+          { "font-scale": 0.8 },
+          labelLine("status_label"),
+          { "font-scale": 0.78 },
+        ],
+      ],
+      "text-font": FONT_MEDIUM,
+      "text-size": ["interpolate", ["linear"], ["zoom"], 11, 10.5, 16, 13.5],
+      "text-offset": [0, 1.1],
+      "text-anchor": "top",
+      "text-optional": true,
+      "symbol-sort-key": 2,
+    },
+    paint: {
+      "text-color": [
+        "match",
+        ["get", "risk"],
+        "isolated",
+        "#ffc3cb",
+        "at_risk",
+        "#ffe0b0",
+        "#f1f7fc",
+      ],
+      "text-opacity": dimmed(1),
+      "text-halo-color": TEXT_HALO,
+      "text-halo-width": 1.9,
+    },
+  },
+
+  {
+    id: "hazard-labels",
+    type: "symbol",
+    source: SOURCE.hazards,
+    minzoom: 13,
+    filter: ["==", ["get", "priority"], "critical"],
+    layout: {
+      "text-field": ["get", "title"],
+      "text-font": FONT_MEDIUM,
+      "text-size": 9.5,
+      "text-offset": [0, -2.6],
+      "text-anchor": "bottom",
+      "text-optional": true,
+      "symbol-sort-key": -2,
+    },
+    paint: {
+      "text-color": "#ffc3cb",
+      "text-opacity": dimmed(1),
+      "text-halo-color": TEXT_HALO,
+      "text-halo-width": 1.9,
     },
   },
 ];
@@ -362,6 +1010,7 @@ export type LayerKey =
   | "floodForecast"
   | "roads"
   | "route"
+  | "routeAlternate"
   | "facilities"
   | "bridges"
   | "gauges"
@@ -380,44 +1029,64 @@ export interface LayerControl {
 export const LAYER_CONTROLS: LayerControl[] = [
   {
     key: "floodNow",
-    label: "Modeled depth bands",
+    label: "Flood depth (current)",
     swatch: "flood-now",
-    layerIds: ["ark-flood-now-fill", "ark-flood-now-line", "ark-channel-line", "ark-depth-halo"],
+    layerIds: [
+      "flood-current-fill",
+      "flood-current-outline",
+      "flood-depth-labels",
+      "ark-channel-line",
+      "flood-flow-arrows",
+      "roads-submerged",
+    ],
   },
   {
     key: "floodForecast",
-    label: "24h forecast extent",
+    label: "Modeled +24h extent",
     swatch: "flood-forecast",
-    layerIds: ["ark-flood-forecast-fill", "ark-flood-forecast-line"],
+    layerIds: ["flood-modeled-fill", "flood-modeled-outline"],
   },
   {
     key: "roads",
-    label: "Roads",
+    label: "Roads & closures",
     swatch: "roads",
     layerIds: [
-      "ark-roads-casing",
-      "ark-roads-open",
-      "ark-roads-restricted",
-      "ark-roads-closed",
+      "roads-base-casing",
+      "roads-base",
+      "roads-affected-casing",
+      "roads-affected",
+      "roads-blocked",
+      "road-hazard-icons",
+      "road-status-labels",
     ],
   },
   {
     key: "route",
-    label: "Evacuation routes",
+    label: "Active response routes",
     swatch: "route",
-    layerIds: ["ark-route-glow", "ark-route-line"],
+    layerIds: ["route-casing", "route-line", "route-arrows", "response-teams"],
+  },
+  {
+    key: "routeAlternate",
+    label: "Alternate plan routes",
+    swatch: "route-alt",
+    layerIds: [
+      "route-alternate-casing",
+      "route-alternate-line",
+      "route-alternate-arrows",
+    ],
   },
   {
     key: "facilities",
-    label: "Hospitals & shelters",
+    label: "Shelters & hospital",
     swatch: "facilities",
-    layerIds: ["ark-assets-circle", "ark-assets-glyph", "ark-assets-halo"],
+    layerIds: ["shelter-icons", "hospital-icons", "facility-labels"],
   },
   {
     key: "bridges",
     label: "Bridges",
     swatch: "bridges",
-    layerIds: ["ark-bridges-marker"],
+    layerIds: ["bridge-casing", "bridge-deck", "bridge-hazards", "bridge-labels"],
   },
   {
     key: "gauges",
@@ -428,15 +1097,20 @@ export const LAYER_CONTROLS: LayerControl[] = [
   },
   {
     key: "alerts",
-    label: "Alerts",
+    label: "Hazards",
     swatch: "alerts",
-    layerIds: ["ark-hazards"],
+    layerIds: [
+      "hazard-escalation-pulse",
+      "hazard-icons-critical",
+      "hazard-icons",
+      "hazard-labels",
+    ],
   },
   {
     key: "labels",
     label: "Community labels",
     swatch: "labels",
-    layerIds: ["ark-asset-labels"],
+    layerIds: ["community-labels"],
   },
   {
     key: "context",
@@ -446,13 +1120,32 @@ export const LAYER_CONTROLS: LayerControl[] = [
   },
 ];
 
-export const HOVERABLE_ROAD_LAYERS = [
-  "ark-roads-open",
-  "ark-roads-restricted",
-  "ark-roads-closed",
+/** Layers off by default: useful on demand, noisy as a baseline. */
+export const DEFAULT_OFF: LayerKey[] = ["routeAlternate", "gauges"];
+
+/* ------------------------------------------------------------ interaction */
+
+/** Road-like layers whose features map back to an edge state. */
+export const EDGE_LAYERS = [
+  "roads-base",
+  "roads-affected",
+  "roads-blocked",
+  "bridge-deck",
 ];
 
-export const HOVERABLE_FLOOD_LAYERS = [
-  "ark-flood-now-fill",
-  "ark-flood-forecast-fill",
+/** Symbols that select an edge but carry their own source. */
+export const EDGE_SYMBOL_LAYERS = ["road-hazard-icons", "bridge-hazards"];
+
+export const ASSET_LAYERS = ["community-icons", "shelter-icons", "hospital-icons"];
+
+export const HAZARD_LAYERS = ["hazard-icons-critical", "hazard-icons"];
+
+export const FLOOD_LAYERS = ["flood-current-fill", "flood-modeled-fill"];
+
+/** Everything clickable, topmost first — click resolution walks this order. */
+export const PICKABLE_LAYERS = [
+  ...HAZARD_LAYERS,
+  ...ASSET_LAYERS,
+  ...EDGE_SYMBOL_LAYERS,
+  ...EDGE_LAYERS,
 ];

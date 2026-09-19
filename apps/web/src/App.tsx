@@ -7,6 +7,7 @@ import type {
 
 import { applyEvent, getBootstrap, getFrame } from "./api";
 import { eventsActiveAt, formatHours, type FrameSeriesEntry } from "./derive";
+import type { MapSelection } from "./map/selection";
 import { logEntry, type LogEntry } from "./session";
 import { IncidentSidebar } from "./components/IncidentSidebar";
 import { RightRail } from "./components/RightRail";
@@ -69,6 +70,9 @@ export function App() {
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
   const [activeEventIds, setActiveEventIds] = useState<string[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState("ktp-plan-a");
+  /* Incident focus. Lifted here so the map and the rails select the same
+   * subject: clicking a hazard in a list focuses the map, and vice versa. */
+  const [selection, setSelection] = useState<MapSelection | null>(null);
   const [comparison, setComparison] = useState<Comparison | undefined>();
   const [log, setLog] = useState<LogEntry[]>([]);
   const [playing, setPlaying] = useState(false);
@@ -116,6 +120,19 @@ export function App() {
     () => series.find((entry) => entry.frameId === selectedFrameId)?.state,
     [series, selectedFrameId],
   );
+
+  /*
+   * Hazards are re-derived per frame, so a hazard id selected at +6h may not
+   * exist at +12h. Drop the selection rather than leave the focus panel
+   * pointing at something the current world state no longer contains.
+   */
+  useEffect(() => {
+    if (!worldState || selection?.kind !== "hazard") return;
+    const present = worldState.hazards.some(
+      (hazard) => hazard.hazard_id === selection.id,
+    );
+    if (!present) setSelection(null);
+  }, [selection, worldState]);
 
   // Last frame in the horizon drives the predicted-inundation layer.
   const horizonState = useMemo(
@@ -330,13 +347,21 @@ export function App() {
       ) : null}
 
       <main className="dashboard-grid" aria-busy={busy}>
-        <IncidentSidebar bootstrap={bootstrap} series={series} worldState={worldState} />
+        <IncidentSidebar
+          bootstrap={bootstrap}
+          onSelect={setSelection}
+          selection={selection}
+          series={series}
+          worldState={worldState}
+        />
 
         <section className="map-workspace" aria-label="Operations workspace">
           <ScenarioMap
             bootstrap={bootstrap}
             horizonState={horizonState}
+            onSelect={setSelection}
             selectedPlan={selectedPlan}
+            selection={selection}
             worldState={worldState}
           />
           <Timeline
@@ -356,7 +381,9 @@ export function App() {
           bootstrap={bootstrap}
           comparison={activeComparison}
           log={log}
+          onSelect={setSelection}
           onSelectPlan={setSelectedPlanId}
+          selection={selection}
           selectedPlanId={selectedPlan?.plan_id ?? selectedPlanId}
           worldState={worldState}
         />

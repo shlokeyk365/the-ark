@@ -13,6 +13,7 @@ import {
   peopleIsolated,
   type FrameSeriesEntry,
 } from "../derive";
+import type { MapSelection } from "../map/selection";
 import { ShellIcon } from "./ShellIcon";
 import { Delta, Sparkline, type Tone } from "./Trend";
 
@@ -20,12 +21,15 @@ interface IncidentSidebarProps {
   bootstrap: ScenarioBootstrapResponse;
   worldState: WorldStateSnapshot;
   series: FrameSeriesEntry[];
+  selection: MapSelection | null;
+  onSelect: (selection: MapSelection | null) => void;
 }
 
-interface MetricRowProps {
+interface MetricCardProps {
   icon: Parameters<typeof ShellIcon>[0]["name"];
   tone: Tone;
   value: string;
+  unit?: string;
   label: string;
   note: string;
   points: number[];
@@ -35,10 +39,11 @@ interface MetricRowProps {
   riseIsBad?: boolean;
 }
 
-function MetricRow({
+function MetricCard({
   icon,
   tone,
   value,
+  unit,
   label,
   note,
   points,
@@ -46,14 +51,17 @@ function MetricRow({
   previous,
   current,
   riseIsBad = true,
-}: MetricRowProps) {
+}: MetricCardProps) {
   return (
-    <div className="metric-row">
-      <span className={`metric-icon ${tone}`}>
+    <article className={`metric-card tone-${tone}`}>
+      <span className="metric-icon">
         <ShellIcon name={icon} size={17} />
       </span>
       <div className="metric-value">
-        <strong>{value}</strong>
+        <strong>
+          {value}
+          {unit ? <i>{unit}</i> : null}
+        </strong>
         <span>{label}</span>
       </div>
       <div className="metric-trend">
@@ -66,7 +74,7 @@ function MetricRow({
         />
         <em>{note}</em>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -74,6 +82,8 @@ export function IncidentSidebar({
   bootstrap,
   worldState,
   series,
+  selection,
+  onSelect,
 }: IncidentSidebarProps) {
   const names = assetNames(bootstrap);
   const metrics = deriveSeries(series);
@@ -95,6 +105,7 @@ export function IncidentSidebar({
   const hospitalAccess = hospitalAccessCount(worldState);
   const totalCommunities = worldState.community_access.length;
   const depthCm = Math.round(maxFloodDepth(worldState) * 100);
+  const disrupted = worldState.active_event_ids.length > 0;
 
   const nextIsolation = worldState.community_access
     .filter((access) => access.time_to_isolation_hours !== null && !access.isolated)
@@ -103,54 +114,69 @@ export function IncidentSidebar({
         (a.time_to_isolation_hours ?? Infinity) - (b.time_to_isolation_hours ?? Infinity),
     )[0];
 
+  const leadHours = nextIsolation
+    ? (nextIsolation.time_to_isolation_hours ?? 0) - worldState.simulation_time_hours
+    : 0;
+
   return (
     <aside className="left-rail panel-shell" aria-label="Incident overview">
       <section className="incident-summary">
         <div className="section-eyebrow">
           <span>Incident overview</span>
-          <span className={`status-badge ${worldState.active_event_ids.length ? "disrupted" : ""}`}>
-            {worldState.active_event_ids.length ? "DISRUPTED" : "MODELED"}
+          <span className={`status-badge ${disrupted ? "disrupted" : ""}`}>
+            <i aria-hidden="true" />
+            {disrupted ? "Disrupted" : "Modeled"}
           </span>
         </div>
         <h1>Kantipur River Flood Exercise</h1>
         <p>{bootstrap.description}</p>
         <div className="incident-meta">
-          <span>
-            <ShellIcon name="clock" size={13} />
+          <span className="meta-chip">
+            <ShellIcon name="clock" size={11} />
             {formatHours(worldState.simulation_time_hours)}
           </span>
-          <span className="meta-version">{worldState.world_state_version}</span>
+          <span className="meta-chip mono">{worldState.world_state_version}</span>
         </div>
         <div className="weather-callout">
           <span className="weather-icon">
-            <ShellIcon name="rain" size={24} />
+            <ShellIcon name="rain" size={22} />
           </span>
           <div>
             <strong>{worldState.rainfall_assumption}</strong>
             <span>{worldState.rainfall_multiplier.toFixed(1)}× modeled rainfall</span>
           </div>
           <span className="weather-depth">
-            <strong>{depthCm}</strong>
-            <em>cm peak</em>
+            <strong>
+              {depthCm}
+              <i>cm</i>
+            </strong>
+            <em>peak depth</em>
           </span>
         </div>
       </section>
 
       <section className="rail-section">
-        <h2>Current status</h2>
+        <div className="section-title-row">
+          <h2>Current conditions</h2>
+          <span className="live-tag">
+            <i aria-hidden="true" />
+            {formatHours(worldState.simulation_time_hours)} frame
+          </span>
+        </div>
         <div className="metric-stack">
-          <MetricRow
+          <MetricCard
             activeIndex={activeIndex}
             current={depthCm}
             icon="drop"
             label="Peak modeled depth"
-            note="across 12 edges"
+            note={`across ${worldState.edge_states.length} edges`}
             points={metrics.maxDepthCm}
             previous={at(metrics.maxDepthCm, previousIndex)}
             tone="cyan"
-            value={`${depthCm} cm`}
+            unit="cm"
+            value={`${depthCm}`}
           />
-          <MetricRow
+          <MetricCard
             activeIndex={activeIndex}
             current={closed}
             icon="road"
@@ -161,7 +187,7 @@ export function IncidentSidebar({
             tone="amber"
             value={`${closed}`}
           />
-          <MetricRow
+          <MetricCard
             activeIndex={activeIndex}
             current={peopleIsolated(worldState)}
             icon="people"
@@ -172,7 +198,7 @@ export function IncidentSidebar({
             tone="red"
             value={peopleIsolated(worldState).toLocaleString()}
           />
-          <MetricRow
+          <MetricCard
             activeIndex={activeIndex}
             current={hospitalAccess}
             icon="hospital"
@@ -189,10 +215,18 @@ export function IncidentSidebar({
 
       {nextIsolation ? (
         <section className="rail-section forecast-callout">
-          <h2>Next to isolate</h2>
-          <div className="forecast-body">
+          <div className="section-title-row">
+            <h2>Next key event</h2>
+            <span>{leadHours > 0 ? `in ${leadHours}h` : "now"}</span>
+          </div>
+          <button
+            className="forecast-body"
+            onClick={() =>
+              onSelect({ kind: "asset", id: nextIsolation.community_id })
+            }
+            type="button">
             <span className="forecast-clock">
-              <ShellIcon name="clock" size={15} />
+              <ShellIcon name="alert" size={15} />
             </span>
             <div>
               <strong>{names.get(nextIsolation.community_id)}</strong>
@@ -202,33 +236,55 @@ export function IncidentSidebar({
                 current assumptions.
               </span>
             </div>
-          </div>
+            <span className="forecast-mark" aria-hidden="true">
+              <ShellIcon name="chevron" size={12} />
+            </span>
+          </button>
         </section>
       ) : null}
 
       <section className="rail-section hazards-section">
         <div className="section-title-row">
-          <h2>Top hazards</h2>
+          <h2>Key hazards</h2>
           <span>{worldState.hazards.length} active</span>
         </div>
         {worldState.hazards.length > 0 ? (
           <div className="hazard-list">
-            {worldState.hazards.slice(0, 6).map((hazard) => (
-              <article className={`hazard-item ${hazard.priority}`} key={hazard.hazard_id}>
-                <span className="hazard-symbol">
-                  <ShellIcon name={hazard.hazard_type === "community_isolated" ? "people" : "alert"} size={15} />
-                </span>
-                <div>
-                  <strong>{describeAsset(names, bootstrap, hazard.asset_id)}</strong>
-                  <span>{hazard.description ?? hazard.hazard_type.replaceAll("_", " ")}</span>
-                </div>
-                <em>{hazard.priority}</em>
-              </article>
-            ))}
+            {worldState.hazards.slice(0, 6).map((hazard) => {
+              const focused =
+                selection?.kind === "hazard" && selection.id === hazard.hazard_id;
+              return (
+                <button
+                  aria-pressed={focused}
+                  className={`hazard-item ${hazard.priority} ${focused ? "focused" : ""}`}
+                  key={hazard.hazard_id}
+                  onClick={() =>
+                    onSelect(
+                      focused ? null : { kind: "hazard", id: hazard.hazard_id },
+                    )
+                  }
+                  type="button"
+                >
+                  <span className="hazard-symbol">
+                    <ShellIcon
+                      name={hazard.hazard_type === "community_isolated" ? "people" : "alert"}
+                      size={14}
+                    />
+                  </span>
+                  <div>
+                    <strong>{describeAsset(names, bootstrap, hazard.asset_id)}</strong>
+                    <span>{hazard.description ?? hazard.hazard_type.replaceAll("_", " ")}</span>
+                  </div>
+                  <em>{hazard.priority}</em>
+                </button>
+              );
+            })}
           </div>
         ) : (
           <div className="quiet-state">
-            <ShellIcon name="shield" size={22} />
+            <span className="quiet-mark">
+              <ShellIcon name="shield" size={20} />
+            </span>
             <strong>No active route hazards</strong>
             <span>Advance the timeline to inspect modeled degradation.</span>
           </div>

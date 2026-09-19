@@ -2,15 +2,96 @@
 
 ## Curated flood depth surface
 
-`flood-polygons.geojson` is original synthetic demo geometry authored for this
-repository. It is not copied from an observed flood, remote-sensing product, or
-hydraulic model. The bands provide a deterministic visual surface for the four
-scenario frames and are explicitly marked `modeled_synthetic_demo`,
+`flood-polygons.geojson` is generated, not hand-authored. Regenerate it with:
+
+```bash
+npm run flood:generate
+```
+
+It is not copied from an observed flood, remote-sensing product, or hydraulic
+model, and remains explicitly marked `modeled_synthetic_demo`,
 `curated_synthetic_surface`, and `operational_use: false`.
+
+### How it is derived
+
+`scripts/generate-flood-surface.mjs` builds the bands from public elevation
+data rather than drawing them:
+
+1. AWS Terrarium DEM tiles covering the scenario extent are decoded to ground
+   elevation, pooled to roughly 30 m cells and lightly smoothed.
+2. Depressions are filled (priority-flood with an epsilon gradient) so every
+   cell drains, and D8 flow accumulation locates the river channel.
+3. Height above nearest drainage (HAND) gives each cell its height over that
+   channel, so a given river stage inundates the valley floor rather than
+   everything under an absolute elevation.
+4. Each frame's river stage is scaled from that frame's canonical peak depth in
+   `flood-frames.json`, and the resulting depth field is rescaled so its
+   deepest water equals that canonical peak exactly.
+5. `d3-contour` cuts the field into the same four depth bands the API contract
+   and the map legend already define.
+
+The terrain supplies the *shape*; `flood-frames.json` supplies the *depths* and
+the growth curve. Nothing here invents a depth value.
+
+One number is tuned rather than derived: `PEAK_STAGE_M` (default 4.0 m) sets
+how far the water spreads at full flood. The canonical depths are road-surface
+depths in centimetres, which on real terrain would inundate almost nothing, so
+the stage is scaled to the scenario's own progression. Override `PEAK_STAGE_M`
+or `CHANNEL_THRESHOLD` to retune without editing the script.
+
+### Reverting
+
+The original hand-authored surface is preserved at
+`flood-polygons.curated-v1.geojson` and can be restored at any time:
+
+```bash
+npm run flood:restore
+```
+
+Both surfaces satisfy the fixture contract and the scenario test suite.
+
+### Boundaries
 
 The polygons are not inputs to road closure, routing, isolation, or response
 plan scoring. Those results continue to use the asset-level depths in
 `flood-frames.json`.
+
+The DEM is [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/)
+(public domain / open data, no key required), used here only to shape a
+synthetic demonstration surface.
+
+## Road network geometry
+
+`road-network.geojson` is authored as twelve straight lines between abstract
+nodes. Over a satellite basemap that reads as a rectangle drawn on a city, so
+the drawn geometry is reshaped to follow real streets:
+
+```bash
+npm run network:snap
+```
+
+`scripts/snap-network-to-streets.mjs` reads the OpenStreetMap `roads` layer out
+of the basemap PMTiles archive the app already ships, builds a graph of street
+segments, snaps each scenario node to the nearest real street vertex (13–58 m
+in practice), and routes each edge along that graph. Bridge assets take only
+the stretch of their route that crosses the modeled flood corridor, trimmed to
+a ~200 m span, so a bridge is drawn as a bridge rather than as the whole drive.
+
+**Topology is unchanged.** Same edge IDs, same from/to nodes, same
+`baseline_travel_minutes`, closure thresholds and criticality. Routing scores
+edges from those fixture values and never reads geometry, so no domain result
+moves. Edges whose street route would be an implausible detour keep their
+straight line.
+
+The authored straight-line network and matching asset positions are preserved
+at `road-network.straight-v1.geojson` and `assets.straight-v1.geojson`:
+
+```bash
+npm run network:restore
+```
+
+Street geometry is © OpenStreetMap contributors (ODbL), read from the same
+archive documented under the basemap in the project README.
 
 ## Administrative context boundaries
 

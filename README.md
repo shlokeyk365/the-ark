@@ -96,16 +96,78 @@ back to a self-contained SVG schematic of the same derived state and says why,
 so the scenario stays inspectable offline and in CI. MapLibre is code-split, so
 that path stays light.
 
-Map layers follow the operator list: modeled depth bands, 24h forecast extent,
-roads, evacuation routes, hospitals and shelters, bridges, river
-gauges, alerts, community labels, and administrative context — plus satellite
-and 3D terrain toggles. River gauges are listed but disabled: the fixture has no
-gauge observations yet.
+Map layers follow the operator list: flood depth (current), the modeled +24h
+extent, roads and closures, active response routes, alternate plan routes,
+shelters and the hospital, bridges, river gauges, hazards, community labels, and
+administrative context. The basemap itself is a radio choice between the
+operational vector style and satellite imagery, with 3D terrain as a separate
+toggle. River gauges are listed but disabled: the fixture has no gauge
+observations yet, and alternate plan routes are off by default.
+
+The visual grammar is consistent across every layer:
+
+- **Shape carries entity type, colour carries status.** Communities are circles,
+  shelters houses, the hospital a cross, hazards triangles, closures a crossed
+  circle. A shelter that cannot be reached is still a house, just muted.
+- **Solid is current, dashed is modeled.** The current flood extent, the active
+  route and confirmed closures are solid; the +24h envelope and alternate plans
+  are dashed. Operator-injected state is amber, so an event the operator caused
+  never reads as an observation.
+- **Hazards are drawn on the thing that is hazardous.** A blocked road is
+  restyled along its own geometry with a heavier casing and a status label; a
+  failed bridge is marked on that span, not on a marker beside it.
+- **Detail arrives with zoom.** Far out you see the flood extent, the network,
+  communities and critical hazards; closer in, facility labels, closures and
+  routes; closest, depth bands, population and per-segment status.
+
+The OpenStreetMap basemap is deliberately restyled for operations: POI and
+address symbols are dropped, minor roads fade back and hold until z13, buildings
+wait for z15, and waterways are brightened rather than suppressed — the flood
+story is a river story. Place names stay legible throughout.
+
+Two things on the map move, and both move because the world state changed.
+Response teams travel the selected plan's routes, staggered so they do not run
+in lockstep, with their destination and ETA shown only for the focused route; a
+route that crosses a failed edge carries no team, because no team is driving it.
+Separately, a hazard that has just escalated to critical pulses for about five
+seconds and then stops — one at a time, never on first load, and cancelled early
+if the operator selects it. Hazard ids carry the world-state version and so
+change every frame; escalation is therefore tracked per asset, which across a
+full nine-frame baseline fires twice. Both effects share one animation frame
+loop that parks itself when idle, and neither runs under
+`prefers-reduced-motion` — teams are placed but held still.
+
+Clicking a community, road, bridge or hazard — on the map or in either rail —
+enters incident focus. The camera frames the affected area, everything outside
+the incident dims, and a panel states the affected population, the nearest
+reachable facility, the route time and what has become unreachable. "Exit focus"
+restores the full picture.
 
 The administrative boundaries are Kathmandu and Lalitpur Metropolitan City,
 visual context only — see `data/scenarios/kantipur-river/SOURCES.md` for
-provenance and licensing. The flood surface is a curated synthetic depth-band
-fixture, not a hydraulic solve or operational forecast. Route safety still
+provenance and licensing.
+
+The flood surface is generated from public elevation data rather than drawn.
+`npm run flood:generate` decodes AWS Terrarium DEM tiles over the scenario
+extent, fills depressions, routes D8 flow to find the channel, computes height
+above nearest drainage, and contours the resulting depth field into the four
+contract depth bands. Terrain gives the bands their shape; the canonical
+per-edge depths in `flood-frames.json` give them their depths and their growth
+curve, so every frame carries a surface and the water spreads along the valley
+instead of blinking between hand-drawn stills. It is still a synthetic
+demonstration surface, not a hydraulic solve or operational forecast.
+
+The previous hand-authored surface is kept at
+`flood-polygons.curated-v1.geojson`; `npm run flood:restore` puts it back, and
+both pass the fixture contract and test suite.
+
+The road network is reshaped the same way. `npm run network:snap` reads the
+OpenStreetMap `roads` layer out of the basemap archive and routes each scenario
+edge along real street centrelines, so the network follows the city instead of
+drawing a rectangle over it; bridges take only the ~200 m of their route that
+crosses the water. Topology, travel times and every domain result are unchanged
+— routing never reads geometry. `npm run network:restore` brings the authored
+straight lines back. Route safety still
 comes from the canonical per-edge flood conditions; see
 `docs/scenario-contract.md` for the separation of concerns.
 
