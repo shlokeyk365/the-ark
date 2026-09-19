@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "scenario_id": "kantipur-river-v1",
+  "data_classification": "modeled_synthetic_demo",
+  "operational_use": false,
+  "events": [
+    {
+      "event_id": "ktp-event-bridge-02-failure",
+      "event_type": "bridge_failure",
+      "effective_at_hours": 12,
+      "occurred_at": "2026-09-19T00:00:00Z",
+      "source_type": "operator_injected",
+      "reliability": "confirmed",
+      "description": "Inject failure of East River Bridge after the southern corridor has closed.",
+      "changes": [
+        {
+          "change_type": "force_close_edge",
+          "edge_id": "ktp-bridge-02",
+          "reason": "Operator-injected structural bridge failure"
+        }
+      ]
+    }
+  ]
+}

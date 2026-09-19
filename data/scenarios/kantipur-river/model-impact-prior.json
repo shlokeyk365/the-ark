@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "1.0",
+  "eventId": "nakkhu-2024",
+  "modelPurpose": "historical_event_impact_prior",
+  "input": {
+    "year": 2024,
+    "month": 9,
+    "day": 28,
+    "region": "Central Region",
+    "district": "Lalitpur",
+    "cause": "HEAVY RAINS",
+    "latitude": 27.64646,
+    "longitude": 85.31348,
+    "district_area_sq_km": 397.01,
+    "elevation_m": 1963.0,
+    "terrain_relief_m": 1139.0,
+    "households_2011": 109797.0,
+    "population_2011": 468132.0,
+    "population_density_2011": 1179.1441,
+    "rainfall_1d_mm": 52.03,
+    "rainfall_3d_mm": 185.25,
+    "rainfall_7d_mm": 291.41,
+    "rainfall_30d_mm": 347.78,
+    "rainy_days_7d": 6.0,
+    "rainfall_7d_anomaly": 11.184,
+    "sub_basin_area_sq_km": 9894.8,
+    "upstream_area_sq_km": 9894.8,
+    "distance_to_outlet_km": 637.4,
+    "basin_order": 4.0,
+    "nearest_river_distance_km": 0.0263,
+    "river_average_discharge_cms": 2.078,
+    "river_upstream_area_sq_km": 57.3,
+    "river_strahler_order": 2.0,
+    "local_elevation_m": 1302.0,
+    "local_relief_m": 53.0
+  },
+  "impactProbabilities": {
+    "casualty_or_missing": 0.489031,
+    "housing_damage": 0.335107,
+    "transport_disruption": 0.130326,
+    "severe_impact": 0.364804
+  },
+  "trainingMetadata": {
+    "model_type": "catboost",
+    "record_count": 4869,
+    "event_count": 4869,
+    "district_group_count": 75,
+    "basin_group_count": 17,
+    "year_min": 1971,
+    "year_max": 2023,
+    "source_names": [
+      "Government of Nepal BIPAD Portal",
+      "UNDRR DesInventar Nepal"
+    ],
+    "feature_policy": "city and district identity excluded from predictors",
+    "holdout_policy": "No event from 2024 or later is allowed in training.",
+    "validation_gate": {
+      "deployment_ready": false,
+      "status": "research_only",
+      "policy": "Every target must achieve ROC-AUC >= 0.65 and positive MSE skill in every configured grouped evaluation.",
+      "targets": {
+        "casualty_or_missing": {
+          "year_grouped_roc_auc": 0.657,
+          "district_grouped_roc_auc": 0.7075,
+          "basin_grouped_roc_auc": 0.6941,
+          "storm_grouped_roc_auc": 0.6955,
+          "positive_mse_skill_in_all": true,
+          "passes": true
+        },
+        "housing_damage": {
+          "year_grouped_roc_auc": 0.6278,
+          "district_grouped_roc_auc": 0.6838,
+          "basin_grouped_roc_auc": 0.6888,
+          "storm_grouped_roc_auc": 0.6554,
+          "positive_mse_skill_in_all": true,
+          "passes": false
+        },
+        "transport_disruption": {
+          "year_grouped_roc_auc": 0.6548,
+          "district_grouped_roc_auc": 0.7213,
+          "basin_grouped_roc_auc": 0.6882,
+          "storm_grouped_roc_auc": 0.6907,
+          "positive_mse_skill_in_all": true,
+          "passes": true
+        },
+        "severe_impact": {
+          "year_grouped_roc_auc": 0.6333,
+          "district_grouped_roc_auc": 0.6824,
+          "basin_grouped_roc_auc": 0.6791,
+          "storm_grouped_roc_auc": 0.6561,
+          "positive_mse_skill_in_all": true,
+          "passes": false
+        }
+      }
+    }
+  },
+  "limitations": [
+    "These probabilities do not predict street-level flood extent or depth.",
+    "The historical records contain reporting bias and incomplete zero values.",
+    "Counterfactual rescue outcomes cannot be validated by this model."
+  ]
+}

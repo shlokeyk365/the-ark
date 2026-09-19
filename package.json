@@ -2,10 +2,17 @@
   "name": "the-ark",
   "private": true,
   "workspaces": [
-    "apps/web"
+    "apps/web",
+    "packages/shared-types"
   ],
   "scripts": {
     "dev": "npm --workspace apps/web run dev",
-    "build": "npm --workspace apps/web run build"
+    "dev:api": "python3 -m uvicorn apps.api.main:app --reload",
+    "dev:web": "npm --prefix apps/web run dev",
+    "build": "npm --workspace apps/web run build",
+    "build:web": "npm --prefix apps/web run build",
+    "typecheck:web": "npm --prefix apps/web run typecheck",
+    "test:fixtures": "python3 -m pytest tests/test_kantipur_scenario.py",
+    "basemap": "./scripts/fetch-basemap.sh"
   }
 }

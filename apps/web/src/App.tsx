@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { App as DashboardApp } from "./DashboardApp";
 import {
   ArrowDown,
   ArrowUpRight,
@@ -53,7 +54,7 @@ function Brand() {
   );
 }
 
-function App() {
+function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -75,7 +76,7 @@ function App() {
             ))}
           </nav>
           <div className="hidden lg:block">
-            <TechnicalButton href="#command" secondary>
+            <TechnicalButton href="/command-center" secondary>
               Enter command center
             </TechnicalButton>
           </div>
@@ -245,7 +246,7 @@ function App() {
               Enter a live environment where forecasts, infrastructure dependencies, and response assets resolve into one actionable view.
             </p>
             <div className="mt-8">
-              <TechnicalButton href="#top">Enter command center</TechnicalButton>
+              <TechnicalButton href="/command-center">Enter command center</TechnicalButton>
             </div>
           </div>
         </div>
@@ -267,6 +268,10 @@ function App() {
       </footer>
     </main>
   );
+}
+
+function App() {
+  return window.location.pathname === "/command-center" ? <DashboardApp /> : <LandingPage />;
 }
 
 export default App;

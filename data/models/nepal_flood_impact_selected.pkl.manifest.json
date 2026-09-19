@@ -1,0 +1,106 @@
+{
+  "model_type": "catboost",
+  "artifact": "nepal_flood_impact_selected.pkl.gz",
+  "feature_encoder": {
+    "policy": "city_identity_excluded_v1",
+    "regions": [
+      "Central Region",
+      "Eastern Region",
+      "Far Western Region",
+      "Mid-Western Region",
+      "Western Region"
+    ],
+    "causes": [
+      "DESIGN ERROR",
+      "FLOOD",
+      "HEAVY RAINS",
+      "HUMAN MISTAKE",
+      "LANDSLIDE",
+      "OTHER",
+      "RAIN",
+      "TECHNICAL FAILU",
+      "UNKNOWN"
+    ],
+    "numeric_medians": {
+      "latitude": 27.538177,
+      "longitude": 85.304584,
+      "district_area_sq_km": 1624.09,
+      "elevation_m": 208.0,
+      "terrain_relief_m": 262.0,
+      "households_2011": 106668.0,
+      "population_2011": 552583.0,
+      "population_density_2011": 260.439018701497,
+      "rainfall_1d_mm": 7.16,
+      "rainfall_3d_mm": 29.71,
+      "rainfall_7d_mm": 68.805,
+      "rainfall_30d_mm": 236.245,
+      "rainy_days_7d": 6.0,
+      "rainfall_7d_anomaly": 1.503,
+      "sub_basin_area_sq_km": 14880.1,
+      "upstream_area_sq_km": 25313.6,
+      "distance_to_outlet_km": 808.3,
+      "basin_order": 3.0,
+      "nearest_river_distance_km": 0.7756,
+      "river_average_discharge_cms": 0.997,
+      "river_upstream_area_sq_km": 32.1,
+      "river_strahler_order": 1.0,
+      "local_elevation_m": 208.0,
+      "local_relief_m": 40.0
+    }
+  },
+  "training_metadata": {
+    "model_type": "catboost",
+    "record_count": 4869,
+    "event_count": 4869,
+    "district_group_count": 75,
+    "basin_group_count": 17,
+    "year_min": 1971,
+    "year_max": 2023,
+    "source_names": [
+      "Government of Nepal BIPAD Portal",
+      "UNDRR DesInventar Nepal"
+    ],
+    "feature_policy": "city and district identity excluded from predictors",
+    "holdout_policy": "No event from 2024 or later is allowed in training.",
+    "validation_gate": {
+      "deployment_ready": false,
+      "status": "research_only",
+      "policy": "Every target must achieve ROC-AUC >= 0.65 and positive MSE skill in every configured grouped evaluation.",
+      "targets": {
+        "casualty_or_missing": {
+          "year_grouped_roc_auc": 0.657,
+          "district_grouped_roc_auc": 0.7075,
+          "basin_grouped_roc_auc": 0.6941,
+          "storm_grouped_roc_auc": 0.6955,
+          "positive_mse_skill_in_all": true,
+          "passes": true
+        },
+        "housing_damage": {
+          "year_grouped_roc_auc": 0.6278,
+          "district_grouped_roc_auc": 0.6838,
+          "basin_grouped_roc_auc": 0.6888,
+          "storm_grouped_roc_auc": 0.6554,
+          "positive_mse_skill_in_all": true,
+          "passes": false
+        },
+        "transport_disruption": {
+          "year_grouped_roc_auc": 0.6548,
+          "district_grouped_roc_auc": 0.7213,
+          "basin_grouped_roc_auc": 0.6882,
+          "storm_grouped_roc_auc": 0.6907,
+          "positive_mse_skill_in_all": true,
+          "passes": true
+        },
+        "severe_impact": {
+          "year_grouped_roc_auc": 0.6333,
+          "district_grouped_roc_auc": 0.6824,
+          "basin_grouped_roc_auc": 0.6791,
+          "storm_grouped_roc_auc": 0.6561,
+          "positive_mse_skill_in_all": true,
+          "passes": false
+        }
+      }
+    }
+  },
+  "warning": "Only load this pickle from the trusted project repository."
+}
