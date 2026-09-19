@@ -400,3 +400,22 @@ and contributions, timeline events, violations, and nonviability reasons:
 
 Here the recommendation follows the plan-ID tie-breaker, not superior outcomes.
 Scores remain operating-priority comparisons, never confidence or probabilities.
+
+## Nepal Nakkhu demonstration
+
+The versioned fixture is
+`data/scenarios/kantipur-river/nepal_nakkhu_demo_v1.json`. From the repository root:
+
+```powershell
+& .\apps\api\.venv\Scripts\python.exe .\apps\api\scripts\run_nepal_demo.py
+```
+
+This offline runner calls the same orchestration function as the API, without a
+live service. Add `--output PATH` to save the full response. See the
+[scenario README](../../data/scenarios/kantipur-river/README.md) for historical
+sources, explicit synthetic assumptions, ranked demo output, and API commands.
+
+This scenario is a synthetic operational reconstruction inspired by the September
+2024 Nakkhu River flood near Kantipur Colony and Nakhipot, Lalitpur, Nepal. Exact
+responder positions, population counts, routes, travel times, closure times, and
+outcomes are demonstration assumptions rather than verified historical records.
