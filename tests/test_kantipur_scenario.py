@@ -414,6 +414,33 @@ def test_context_boundaries_flagged_as_domain_input_are_rejected() -> None:
         )
 
 
+def test_flood_polygon_simulation_time_must_match_its_frame() -> None:
+    """A polygon repeats its frame's simulation time, so it can drift from it.
+
+    This rule was silently lost once already: a merge duplicated the validator
+    and the copy that carried this check was shadowed by the one that did not.
+    Nothing failed, because a dead function raises no errors.
+    """
+
+    service = _service()
+    drifted = copy.deepcopy(service.flood_polygons)
+    drifted["features"][0]["properties"]["simulation_time_hours"] = 999
+
+    with pytest.raises(ScenarioValidationError, match="mismatched simulation time"):
+        validate_scenario_fixtures(
+            service.manifest,
+            service.assets,
+            service.network,
+            service.flood_frames,
+            drifted,
+            service.response_plans,
+            service.event_stream,
+            service.context_boundaries,
+            service.impact_prior,
+            service.prediction_pings,
+        )
+
+
 def test_flood_polygon_contract_rejects_unknown_frames_and_open_rings() -> None:
     service = _service()
 

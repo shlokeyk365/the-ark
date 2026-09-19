@@ -155,107 +155,6 @@ def _validate_flood_polygons(
     frames: Iterable[Mapping[str, Any]],
     frame_ids: set[str],
 ) -> None:
-    """Validate display-only keyframes without treating them as routing truth."""
-
-    if flood_polygons["data_classification"] != "modeled_synthetic_demo":
-        raise ScenarioValidationError(
-            "Flood polygons must be classified modeled_synthetic_demo"
-        )
-    if flood_polygons["operational_use"]:
-        raise ScenarioValidationError("Flood polygons are not operational data")
-    if flood_polygons["source"]["source_type"] != "modeled_input":
-        raise ScenarioValidationError(
-            "Flood polygons must identify modeled input provenance"
-        )
-
-    features = flood_polygons["features"]
-    _assert_unique((feature["id"] for feature in features), "flood polygon ID")
-    bands_by_frame: dict[str, list[tuple[float, float]]] = {}
-    frames_by_id = {frame["frame_id"]: frame for frame in frames}
-
-    for feature in features:
-        properties = feature["properties"]
-        if properties["id"] != feature["id"]:
-            raise ScenarioValidationError(
-                f"Flood polygon {feature['id']} must repeat its feature ID in properties"
-            )
-        frame_id = properties["frame_id"]
-        if frame_id not in frame_ids:
-            raise ScenarioValidationError(
-                f"Flood polygon {feature['id']} references unknown frame {frame_id}"
-            )
-        expected_time = float(frames_by_id[frame_id]["simulation_time_hours"])
-        if float(properties["simulation_time_hours"]) != expected_time:
-            raise ScenarioValidationError(
-                f"Flood polygon {feature['id']} has a mismatched simulation time"
-            )
-        depth_min = float(properties["depth_min_m"])
-        depth_max = float(properties["depth_max_m"])
-        if depth_min < 0 or depth_max <= depth_min:
-            raise ScenarioValidationError(
-                f"Flood polygon {feature['id']} has an invalid depth range"
-            )
-        if properties["surface_kind"] != "curated_synthetic_surface":
-            raise ScenarioValidationError(
-                f"Flood polygon {feature['id']} must disclose curated synthetic provenance"
-            )
-        bands_by_frame.setdefault(frame_id, []).append((depth_min, depth_max))
-
-        rings = feature["geometry"]["coordinates"]
-        if not rings:
-            raise ScenarioValidationError(f"Flood polygon {feature['id']} has no rings")
-        for ring in rings:
-            if len(ring) < 4 or ring[0] != ring[-1]:
-                raise ScenarioValidationError(
-                    f"Flood polygon {feature['id']} must use closed rings"
-                )
-            if any(
-                not (80 <= longitude <= 90 and 25 <= latitude <= 31)
-                for longitude, latitude in ring
-            ):
-                raise ScenarioValidationError(
-                    f"Flood polygon {feature['id']} falls outside Nepal"
-                )
-
-    ordered_frames = sorted(
-        frames,
-        key=lambda frame: float(frame["simulation_time_hours"]),
-    )
-    required_keyframes = {
-        ordered_frames[0]["frame_id"],
-        ordered_frames[-1]["frame_id"],
-    }
-    if not required_keyframes.issubset(bands_by_frame):
-        raise ScenarioValidationError(
-            "Flood polygon keyframes must cover the first and last timeline frames"
-        )
-
-    for frame_id, bands in bands_by_frame.items():
-        ordered = sorted(set(bands))
-        if ordered[0][0] != 0:
-            raise ScenarioValidationError(
-                f"Flood depth bands for {frame_id} must begin at 0 m"
-            )
-        for previous, current in zip(ordered, ordered[1:]):
-            if current[0] != previous[1]:
-                raise ScenarioValidationError(
-                    f"Flood depth bands for {frame_id} must be contiguous"
-                )
-        peak_depth = max(
-            float(condition["flood_depth_m"])
-            for condition in frames_by_id[frame_id]["edge_conditions"]
-        )
-        if ordered[-1][1] < peak_depth:
-            raise ScenarioValidationError(
-                f"Flood depth bands for {frame_id} do not cover the frame peak"
-            )
-
-
-def _validate_flood_polygons(
-    flood_polygons: Mapping[str, Any],
-    frames: Iterable[Mapping[str, Any]],
-    frame_ids: set[str],
-) -> None:
     """Validate the synthetic display surface without treating it as routing truth."""
 
     if flood_polygons["data_classification"] != "modeled_synthetic_demo":
@@ -269,6 +168,9 @@ def _validate_flood_polygons(
 
     features = flood_polygons["features"]
     _assert_unique((feature["id"] for feature in features), "flood polygon ID")
+    # `frames` may be any iterable, so materialise it once: it is read both in
+    # the per-feature loop below and again in the per-frame checks after it.
+    frames_by_id = {frame["frame_id"]: frame for frame in frames}
     bands_by_frame: dict[str, list[tuple[float, float]]] = {
         frame_id: [] for frame_id in frame_ids
     }
@@ -283,6 +185,14 @@ def _validate_flood_polygons(
         if frame_id not in frame_ids:
             raise ScenarioValidationError(
                 f"Flood polygon {feature['id']} references unknown frame {frame_id}"
+            )
+        # A polygon carries its own simulation time so the frontend can label it
+        # without a lookup. That makes it a second copy of the truth, and a copy
+        # that can drift, so it is checked against the frame it names.
+        expected_time = float(frames_by_id[frame_id]["simulation_time_hours"])
+        if float(properties["simulation_time_hours"]) != expected_time:
+            raise ScenarioValidationError(
+                f"Flood polygon {feature['id']} has a mismatched simulation time"
             )
         depth_min = float(properties["depth_min_m"])
         depth_max = float(properties["depth_max_m"])
@@ -312,7 +222,6 @@ def _validate_flood_polygons(
                     f"Flood polygon {feature['id']} falls outside Nepal"
                 )
 
-    frames_by_id = {frame["frame_id"]: frame for frame in frames}
     for frame_id, bands in bands_by_frame.items():
         if not bands:
             raise ScenarioValidationError(
