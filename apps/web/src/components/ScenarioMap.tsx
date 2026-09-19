@@ -26,6 +26,8 @@ interface ScenarioMapProps {
   /* Incident focus, shared with the rails and the asset panel. */
   selection: MapSelection | null;
   onSelect: (selection: MapSelection | null) => void;
+  /** Landing embed: same derived map, without stealing page scroll. */
+  embedded?: boolean;
 }
 
 function BasemapLoading() {
@@ -54,6 +56,7 @@ export function ScenarioMap({
   focusedRouteEdgeIds,
   selection,
   onSelect,
+  embedded = false,
 }: ScenarioMapProps) {
   const [failure, setFailure] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
@@ -104,6 +107,7 @@ export function ScenarioMap({
     <Suspense fallback={<BasemapLoading />}>
       <MapLibreScenarioMap
         bootstrap={bootstrap}
+        embedded={embedded}
         focusedRouteEdgeIds={focusedRouteEdgeIds}
         horizonState={horizonState}
         onFailure={onFailure}

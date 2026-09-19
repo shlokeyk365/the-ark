@@ -1,12 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { App as DashboardApp } from "./DashboardApp";
+import { LandingScenarioMap } from "./components/LandingScenarioMap";
 import {
   ArrowDown,
   ArrowUpRight,
-  Check,
-  Crosshair,
   Menu,
-  Radio,
   X,
 } from "lucide-react";
 
@@ -57,8 +55,13 @@ function Brand() {
 function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
 
+  useEffect(() => {
+    document.documentElement.classList.add("landing-mode");
+    return () => document.documentElement.classList.remove("landing-mode");
+  }, []);
+
   return (
-    <main id="top" className="overflow-hidden bg-[#050607] text-[#f1f3f2]">
+    <main id="top" className="landing-page bg-[#050607] text-[#f1f3f2]">
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#050607]/65 backdrop-blur-md">
         <div className="mx-auto flex h-[72px] max-w-[1600px] items-center justify-between px-5 sm:px-8 lg:px-16">
           <Brand />
@@ -192,43 +195,8 @@ function LandingPage() {
             </p>
           </div>
 
-          <div className="model-frame relative mt-14 aspect-[16/9] min-h-[520px] overflow-hidden border border-[#364049] bg-[#050607]">
-            <img
-              src="/assets/ark-model-map.jpg"
-              alt="ARK operational map of a river basin with infrastructure and response asset overlays"
-              className="absolute inset-0 size-full object-cover opacity-70"
-            />
-            <div className="map-shade absolute inset-0" />
-
-            <div className="absolute left-4 top-4 w-[min(280px,calc(100%-2rem))] border border-[#3d4952] bg-[#11171b]/95 p-4 sm:left-7 sm:top-7">
-              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[#87aabc]">[ Telemetry feed ]</p>
-              <div className="mt-3 border-t border-[#38434b] pt-3 font-mono text-[10px] uppercase text-[#aab0b4]">
-                <div className="flex justify-between gap-5"><span>Rain monitor</span><span className="text-[#9fc2d2]">42.1 mm/h</span></div>
-                <div className="mt-2 flex justify-between gap-5"><span>Hydro sensors</span><span className="text-[#d2d7da]">92% cap</span></div>
-              </div>
-            </div>
-
-            <div className="absolute right-7 top-7 hidden w-[250px] border border-[#3d4952] bg-[#11171b]/95 p-4 md:block">
-              {["Precipitation model", "Infrastructure status", "Active dispatch vehicles"].map((item, index) => (
-                <div key={item} className="flex items-center gap-3 py-2 text-xs text-[#d9dcde]">
-                  <span className={`grid size-4 place-items-center border ${index < 2 ? "border-[#7396a8] bg-[#7396a8]" : "border-[#56616a]"}`}>
-                    {index < 2 && <Check className="size-3 text-[#080a0c]" />}
-                  </span>
-                  {item}
-                </div>
-              ))}
-            </div>
-
-            <div className="absolute bottom-5 left-4 right-4 flex flex-wrap items-center justify-between gap-3 sm:bottom-7 sm:left-7 sm:right-7">
-              <div className="flex items-center gap-3 border border-[#3d4952] bg-[#11171b]/95 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[#b7bdc1]">
-                <Crosshair className="size-4 text-[#87aabc]" />
-                47.2341 N / 122.3127 W
-              </div>
-              <div className="flex items-center gap-2 border border-[#3d4952] bg-[#11171b]/95 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[#aab1b5]">
-                <Radio className="size-4 text-[#87aabc]" />
-                Basin model live
-              </div>
-            </div>
+          <div className="model-frame landing-map-frame relative mt-14 aspect-[16/9] min-h-[520px] overflow-hidden border border-[#364049] bg-[#050607]">
+            <LandingScenarioMap />
           </div>
         </div>
       </section>

@@ -18,7 +18,11 @@ export function TopBar({
     <header className="topbar">
       <div className="brand" aria-label="the ark flood operations">
         <span className="brand-mark">
-          <ShellIcon name="waves" size={22} />
+          <img
+            src="/assets/ark-longboat-logo.png"
+            alt=""
+            className="brand-logo"
+          />
         </span>
         <span className="brand-name">ARK</span>
         <span className="brand-divider">/</span>

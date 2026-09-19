@@ -77,8 +77,10 @@ import {
 } from "./scenarioSources";
 
 const FIT_PADDING = { top: 78, right: 230, bottom: 74, left: 70 };
+const EMBED_FIT_PADDING = { top: 56, right: 28, bottom: 56, left: 28 };
 /** Focus keeps clear of the focus panel (left) and the layers panel (right). */
 const FOCUS_PADDING = { top: 62, right: 210, bottom: 92, left: 268 };
+const EMBED_FOCUS_PADDING = { top: 56, right: 28, bottom: 72, left: 28 };
 const LOAD_TIMEOUT_MS = 15000;
 
 type Padding = { top: number; right: number; bottom: number; left: number };
@@ -269,6 +271,8 @@ interface MapLibreScenarioMapProps {
   selection: MapSelection | null;
   onSelect: (selection: MapSelection | null) => void;
   onFailure: (reason: string) => void;
+  /** Landing embed: cooperative scroll and no command-center fullscreen. */
+  embedded?: boolean;
 }
 
 const DEFAULT_LAYERS = Object.fromEntries(
@@ -287,6 +291,7 @@ export function MapLibreScenarioMap({
   selection,
   onSelect,
   onFailure,
+  embedded = false,
 }: MapLibreScenarioMapProps) {
   const cardRef = useRef<HTMLElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -294,7 +299,7 @@ export function MapLibreScenarioMap({
   const animatorRef = useRef<MapAnimator | null>(null);
   const predictionPopupRef = useRef<maplibregl.Popup | null>(null);
   const [ready, setReady] = useState(false);
-  const [layersOpen, setLayersOpen] = useState(true);
+  const [layersOpen, setLayersOpen] = useState(!embedded);
   const [basemapMode, setBasemapMode] = useState<"operational" | "satellite">(
     "satellite",
   );
@@ -304,7 +309,9 @@ export function MapLibreScenarioMap({
   const [layers, setLayers] = useState<Record<LayerKey, boolean>>(DEFAULT_LAYERS);
 
   // A rail-focused destination overrides the selected plan's own route set.
-  const fullscreen = useFullscreen(cardRef);
+  const fullscreen = useFullscreen(cardRef, "f", !embedded);
+  const viewPadding = embedded ? EMBED_FIT_PADDING : FIT_PADDING;
+  const focusPadding = embedded ? EMBED_FOCUS_PADDING : FOCUS_PADDING;
 
   const routeEdgeIds = useMemo(
     () =>
@@ -389,9 +396,10 @@ export function MapLibreScenarioMap({
         style: buildStyle(),
         bounds: scenarioBounds(bootstrap),
         fitBoundsOptions: {
-          padding: fitPadding(container.getBoundingClientRect(), FIT_PADDING),
+          padding: fitPadding(container.getBoundingClientRect(), viewPadding),
         },
         attributionControl: false,
+        cooperativeGestures: embedded,
       });
     } catch (initError) {
       failureRef.current(
@@ -482,7 +490,7 @@ export function MapLibreScenarioMap({
         // layout has settled, so the padding clamp has nothing to measure then
         // and the scenario ends up framed at half the zoom it deserves.
         map.fitBounds(scenarioBounds(bootstrap), {
-          padding: fitPadding(canvas.getBoundingClientRect(), FIT_PADDING),
+          padding: fitPadding(canvas.getBoundingClientRect(), viewPadding),
           duration: 0,
         });
       }, 250);
@@ -496,7 +504,7 @@ export function MapLibreScenarioMap({
       mapRef.current = null;
       map.remove();
     };
-  }, [bootstrap]);
+  }, [bootstrap, embedded, viewPadding]);
 
   /* ------------------------------------------------------- hover + click */
 
@@ -1005,7 +1013,7 @@ export function MapLibreScenarioMap({
     }
 
     map.fitBounds(bounds, {
-      padding: fitPadding(map.getCanvas().getBoundingClientRect(), FOCUS_PADDING),
+      padding: fitPadding(map.getCanvas().getBoundingClientRect(), focusPadding),
       duration: 850,
       maxZoom: 15.5,
     });
@@ -1087,10 +1095,10 @@ export function MapLibreScenarioMap({
     const map = mapRef.current;
     if (!map) return;
     map.fitBounds(scenarioBounds(bootstrap), {
-      padding: fitPadding(map.getCanvas().getBoundingClientRect(), FIT_PADDING),
+      padding: fitPadding(map.getCanvas().getBoundingClientRect(), viewPadding),
       duration: 900,
     });
-  }, [bootstrap, onSelect]);
+  }, [bootstrap, onSelect, viewPadding]);
 
   const toggleLayer = (key: LayerKey) =>
     setLayers((current) => ({ ...current, [key]: !current[key] }));
@@ -1100,7 +1108,7 @@ export function MapLibreScenarioMap({
   return (
     <section
       aria-label="Kantipur River scenario map"
-      className={`map-card maplibre-card ${focus ? "focused" : ""}`}
+      className={`map-card maplibre-card ${embedded ? "embedded" : ""} ${focus ? "focused" : ""}`}
       ref={cardRef}
     >
       <div className="map-canvas" ref={containerRef} />
@@ -1122,15 +1130,17 @@ export function MapLibreScenarioMap({
             : `+${worldState.simulation_time_hours}h modeled`}
         </span>
         <span className="state-version">{worldState.world_state_version}</span>
-        <button
+        {embedded ? null : (
+          <button
             className={`fullscreen-toggle ${fullscreen.active ? "active" : ""}`}
             onClick={fullscreen.toggle}
             title={fullscreen.active ? "Exit fullscreen (F)" : "Fullscreen map (F)"}
             type="button"
           >
             <ShellIcon name={fullscreen.active ? "minus" : "plus"} size={11} />
-          <kbd>F</kbd>
-        </button>
+            <kbd>F</kbd>
+          </button>
+        )}
       </div>
 
       <div className={`map-layers ${layersOpen ? "open" : "closed"}`}>
