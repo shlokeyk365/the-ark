@@ -545,6 +545,17 @@ export function MapLibreScenarioMap({
             : `+${worldState.simulation_time_hours}h modeled`}
         </span>
         <span className="state-version">{worldState.world_state_version}</span>
+        <button
+          className="map-dimension-toggle"
+          type="button"
+          onClick={() => setTerrain3d((enabled) => !enabled)}
+          aria-label={`Switch to ${terrain3d ? "2D" : "3D"} map view`}
+          aria-pressed={terrain3d}
+          title={`Switch to ${terrain3d ? "2D" : "3D"} map view`}
+        >
+          <span className={!terrain3d ? "selected" : ""}>2D</span>
+          <span className={terrain3d ? "selected" : ""}>3D</span>
+        </button>
       </div>
 
       <div className={`map-layers ${layersOpen ? "open" : "closed"}`}>

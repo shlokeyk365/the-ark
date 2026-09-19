@@ -862,6 +862,45 @@ input:focus-visible,
   font-weight: 500;
 }
 
+.map-dimension-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 3px;
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  background: rgba(4, 11, 18, 0.91);
+  border: 1px solid rgba(72, 139, 186, 0.4);
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(10px);
+}
+
+.map-dimension-toggle span {
+  min-width: 26px;
+  padding: 3px 6px;
+  text-align: center;
+  border-radius: 3px;
+  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.map-dimension-toggle span.selected {
+  color: #04111b;
+  background: var(--cyan-bright);
+  box-shadow: 0 0 10px rgba(85, 214, 255, 0.35);
+}
+
+.map-dimension-toggle:hover {
+  border-color: rgba(85, 214, 255, 0.72);
+}
+
+.map-dimension-toggle:focus-visible {
+  outline: 2px solid var(--cyan-bright);
+  outline-offset: 2px;
+}
+
 /* layers panel */
 
 .map-layers {
