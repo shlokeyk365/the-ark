@@ -9,6 +9,12 @@ It is not yet a street-level inundation model. Flood extent and water depth need
 a separate spatial training set built from rainfall, terrain, and satellite
 flood masks.
 
+The generated evaluation report includes year-grouped ROC-AUC confidence
+intervals, MSE, RMSE, Brier score, log loss, and comparisons against a
+fold-specific prevalence baseline. A validation gate labels the current model
+`research_only` unless every target reaches ROC-AUC 0.65 and improves on the
+baseline MSE.
+
 ## Reproduce the model
 
 ```bash

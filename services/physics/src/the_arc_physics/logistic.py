@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Mapping
+from typing import Any, Dict, Mapping, Optional
 
 import numpy as np
 
@@ -13,6 +13,7 @@ class BinaryLogisticRegression:
     learning_rate: float = 0.08
     iterations: int = 600
     l2: float = 0.02
+    class_weight: Optional[str] = None
 
     def fit(self, matrix: np.ndarray, labels: np.ndarray) -> "BinaryLogisticRegression":
         if matrix.ndim != 2 or labels.ndim != 1:
@@ -33,9 +34,14 @@ class BinaryLogisticRegression:
             self.weights_[0] = np.log(smoothed_rate / (1.0 - smoothed_rate))
             return self
 
-        positive_weight = len(labels) / (2.0 * positives)
-        negative_weight = len(labels) / (2.0 * negatives)
-        sample_weights = np.where(labels > 0.5, positive_weight, negative_weight)
+        if self.class_weight == "balanced":
+            positive_weight = len(labels) / (2.0 * positives)
+            negative_weight = len(labels) / (2.0 * negatives)
+            sample_weights = np.where(labels > 0.5, positive_weight, negative_weight)
+        elif self.class_weight is None:
+            sample_weights = np.ones(len(labels), dtype=float)
+        else:
+            raise ValueError("class_weight must be None or 'balanced'")
         denominator = sample_weights.sum()
 
         for _ in range(self.iterations):
@@ -60,6 +66,7 @@ class BinaryLogisticRegression:
             "learning_rate": self.learning_rate,
             "iterations": self.iterations,
             "l2": self.l2,
+            "class_weight": self.class_weight,
             "mean": self.mean_.tolist(),
             "scale": self.scale_.tolist(),
             "weights": self.weights_.tolist(),
@@ -71,6 +78,7 @@ class BinaryLogisticRegression:
             learning_rate=float(value["learning_rate"]),
             iterations=int(value["iterations"]),
             l2=float(value["l2"]),
+            class_weight=value.get("class_weight"),
         )
         model.mean_ = np.asarray(value["mean"], dtype=float)
         model.scale_ = np.asarray(value["scale"], dtype=float)

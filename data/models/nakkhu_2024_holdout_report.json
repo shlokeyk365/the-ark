@@ -1,31 +1,35 @@
 {
   "holdout_id": "nakkhu-2024",
-  "classification_accuracy_percent": 50.0,
-  "probabilistic_match_percent": 75.03,
+  "classification_accuracy_percent": 75.0,
+  "probabilistic_match_percent": 63.36,
+  "mean_squared_error": 0.3664,
+  "root_mean_squared_error": 0.6053,
+  "roc_auc": null,
+  "roc_auc_note": "ROC-AUC is undefined for one event whose four observed labels are all positive.",
   "components": {
     "casualty_or_missing": {
-      "probability": 0.671789,
+      "probability": 0.508687,
       "predicted_label": 1,
       "actual_label": 1,
       "correct": true
     },
     "housing_damage": {
-      "probability": 0.786653,
+      "probability": 0.739612,
       "predicted_label": 1,
       "actual_label": 1,
       "correct": true
     },
     "transport_disruption": {
-      "probability": 0.344443,
+      "probability": 0.044924,
       "predicted_label": 0,
       "actual_label": 1,
       "correct": false
     },
     "severe_impact": {
-      "probability": 0.355226,
-      "predicted_label": 0,
+      "probability": 0.505826,
+      "predicted_label": 1,
       "actual_label": 1,
-      "correct": false
+      "correct": true
     }
   },
   "interpretation": "This evaluates event-level impact categories. It does not measure street-level flood extent or prove counterfactual rescue outcomes."

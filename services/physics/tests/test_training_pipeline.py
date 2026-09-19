@@ -4,9 +4,12 @@ import unittest
 import zipfile
 from pathlib import Path
 
+import numpy as np
+
 from the_arc_physics.desinventar import read_desinventar_floods
 from the_arc_physics.features import EventInput
 from the_arc_physics.integration import simulation_impact_prior
+from the_arc_physics.metrics import binary_metrics, grouped_roc_auc_interval, roc_auc
 from the_arc_physics.model import MultiLabelFloodImpactModel
 from the_arc_physics.pipeline import evaluate_locked_holdout, grouped_cross_validation
 from the_arc_physics.records import FloodEventRecord, validate_training_records
@@ -63,6 +66,36 @@ class TrainingPipelineTests(unittest.TestCase):
         report = grouped_cross_validation(sample_records(), folds=5)
         self.assertEqual(report["overall"]["casualty_or_missing"]["support"], 120)
         self.assertIn("macro_f1", report["overall"])
+        self.assertIn("macro_roc_auc", report["overall"])
+        self.assertIn("prevalence_baseline", report["overall"]["housing_damage"])
+        self.assertIn("validation_gate", report)
+
+    def test_roc_auc_distinguishes_signal_from_guessing(self):
+        labels = np.asarray([0, 0, 1, 1], dtype=float)
+        self.assertEqual(roc_auc(labels, np.asarray([0.1, 0.2, 0.8, 0.9])), 1.0)
+        self.assertEqual(roc_auc(labels, np.asarray([0.9, 0.8, 0.2, 0.1])), 0.0)
+        self.assertEqual(roc_auc(labels, np.asarray([0.5, 0.5, 0.5, 0.5])), 0.5)
+
+    def test_probability_errors_are_reported(self):
+        metrics = binary_metrics(
+            np.asarray([0.0, 1.0]), np.asarray([0.25, 0.75])
+        )
+        self.assertEqual(metrics["mse"], 0.0625)
+        self.assertEqual(metrics["rmse"], 0.25)
+        self.assertEqual(metrics["brier"], metrics["mse"])
+
+    def test_grouped_auc_interval_is_deterministic(self):
+        labels = np.asarray([0, 1, 0, 1, 0, 1], dtype=float)
+        probabilities = np.asarray([0.1, 0.9, 0.2, 0.8, 0.3, 0.7])
+        groups = [2000, 2000, 2001, 2001, 2002, 2002]
+        first = grouped_roc_auc_interval(
+            labels, probabilities, groups, iterations=50
+        )
+        second = grouped_roc_auc_interval(
+            labels, probabilities, groups, iterations=50
+        )
+        self.assertEqual(first, second)
+        self.assertEqual(first["lower"], 1.0)
 
     def test_locked_holdout_returns_component_scores(self):
         model = MultiLabelFloodImpactModel.fit(sample_records())

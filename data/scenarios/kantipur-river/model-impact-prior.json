@@ -11,10 +11,10 @@
     "cause": "HEAVY RAINS"
   },
   "impactProbabilities": {
-    "casualty_or_missing": 0.671789,
-    "housing_damage": 0.786653,
-    "transport_disruption": 0.344443,
-    "severe_impact": 0.355226
+    "casualty_or_missing": 0.508687,
+    "housing_damage": 0.739612,
+    "transport_disruption": 0.044924,
+    "severe_impact": 0.505826
   },
   "trainingMetadata": {
     "record_count": 3953,
@@ -24,7 +24,34 @@
     "source_names": [
       "UNDRR DesInventar Nepal"
     ],
-    "holdout_policy": "No event from 2024 or later is allowed in training."
+    "holdout_policy": "No event from 2024 or later is allowed in training.",
+    "validation_gate": {
+      "deployment_ready": false,
+      "status": "research_only",
+      "policy": "Every target must have year-grouped ROC-AUC >= 0.65 and lower MSE than a fold-specific prevalence baseline.",
+      "targets": {
+        "casualty_or_missing": {
+          "roc_auc_at_least_0_65": false,
+          "positive_mse_skill": true,
+          "passes": false
+        },
+        "housing_damage": {
+          "roc_auc_at_least_0_65": false,
+          "positive_mse_skill": true,
+          "passes": false
+        },
+        "transport_disruption": {
+          "roc_auc_at_least_0_65": false,
+          "positive_mse_skill": true,
+          "passes": false
+        },
+        "severe_impact": {
+          "roc_auc_at_least_0_65": false,
+          "positive_mse_skill": false,
+          "passes": false
+        }
+      }
+    }
   },
   "limitations": [
     "These probabilities do not predict street-level flood extent or depth.",

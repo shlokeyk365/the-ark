@@ -3,7 +3,8 @@
 - `nepal_flood_impact_model.json`: fitted multi-label logistic models and feature
   encoder.
 - `nepal_flood_impact_report.json`: complete year-grouped cross-validation
-  results.
+  results, guessing baselines, ROC-AUC intervals, probability-error metrics,
+  and the deployment validation gate.
 - `nakkhu_2024_holdout_report.json`: locked holdout evaluation.
 
 The model and reports are JSON so that assumptions, learned coefficients,
