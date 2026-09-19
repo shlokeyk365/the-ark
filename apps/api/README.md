@@ -143,7 +143,7 @@ a responder has `node_id=null`, one route ID, one assignment, and a bounded load
 ### Intentionally unimplemented
 
 Other action types produce `unsupported_action` rejections. No random behavior,
-optimized dispatch, weighted scoring (`score=null`, `score_breakdown=[]`), MiroFish,
+optimized dispatch, robustness/Monte Carlo runs, MiroFish,
 LLM calls, real flood physics, live hazard updates, persistence, background jobs,
 or frontend changes. Results are not resumable checkpoints. No type checker is
 configured. Run `uv run pytest` for contracts, health, routing, validation,
@@ -205,3 +205,98 @@ population assumption still applies. Engine execution always revalidates actions
 planning feasibility cannot bypass that boundary. MiroFish can later be another
 proposal source behind the same deterministic validator, without permission to
 change physical state.
+
+## Transparent scoring and ranking
+
+Use `score_scenario_result(result)` to score one terminal result,
+`rank_scenario_results(results)` to return independent scored copies in rank order,
+and `recommend_plan_id(results)` to choose the first viable plan or return `None`.
+All are in `ark_api.simulation.scoring`. The recommendation helper defensively
+recomputes ranking; caller-provided order, scores, breakdowns, and viability flags
+are never trusted. Engine execution itself still returns an unscored result.
+
+The immutable default `ScoringPolicy` is `ark-response-priorities`, version
+`1.0.0`. Nested weights and hard-constraint settings are also immutable. Create a
+new policy for custom priorities; use a new policy ID/version when changing
+operating priorities. Versions must be numeric `major.minor.patch` strings.
+Unknown configuration fields, nonfinite weights, and invalid versions are errors.
+
+| Metric | Default weight | Meaning |
+| --- | ---: | --- |
+| `people_rescued` | +10 | People newly serviced by completed rescue service in this run. |
+| `people_evacuated` | +6 | Community members newly admitted to shelters in this run. |
+| `people_isolated` | -15 | Unserved people at final nodes without civilian access to safety. |
+| `responders_stranded` | -100 | Responders at final nodes without capability-valid access to safety. |
+| `critical_calls_completed` | +25 | Fully completed urgency-4/5 calls at the horizon. |
+| `critical_calls_unanswered` | -40 | Partially or completely unresolved urgency-4/5 calls. |
+| `average_response_minutes` | -0.5 | Mean reported-to-first-service-arrival delay per serviced request. |
+| `shelter_peak_overflow` | -20 | Largest attempted admission excess, including reservations. |
+| `rejected_actions` | -5 | Plan actions rejected by deterministic validation. |
+
+These weights express configurable operating priorities, **not scientifically
+validated constants**. The score is a weighted comparison of simulated outcomes,
+not AI confidence, statistical confidence, or a probability. It establishes no
+optimality or safety guarantee and makes no claim about lives definitely saved.
+Always display individual metrics and signed contributions alongside the total:
+different outcomes can produce the same total, and a positive score can still
+belong to a nonviable plan. Null response time remains null in metrics and in the
+contribution's `raw_value`; it contributes zero without inventing a response time.
+
+Each of the nine contributions includes its raw value, configured weight, signed
+contribution, and deterministic explanation including policy ID/version. Arithmetic
+uses exact rational values of the inputs' decimal representations. Only conversion
+to the existing public float fields rounds to IEEE-754; there is no intermediate
+rounding or rounding to a fixed number of decimal places. Consequently summing
+serialized floats may show ordinary last-bit differences from the once-converted
+exact total. Ranking uses the returned numeric score. Unrepresentably large
+outputs raise `ValueError`; infinity and NaN are never returned as scores.
+
+### Viability is separate from numerical score and run status
+
+`ScenarioResult` adds `viable: bool | None` (default `None` means unevaluated) and
+`nonviable_reasons: list[str]` (default empty). Scoring always sets these explicitly.
+`ScoreContribution.raw_value` now permits `None` to faithfully represent an unknown
+response time. These are the only public schema changes. A completed run can have
+nonviable outcomes; scoring preserves its terminal `status`, metrics, timeline,
+and original violations. Nonviable results still receive the full finite score.
+
+The default hard constraints mark a result nonviable if any responders are
+stranded or an explicit hard-safety failure uses one of these existing stable
+validator codes: `capacity_exceeded`, `shelter_capacity_exceeded`, `shelter_closed`,
+`missing_capability`, `no_route`.
+
+An explicit failure means an **exact standalone code** in `violations`, or an
+`ACTION_FAILED` timeline event with that exact `metadata.reason_code`. Producers
+must reserve standalone codes for actual hard failures. The engine's ordinary
+`action-id: reason-code: explanation` rejection strings and `ACTION_REJECTED`
+events do not qualify, even when they contain one of these codes. Unknown codes,
+free-text messages, and substring matches never create a hard failure. The current
+engine prevents unsafe actions rather than emitting these execution failures.
+Reason strings are stable, deduplicated, and sorted. Policies can change the
+stranding threshold or the explicit-code allowlist; such changes alter viability.
+
+Failed/cancelled terminal runs can be scored for inspection but are nonviable for
+recommendation (`run_status:failed` / `run_status:cancelled`), independently of
+safety failures. Draft, ready, and running results cannot be scored or ranked.
+An action merely unfinished at a successfully reached simulation horizon does
+not itself create a hard failure. Viable means it passed these configured checks,
+not that it is guaranteed safe or that every action completed.
+
+### Exact ranking order
+
+1. Viable before nonviable.
+2. Higher total score.
+3. Fewer people isolated.
+4. Fewer responders stranded.
+5. Fewer critical calls unanswered.
+6. Lower average response time, with null last.
+7. Lexicographically smaller plan ID.
+
+To explain relative ranks, use the first differing item in this ordered list.
+Duplicate plan IDs are rejected. Empty input returns an empty ranking and no
+recommendation; all-nonviable input also has no recommendation. Negative scores
+are valid, including for the recommended viable plan. Results are compared only
+under the supplied policy, with no mutation of the caller's list or objects.
+Tests include the generic world -> candidate plans -> independent simulations ->
+scoring -> ranking -> recommendation pipeline and serialization in
+`SimulationResponse`.

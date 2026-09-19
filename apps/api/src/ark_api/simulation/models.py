@@ -341,7 +341,7 @@ class ScenarioMetrics(ContractModel):
 
 class ScoreContribution(ContractModel):
     metric: NonemptyString
-    raw_value: FiniteFloat
+    raw_value: FiniteFloat | None
     weight: FiniteFloat
     contribution: FiniteFloat
     explanation: NonemptyString
@@ -353,6 +353,9 @@ class ScenarioResult(ContractModel):
     metrics: ScenarioMetrics
     score: FiniteFloat | None = None
     score_breakdown: list[ScoreContribution] = Field(default_factory=list)
+    # None means viability has not yet been evaluated by a scoring policy.
+    viable: Annotated[bool, Field(strict=True)] | None = None
+    nonviable_reasons: list[NonemptyString] = Field(default_factory=list)
     timeline: list[TimelineEvent] = Field(default_factory=list)
     violations: list[NonemptyString] = Field(default_factory=list)
     simulation_minutes: NonnegativeInt
