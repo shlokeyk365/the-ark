@@ -2,7 +2,7 @@
 
 import pytest
 
-from ark_api.simulation.models import WorldState
+from ark_api.simulation.models import Capability, PlanAction, ResponsePlan, WorldState
 
 
 @pytest.fixture
@@ -87,3 +87,41 @@ def world_state() -> WorldState:
             "metadata": {"source": "test", "tags": ["generic"], "revision": 1},
         }
     )
+
+
+@pytest.fixture
+def simulation_world(world_state):
+    world = world_state.model_copy(deep=True)
+    world.routes[0].closure_minute = None
+    world.responders[0].capabilities.add(Capability.RESCUE)
+    return world
+
+
+@pytest.fixture
+def make_action():
+    def factory(**changes):
+        data = dict(
+            id="action-1",
+            responder_id="bus-1",
+            action_type="move",
+            target_node_id="riverside",
+            start_minute=10,
+        )
+        data.update(changes)
+        return PlanAction.model_validate(data)
+
+    return factory
+
+
+@pytest.fixture
+def make_plan():
+    def factory(*actions):
+        return ResponsePlan(
+            id="plan-1",
+            name="Test plan",
+            description="Test execution",
+            actions=list(actions),
+            status="ready",
+        )
+
+    return factory
