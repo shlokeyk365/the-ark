@@ -15,7 +15,7 @@ import { StatusBar } from "./components/StatusBar";
 import { Timeline } from "./components/Timeline";
 import { TopBar } from "./components/TopBar";
 
-const PLAYBACK_INTERVAL_MS = 1600;
+const PLAYBACK_INTERVAL_MS = 2400;
 
 interface Comparison {
   worldStateVersion: string;

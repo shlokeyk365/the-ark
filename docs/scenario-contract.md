@@ -4,6 +4,14 @@ Status: MVP contract
 
 Schema version: `1.0.0`
 
+## Timeline cadence
+
+The dashboard exposes frames every three hours from now through +24h. The
+now/+6h/+12h/+24h fixtures are the original curated anchors. Intermediate
++3h/+9h/+15h/+18h/+21h edge depths are linear interpolations and carry model
+version `1.0.0-interpolated`; they improve animation cadence but do not add new
+hydrologic evidence.
+
 ## Evaluation model
 
 Each plan is evaluated against the same frozen canonical world-state snapshot.

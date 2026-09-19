@@ -10,7 +10,9 @@ The fixture is synthetic demonstration data and is not operational guidance.
 ## Current backend slice
 
 - Five communities, two bridges, one hospital, and two shelters.
-- Flood frames for now, +6h, +12h, and +24h.
+- Nine flood frames at 3-hour intervals from now through +24h. The original
+  now/+6h/+12h/+24h depths remain anchors; intervening frames are explicitly
+  labeled linear interpolations for smoother demonstration playback.
 - Deterministic edge closures and travel penalties.
 - Safe-path, access, and time-to-isolation calculations.
 - Plan A/B/C evaluation against a frozen state.
@@ -56,6 +58,7 @@ the local FastAPI process on port `8000`.
 The dashboard loads every modeled frame on start, so scrubbing the timeline and
 frame playback are instant and the sparklines plot real per-frame values. All
 domain results come from the API; the browser derives no routing or plan logic.
+Playback advances one 3-hour frame every 2.4 seconds.
 
 ### Basemap
 

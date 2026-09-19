@@ -42,7 +42,7 @@ export function Timeline({
         <h2>Simulation timeline</h2>
         <span className="timeline-context">
           {worldState.rainfall_assumption} · {bootstrap.available_frames.length} modeled
-          frames · {horizon}h horizon
+          frames · 3h steps · {horizon}h horizon
         </span>
         <span className={`live-state ${eventInForce ? "event" : eventPending ? "pending" : ""}`}>
           <i />

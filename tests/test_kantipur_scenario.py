@@ -49,7 +49,9 @@ def test_fixture_shape_and_capacity_are_coherent() -> None:
     assert sum(asset["population"] for asset in assets if asset["asset_type"] == "community") == 4560
     assert sum(asset["capacity"] for asset in assets if asset["asset_type"] == "shelter") == 3000
     assert len(service.network["features"]) == 12
-    assert [frame["simulation_time_hours"] for frame in service.flood_frames["frames"]] == [0, 6, 12, 24]
+    assert [
+        frame["simulation_time_hours"] for frame in service.flood_frames["frames"]
+    ] == list(range(0, 25, 3))
 
 
 def test_baseline_is_reachable_and_has_expected_routes() -> None:
@@ -60,7 +62,7 @@ def test_baseline_is_reachable_and_has_expected_routes() -> None:
     assert all(not community["isolated"] for community in access.values())
     assert all(community["hospital_accessible"] for community in access.values())
     assert all(community["reachable_shelter_ids"] for community in access.values())
-    assert access["ktp-com-05"]["time_to_isolation_hours"] == 24
+    assert access["ktp-com-05"]["time_to_isolation_hours"] == 21
 
     edge_states = _by_id(baseline["edge_states"], "edge_id")
     adjacency = build_adjacency(service.network, edge_states)
@@ -134,7 +136,7 @@ def test_api_serves_baseline_and_event_recompute() -> None:
     )
     assert event.status_code == 200
     assert event.json()["updated_world_state"]["world_state_version"].startswith(
-        "ktp-world-0003-"
+        "ktp-world-0005-"
     )
 
 
@@ -147,7 +149,9 @@ def test_bootstrap_supplies_frontend_geometry_and_controls() -> None:
     assert payload["initial_frame_id"] == "ktp-frame-now"
     assert len(payload["assets"]["features"]) == 10
     assert len(payload["road_network"]["features"]) == 12
-    assert [frame["simulation_time_hours"] for frame in payload["available_frames"]] == [0, 6, 12, 24]
+    assert [
+        frame["simulation_time_hours"] for frame in payload["available_frames"]
+    ] == list(range(0, 25, 3))
     assert [event["event_id"] for event in payload["events"]] == [
         "ktp-event-bridge-02-failure"
     ]
@@ -280,7 +284,7 @@ def test_time_to_isolation_moves_forward_under_an_injected_event() -> None:
     service = _service()
 
     baseline = _by_id(service.baseline()["community_access"], "community_id")
-    assert baseline["ktp-com-05"]["time_to_isolation_hours"] == 24
+    assert baseline["ktp-com-05"]["time_to_isolation_hours"] == 21
     assert baseline["ktp-com-05"]["isolated"] is False
 
     disrupted = _by_id(
@@ -309,7 +313,7 @@ def test_frames_can_be_scrubbed_with_an_event_held_active() -> None:
     assert later.status_code == 200
     payload = later.json()
     WorldStateSnapshot.model_validate(payload)
-    assert payload["world_state_version"] == "ktp-world-0004-bridge-02-failure"
+    assert payload["world_state_version"] == "ktp-world-0009-bridge-02-failure"
     assert payload["active_event_ids"] == [event_id]
     edges = _by_id(payload["edge_states"], "edge_id")
     assert edges["ktp-bridge-02"]["status"] == "closed"

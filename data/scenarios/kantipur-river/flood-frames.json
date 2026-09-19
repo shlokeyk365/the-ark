@@ -32,6 +32,33 @@
       ]
     },
     {
+      "frame_id": "ktp-frame-plus-3h",
+      "simulation_time_hours": 3,
+      "observed_at": "2024-09-28T03:00:00Z",
+      "rainfall_assumption": "baseline rainfall",
+      "rainfall_multiplier": 1.0,
+      "source": {
+        "source_type": "modeled_input",
+        "model_name": "kantipur-curated-fixture",
+        "model_version": "1.0.0-interpolated",
+        "description": "Linearly interpolated between the now and +6h anchor frames."
+      },
+      "edge_conditions": [
+        { "edge_id": "ktp-road-01", "flood_depth_m": 0.005 },
+        { "edge_id": "ktp-road-02", "flood_depth_m": 0.01 },
+        { "edge_id": "ktp-road-03", "flood_depth_m": 0.01 },
+        { "edge_id": "ktp-road-04", "flood_depth_m": 0.015 },
+        { "edge_id": "ktp-road-05", "flood_depth_m": 0.02 },
+        { "edge_id": "ktp-road-06", "flood_depth_m": 0.015 },
+        { "edge_id": "ktp-road-07", "flood_depth_m": 0.01 },
+        { "edge_id": "ktp-road-08", "flood_depth_m": 0.035 },
+        { "edge_id": "ktp-road-09", "flood_depth_m": 0.09 },
+        { "edge_id": "ktp-road-10", "flood_depth_m": 0.06 },
+        { "edge_id": "ktp-bridge-01", "flood_depth_m": 0.025 },
+        { "edge_id": "ktp-bridge-02", "flood_depth_m": 0.065 }
+      ]
+    },
+    {
       "frame_id": "ktp-frame-plus-6h",
       "simulation_time_hours": 6,
       "observed_at": "2024-09-28T06:00:00Z",
@@ -59,6 +86,33 @@
       ]
     },
     {
+      "frame_id": "ktp-frame-plus-9h",
+      "simulation_time_hours": 9,
+      "observed_at": "2024-09-28T09:00:00Z",
+      "rainfall_assumption": "baseline rainfall",
+      "rainfall_multiplier": 1.0,
+      "source": {
+        "source_type": "modeled_input",
+        "model_name": "kantipur-curated-fixture",
+        "model_version": "1.0.0-interpolated",
+        "description": "Linearly interpolated between the +6h and +12h anchor frames."
+      },
+      "edge_conditions": [
+        { "edge_id": "ktp-road-01", "flood_depth_m": 0.015 },
+        { "edge_id": "ktp-road-02", "flood_depth_m": 0.03 },
+        { "edge_id": "ktp-road-03", "flood_depth_m": 0.035 },
+        { "edge_id": "ktp-road-04", "flood_depth_m": 0.045 },
+        { "edge_id": "ktp-road-05", "flood_depth_m": 0.06 },
+        { "edge_id": "ktp-road-06", "flood_depth_m": 0.045 },
+        { "edge_id": "ktp-road-07", "flood_depth_m": 0.025 },
+        { "edge_id": "ktp-road-08", "flood_depth_m": 0.105 },
+        { "edge_id": "ktp-road-09", "flood_depth_m": 0.235 },
+        { "edge_id": "ktp-road-10", "flood_depth_m": 0.14 },
+        { "edge_id": "ktp-bridge-01", "flood_depth_m": 0.07 },
+        { "edge_id": "ktp-bridge-02", "flood_depth_m": 0.15 }
+      ]
+    },
+    {
       "frame_id": "ktp-frame-plus-12h",
       "simulation_time_hours": 12,
       "observed_at": "2024-09-28T12:00:00Z",
@@ -83,6 +137,87 @@
         { "edge_id": "ktp-road-10", "flood_depth_m": 0.18 },
         { "edge_id": "ktp-bridge-01", "flood_depth_m": 0.09 },
         { "edge_id": "ktp-bridge-02", "flood_depth_m": 0.18 }
+      ]
+    },
+    {
+      "frame_id": "ktp-frame-plus-15h",
+      "simulation_time_hours": 15,
+      "observed_at": "2024-09-28T15:00:00Z",
+      "rainfall_assumption": "baseline rainfall",
+      "rainfall_multiplier": 1.0,
+      "source": {
+        "source_type": "modeled_input",
+        "model_name": "kantipur-curated-fixture",
+        "model_version": "1.0.0-interpolated",
+        "description": "Linearly interpolated between the +12h and +24h anchor frames."
+      },
+      "edge_conditions": [
+        { "edge_id": "ktp-road-01", "flood_depth_m": 0.025 },
+        { "edge_id": "ktp-road-02", "flood_depth_m": 0.048 },
+        { "edge_id": "ktp-road-03", "flood_depth_m": 0.06 },
+        { "edge_id": "ktp-road-04", "flood_depth_m": 0.073 },
+        { "edge_id": "ktp-road-05", "flood_depth_m": 0.093 },
+        { "edge_id": "ktp-road-06", "flood_depth_m": 0.07 },
+        { "edge_id": "ktp-road-07", "flood_depth_m": 0.035 },
+        { "edge_id": "ktp-road-08", "flood_depth_m": 0.155 },
+        { "edge_id": "ktp-road-09", "flood_depth_m": 0.33 },
+        { "edge_id": "ktp-road-10", "flood_depth_m": 0.185 },
+        { "edge_id": "ktp-bridge-01", "flood_depth_m": 0.103 },
+        { "edge_id": "ktp-bridge-02", "flood_depth_m": 0.195 }
+      ]
+    },
+    {
+      "frame_id": "ktp-frame-plus-18h",
+      "simulation_time_hours": 18,
+      "observed_at": "2024-09-28T18:00:00Z",
+      "rainfall_assumption": "baseline rainfall",
+      "rainfall_multiplier": 1.0,
+      "source": {
+        "source_type": "modeled_input",
+        "model_name": "kantipur-curated-fixture",
+        "model_version": "1.0.0-interpolated",
+        "description": "Linearly interpolated between the +12h and +24h anchor frames."
+      },
+      "edge_conditions": [
+        { "edge_id": "ktp-road-01", "flood_depth_m": 0.03 },
+        { "edge_id": "ktp-road-02", "flood_depth_m": 0.055 },
+        { "edge_id": "ktp-road-03", "flood_depth_m": 0.07 },
+        { "edge_id": "ktp-road-04", "flood_depth_m": 0.085 },
+        { "edge_id": "ktp-road-05", "flood_depth_m": 0.105 },
+        { "edge_id": "ktp-road-06", "flood_depth_m": 0.08 },
+        { "edge_id": "ktp-road-07", "flood_depth_m": 0.04 },
+        { "edge_id": "ktp-road-08", "flood_depth_m": 0.17 },
+        { "edge_id": "ktp-road-09", "flood_depth_m": 0.35 },
+        { "edge_id": "ktp-road-10", "flood_depth_m": 0.19 },
+        { "edge_id": "ktp-bridge-01", "flood_depth_m": 0.115 },
+        { "edge_id": "ktp-bridge-02", "flood_depth_m": 0.21 }
+      ]
+    },
+    {
+      "frame_id": "ktp-frame-plus-21h",
+      "simulation_time_hours": 21,
+      "observed_at": "2024-09-28T21:00:00Z",
+      "rainfall_assumption": "baseline rainfall",
+      "rainfall_multiplier": 1.0,
+      "source": {
+        "source_type": "modeled_input",
+        "model_name": "kantipur-curated-fixture",
+        "model_version": "1.0.0-interpolated",
+        "description": "Linearly interpolated between the +12h and +24h anchor frames."
+      },
+      "edge_conditions": [
+        { "edge_id": "ktp-road-01", "flood_depth_m": 0.035 },
+        { "edge_id": "ktp-road-02", "flood_depth_m": 0.063 },
+        { "edge_id": "ktp-road-03", "flood_depth_m": 0.08 },
+        { "edge_id": "ktp-road-04", "flood_depth_m": 0.098 },
+        { "edge_id": "ktp-road-05", "flood_depth_m": 0.118 },
+        { "edge_id": "ktp-road-06", "flood_depth_m": 0.09 },
+        { "edge_id": "ktp-road-07", "flood_depth_m": 0.045 },
+        { "edge_id": "ktp-road-08", "flood_depth_m": 0.185 },
+        { "edge_id": "ktp-road-09", "flood_depth_m": 0.37 },
+        { "edge_id": "ktp-road-10", "flood_depth_m": 0.195 },
+        { "edge_id": "ktp-bridge-01", "flood_depth_m": 0.128 },
+        { "edge_id": "ktp-bridge-02", "flood_depth_m": 0.225 }
       ]
     },
     {
