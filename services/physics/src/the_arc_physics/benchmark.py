@@ -33,25 +33,37 @@ def benchmark_models(
             classifier_factory=factory,
             model_name=name,
         )
+        by_basin = grouped_cross_validation(
+            records,
+            folds=folds,
+            grouping="basin",
+            classifier_factory=factory,
+            model_name=name,
+        )
+        by_storm = grouped_cross_validation(
+            records,
+            folds=folds,
+            grouping="storm",
+            classifier_factory=factory,
+            model_name=name,
+        )
         candidates[name] = {
             "year_grouped": by_year,
             "district_grouped": by_district,
+            "basin_grouped": by_basin,
+            "storm_grouped": by_storm,
             "selection_summary": {
                 "mean_macro_roc_auc": round(
                     mean(
-                        (
-                            by_year["overall"]["macro_roc_auc"],
-                            by_district["overall"]["macro_roc_auc"],
-                        )
+                        report["overall"]["macro_roc_auc"]
+                        for report in (by_year, by_district, by_basin, by_storm)
                     ),
                     4,
                 ),
                 "mean_rmse": round(
                     mean(
-                        (
-                            by_year["overall"]["mean_rmse"],
-                            by_district["overall"]["mean_rmse"],
-                        )
+                        report["overall"]["mean_rmse"]
+                        for report in (by_year, by_district, by_basin, by_storm)
                     ),
                     4,
                 ),
@@ -76,7 +88,8 @@ def benchmark_models(
         "holdout_used_for_selection": False,
         "feature_policy": "city and district identity excluded from predictors",
         "selection_rule": (
-            "Highest mean of year- and district-grouped macro ROC-AUC among "
+            "Highest mean of year-, district-, basin-, and storm-grouped macro "
+            "ROC-AUC among "
             "candidates whose mean RMSE is within 2% of logistic regression."
         ),
         "selected_model": selected,

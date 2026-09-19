@@ -50,6 +50,24 @@ class FloodEventRecord:
     rainfall_30d_mm: Optional[float] = None
     rainy_days_7d: Optional[float] = None
     rainfall_7d_anomaly: Optional[float] = None
+    basin_id: Optional[str] = None
+    sub_basin_area_sq_km: Optional[float] = None
+    upstream_area_sq_km: Optional[float] = None
+    distance_to_outlet_km: Optional[float] = None
+    basin_order: Optional[float] = None
+    nearest_river_distance_km: Optional[float] = None
+    river_average_discharge_cms: Optional[float] = None
+    river_upstream_area_sq_km: Optional[float] = None
+    river_strahler_order: Optional[float] = None
+    local_elevation_m: Optional[float] = None
+    local_relief_m: Optional[float] = None
+    basin_rainfall_1d_mean_mm: Optional[float] = None
+    basin_rainfall_1d_max_mm: Optional[float] = None
+    basin_rainfall_3d_mean_mm: Optional[float] = None
+    basin_rainfall_3d_max_mm: Optional[float] = None
+    basin_rainfall_7d_mean_mm: Optional[float] = None
+    basin_rainfall_7d_max_mm: Optional[float] = None
+    basin_rainfall_3d_spread_mm: Optional[float] = None
     casualty_label_known: bool = True
     housing_label_known: bool = True
     transport_label_known: bool = True
@@ -66,9 +84,7 @@ class FloodEventRecord:
                 self.transport_affected or self.roads_damaged_km > 0
             ),
             "severe_impact": int(
-                self.people_affected >= 50
-                or damaged_housing >= 10
-                or self.deaths + self.missing > 0
+                damaged_housing >= 10 or self.deaths + self.missing > 0
             ),
         }
 
@@ -141,6 +157,54 @@ def read_records(path: Path) -> List[FloodEventRecord]:
                     rainfall_7d_anomaly=_optional_number(
                         row.get("rainfall_7d_anomaly")
                     ),
+                    basin_id=_optional_text(row.get("basin_id")),
+                    sub_basin_area_sq_km=_optional_number(
+                        row.get("sub_basin_area_sq_km")
+                    ),
+                    upstream_area_sq_km=_optional_number(
+                        row.get("upstream_area_sq_km")
+                    ),
+                    distance_to_outlet_km=_optional_number(
+                        row.get("distance_to_outlet_km")
+                    ),
+                    basin_order=_optional_number(row.get("basin_order")),
+                    nearest_river_distance_km=_optional_number(
+                        row.get("nearest_river_distance_km")
+                    ),
+                    river_average_discharge_cms=_optional_number(
+                        row.get("river_average_discharge_cms")
+                    ),
+                    river_upstream_area_sq_km=_optional_number(
+                        row.get("river_upstream_area_sq_km")
+                    ),
+                    river_strahler_order=_optional_number(
+                        row.get("river_strahler_order")
+                    ),
+                    local_elevation_m=_optional_number(
+                        row.get("local_elevation_m")
+                    ),
+                    local_relief_m=_optional_number(row.get("local_relief_m")),
+                    basin_rainfall_1d_mean_mm=_optional_number(
+                        row.get("basin_rainfall_1d_mean_mm")
+                    ),
+                    basin_rainfall_1d_max_mm=_optional_number(
+                        row.get("basin_rainfall_1d_max_mm")
+                    ),
+                    basin_rainfall_3d_mean_mm=_optional_number(
+                        row.get("basin_rainfall_3d_mean_mm")
+                    ),
+                    basin_rainfall_3d_max_mm=_optional_number(
+                        row.get("basin_rainfall_3d_max_mm")
+                    ),
+                    basin_rainfall_7d_mean_mm=_optional_number(
+                        row.get("basin_rainfall_7d_mean_mm")
+                    ),
+                    basin_rainfall_7d_max_mm=_optional_number(
+                        row.get("basin_rainfall_7d_max_mm")
+                    ),
+                    basin_rainfall_3d_spread_mm=_optional_number(
+                        row.get("basin_rainfall_3d_spread_mm")
+                    ),
                     casualty_label_known=_optional_bool(
                         row.get("casualty_label_known"), default=True
                     ),
@@ -199,3 +263,9 @@ def _optional_number(value: Optional[str]) -> Optional[float]:
     except ValueError:
         return None
     return parsed if parsed > -900.0 else None
+
+
+def _optional_text(value: Optional[str]) -> Optional[str]:
+    if value is None or not value.strip():
+        return None
+    return value.strip()

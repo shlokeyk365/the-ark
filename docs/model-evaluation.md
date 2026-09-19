@@ -1,93 +1,99 @@
 # Flood model evaluation
 
-The September 2024 Nakkhu event is a locked holdout. Its known outcomes were
-not used in training, feature selection, model selection, threshold selection,
-or tuning.
+The September 2024 Nakkhu event is a locked holdout. Its known outcomes are not
+used in training, feature selection, model selection, threshold selection, or
+tuning. The 0.5 classification threshold is unchanged after evaluation.
 
-## What the model predicts
+## Training unit and features
 
-The trained component is an event-level impact prior learned from 5,349 Nepal
-flood records spanning 1971–2023. It predicts probabilities for:
+The model learns from 4,869 location-level flood episodes spanning 1971–2023,
+consolidated from 5,349 DesInventar and BIPAD reports. Consolidation prevents a
+municipality-day with many administrative reports from receiving disproportionate
+training weight.
 
-- casualty or missing-person reports;
-- housing damage;
-- transport disruption; and
-- severe reported impact.
+Predictors include date, coordinates, rainfall, census exposure, district-scale
+terrain, local elevation/relief, level-6 catchment characteristics, river
+proximity, long-term discharge, and river order. City, district, basin ID, and
+data-source identity are excluded from predictors.
 
-The inputs combine event date and cause with coordinates, district-scale
-terrain, 2011 census exposure, and antecedent rainfall. City and district names
-are deliberately excluded from the predictor matrix so the model cannot simply
-memorize a place's historical rate.
+The severe-impact definition was harmonized across sources to use deaths or
+missing people, or at least 10 damaged homes. BIPAD's uniformly zero
+`people_affected` field no longer creates a source-dependent target definition.
 
 ## Evaluation design
 
-Two complementary grouped tests are used:
+Every candidate is evaluated four ways:
 
-1. **Unseen years:** complete years are held out, testing temporal transfer.
-2. **Unseen districts:** complete normalized districts are held out, testing
-   whether the model transfers to places it did not train on.
+1. complete years held out;
+2. complete normalized districts held out;
+3. complete HydroBASINS level-6 catchments held out; and
+4. complete four-day nationwide storm windows held out.
 
-Each validation event is also compared with a leakage-safe baseline that knows
-only its training fold's target prevalence. Unknown target labels are excluded
-per target. Model selection uses the mean of the two macro ROC-AUC scores,
-subject to mean RMSE staying within 2% of logistic regression. Nakkhu is never
-part of that selection.
+The fourth split prevents reports from the same storm in different cities from
+appearing in training and validation. Each result is compared with a baseline
+that knows only the training fold's label prevalence. Unknown labels are
+excluded per target.
 
-## Selected model
+## Model selection
 
-The soft-voting ensemble combines logistic regression, Extra Trees, and
-CatBoost. It had the strongest allowed selection score:
+Selection maximizes mean macro ROC-AUC across all four split strategies while
+requiring mean RMSE to remain within 2% of logistic regression.
 
 | Candidate | Mean macro ROC-AUC | Mean RMSE |
 | --- | ---: | ---: |
-| Logistic regression | 0.6271 | 0.4211 |
-| Histogram gradient boosting | 0.6324 | 0.4241 |
-| Random forest | 0.6310 | 0.4206 |
-| Extra Trees | 0.6379 | 0.4193 |
-| CatBoost | 0.6402 | 0.4194 |
-| **Soft-voting ensemble** | **0.6471** | **0.4168** |
+| Logistic regression | 0.6320 | 0.4258 |
+| Histogram gradient boosting | 0.6613 | 0.4219 |
+| Random forest | 0.6649 | 0.4184 |
+| Extra Trees | 0.6625 | 0.4190 |
+| **CatBoost** | **0.6760** | **0.4166** |
+| Soft-voting ensemble | 0.6738 | 0.4170 |
 
-The selected model's detailed results are:
+Two additional CatBoost configurations were tested but did not beat the
+selected configuration. Basin-wide rainfall summaries were also excluded after
+an ablation reduced mean AUC from 0.6760 to 0.6724.
 
-| Target | Unseen-year AUC | Year RMSE | Year MSE skill | Unseen-district AUC | District RMSE | District MSE skill |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Casualty or missing | 0.6227 | 0.4678 | 0.0495 | 0.6591 | 0.4607 | 0.0713 |
-| Housing damage | 0.6276 | 0.4734 | 0.0736 | 0.6842 | 0.4576 | 0.1246 |
-| Transport disruption | 0.6384 | 0.2644 | 0.0251 | 0.6918 | 0.2622 | 0.0378 |
-| Severe impact | 0.6083 | 0.4783 | 0.0447 | 0.6450 | 0.4703 | 0.0772 |
+## Selected CatBoost results
 
-Macro ROC-AUC is 0.6242 for unseen years and 0.6700 for unseen districts. All
-eight target/split checks have positive MSE skill over the prevalence baseline,
-so the model is learning real but modest signal rather than merely replaying
-the common class. The unseen-district score is encouraging for transfer to
-other cities; the weaker unseen-year score is the more important warning.
+| Target | Year AUC | District AUC | Basin AUC | Storm AUC |
+| --- | ---: | ---: | ---: | ---: |
+| Casualty or missing | 0.6570 | 0.7075 | 0.6941 | 0.6955 |
+| Housing damage | 0.6278 | 0.6838 | 0.6888 | 0.6554 |
+| Transport disruption | 0.6548 | 0.7213 | 0.6882 | 0.6907 |
+| Severe impact | 0.6333 | 0.6824 | 0.6791 | 0.6561 |
+| **Macro** | **0.6432** | **0.6987** | **0.6875** | **0.6744** |
+
+Mean RMSE is 0.4237 for years, 0.4118 for districts, 0.4134 for basins,
+and 0.4174 for storms. Every target has positive MSE skill in every split and
+passes the report's non-guessing check. That is meaningful improvement, but it
+is not close enough to 0.80 to claim operational reliability.
 
 The deployment gate requires every target to reach ROC-AUC 0.65 and positive
-MSE skill in both split strategies. The model therefore remains
-`research_only`. AUC values close to 1 would be implausible with these coarse
-event-level inputs and would trigger a leakage audit, not confidence.
+MSE skill in every split. Housing and severe impact miss the unseen-year AUC
+requirement, so status remains `research_only`.
 
-MSE and Brier score are the same quantity for binary probabilistic predictions.
-Lower is better for MSE/RMSE/Brier; higher is better for ROC-AUC and MSE skill.
+## Corrected Nakkhu location and locked result
 
-## Locked Nakkhu result
+The prior scenario coordinate was incorrect: it produced a local elevation of
+1,963 m. The corrected Kantipur Colony coordinate is approximately
+27.64646, 85.31348, with sampled local elevation 1,302 m and a mapped river
+distance of about 26 m. This factual correction was made before final model
+selection.
 
-After selection was frozen, the selected ensemble was evaluated once on the
-four known Nakkhu impact categories:
+After the model was frozen, its one-time Nakkhu result was:
 
-- fixed 0.5-threshold accuracy: 50% (2 of 4 labels);
-- probability-sensitive match: 61.70%;
-- MSE: 0.3830; and
-- RMSE: 0.6188.
+- fixed 0.5-threshold accuracy: 0% (0 of 4 labels);
+- probability-sensitive match: 53.43%;
+- MSE: 0.4657; and
+- RMSE: 0.6825.
 
-ROC-AUC is undefined for this single event because all four observed labels are
-positive. This result is not a reason to retune on Nakkhu; doing that would
-destroy its value as a holdout.
+ROC-AUC is undefined because this is one event and all four observed labels are
+positive. The result is not used to change thresholds or retrain the model.
+It shows that stronger general historical ranking does not yet capture the
+severity of this particular extreme urban-river event.
 
-## What this does not validate
+## Remaining route toward 0.80
 
-These are event-level impact metrics. They do not measure street-level flood
-extent, water depth, road-level arrival time, or the truth of a counterfactual
-rescue plan. A spatial inundation model still needs multiple historical events
-with aligned river observations, terrain/drainage features, and satellite
-flood/non-flood cell labels, evaluated using complete-event spatial holdouts.
+The next material inputs are event-time river stage/discharge and rate of rise,
+sub-daily upstream rainfall, street-scale height above drainage, building and
+road exposure, and satellite-derived flood masks. Additional tuning of the
+current administrative-report model is unlikely to close that gap honestly.

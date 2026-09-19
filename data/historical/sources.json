@@ -52,18 +52,31 @@
       "name": "Open-Meteo Elevation API",
       "url": "https://open-meteo.com/en/docs/elevation-api",
       "record_type": "sampled elevation",
-      "training_use": "district elevation and terrain-relief features",
+      "training_use": "district and location-level elevation and terrain-relief features",
       "limitations": [
         "District samples summarize terrain and do not represent property-level elevation."
+      ]
+    },
+    {
+      "name": "HydroBASINS level 6 and HydroRIVERS",
+      "url": "https://www.hydrosheds.org/products",
+      "record_type": "catchment polygons and river-reach network",
+      "training_use": "basin area, upstream area, outlet distance, river proximity, long-term discharge, and river order",
+      "limitations": [
+        "Level-6 catchments and global river reaches do not resolve every urban drainage channel.",
+        "Long-term average discharge is not event-time river stage or discharge."
       ]
     }
   ],
   "training_summary": {
-    "event_count": 5349,
+    "source_report_count": 5349,
+    "consolidated_episode_count": 4869,
     "year_min": 1971,
     "year_max": 2023,
     "normalized_district_groups": 75,
-    "city_or_district_identity_used_as_predictor": false
+    "hydrobasins_level_6_groups": 17,
+    "city_or_district_identity_used_as_predictor": false,
+    "basin_identity_used_as_predictor": false
   },
   "reserved_holdout": {
     "event_id": "nakkhu-2024",

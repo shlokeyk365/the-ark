@@ -1,4 +1,4 @@
-"""Selected city-independent soft-voting flood impact model."""
+"""Selected city-independent flood impact model artifact."""
 
 from __future__ import annotations
 
@@ -28,11 +28,15 @@ class EnsembleFloodImpactModel:
         cls,
         records: Sequence[FloodEventRecord],
         validation_gate: Mapping[str, Any],
+        model_name: str = "soft_voting_ensemble",
     ) -> "EnsembleFloodImpactModel":
         inputs = event_inputs(records)
         encoder = FeatureEncoder.fit(inputs)
         matrix = encoder.transform(inputs)
-        factory = classifier_factories()["soft_voting_ensemble"]
+        factories = classifier_factories()
+        if model_name not in factories:
+            raise ValueError(f"unknown selected model: {model_name}")
+        factory = factories[model_name]
         classifiers: Dict[str, Any] = {}
         for target in TARGET_NAMES:
             known = np.asarray(
@@ -44,11 +48,18 @@ class EnsembleFloodImpactModel:
             encoder=encoder,
             classifiers=classifiers,
             training_metadata={
-                "model_type": "soft_voting_logistic_extra_trees_catboost",
+                "model_type": model_name,
                 "record_count": len(records),
                 "event_count": len({record.event_id for record in records}),
                 "district_group_count": len(
                     {normalize_district(record.district) for record in records}
+                ),
+                "basin_group_count": len(
+                    {
+                        record.basin_id
+                        or f"district:{normalize_district(record.district)}"
+                        for record in records
+                    }
                 ),
                 "year_min": min(record.year for record in records),
                 "year_max": max(record.year for record in records),

@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import date, timedelta
 from pathlib import Path
+from statistics import mean
 from typing import Dict, Iterable, Mapping, Optional, Sequence, Tuple
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
 
 POWER_START = date(1981, 1, 1)
+POWER_CACHE_PATTERN = re.compile(
+    r"rain_([+-]\d+(?:\.\d+)?)_([+-]\d+(?:\.\d+)?)_1981_\d{4}\.json$"
+)
 
 
 def power_grid(latitude: float, longitude: float) -> Tuple[float, float]:
@@ -88,6 +93,48 @@ def rainfall_features(
         "rainy_days_7d": rainy_days,
         "rainfall_7d_anomaly": anomaly,
     }
+
+
+def load_cached_power_grids(
+    cache_dir: Path,
+) -> Mapping[Tuple[float, float], Mapping[str, float]]:
+    grids = {}
+    for path in sorted(cache_dir.glob("rain_*_1981_*.json")):
+        match = POWER_CACHE_PATTERN.match(path.name)
+        if match is None:
+            continue
+        grids[(float(match.group(1)), float(match.group(2)))] = {
+            key: float(value)
+            for key, value in json.loads(path.read_text(encoding="utf-8")).items()
+        }
+    return grids
+
+
+def basin_rainfall_features(
+    event_date: date,
+    rainfall_grids: Sequence[Mapping[str, float]],
+) -> Mapping[str, Optional[float]]:
+    result: Dict[str, Optional[float]] = {}
+    for days in (1, 3, 7):
+        totals = []
+        for daily_rainfall in rainfall_grids:
+            values = _window_values(event_date, daily_rainfall, days)
+            if values is not None:
+                totals.append(sum(values))
+        result[f"basin_rainfall_{days}d_mean_mm"] = (
+            round(mean(totals), 3) if totals else None
+        )
+        result[f"basin_rainfall_{days}d_max_mm"] = (
+            round(max(totals), 3) if totals else None
+        )
+    mean_3d = result["basin_rainfall_3d_mean_mm"]
+    max_3d = result["basin_rainfall_3d_max_mm"]
+    result["basin_rainfall_3d_spread_mm"] = (
+        round(max_3d - mean_3d, 3)
+        if max_3d is not None and mean_3d is not None
+        else None
+    )
+    return result
 
 
 def _window_values(

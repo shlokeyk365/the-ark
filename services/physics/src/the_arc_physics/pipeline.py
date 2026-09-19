@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+from datetime import date
 from pathlib import Path
 from statistics import mean
 from typing import Any, Callable, Dict, List, Mapping, Sequence
@@ -29,8 +30,17 @@ def train_and_evaluate(
     district_generalization = grouped_cross_validation(
         records, folds=folds, grouping="district"
     )
+    basin_generalization = grouped_cross_validation(
+        records, folds=folds, grouping="basin"
+    )
+    storm_generalization = grouped_cross_validation(
+        records, folds=folds, grouping="storm"
+    )
     validation_gate = combined_validation_gate(
-        cross_validation, district_generalization
+        cross_validation,
+        district_generalization,
+        basin_generalization,
+        storm_generalization,
     )
     model = MultiLabelFloodImpactModel.fit(records)
     model.training_metadata = {
@@ -45,6 +55,8 @@ def train_and_evaluate(
         "training": dict(model.training_metadata),
         "cross_validation": cross_validation,
         "district_generalization": district_generalization,
+        "basin_generalization": basin_generalization,
+        "storm_generalization": storm_generalization,
         "validation_gate": validation_gate,
     }
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -130,17 +142,15 @@ def grouped_cross_validation(
                 "validation_districts": sorted(
                     {record.district for record in test_records}
                 ),
+                "validation_groups": sorted(
+                    {str(_group_key(record, grouping)) for record in test_records}
+                ),
                 "metrics": target_metrics,
             }
         )
 
     overall: Dict[str, Any] = {}
-    bootstrap_groups = [
-        normalize_district(record.district)
-        if grouping == "district"
-        else record.year
-        for record in records
-    ]
+    bootstrap_groups = [_group_key(record, grouping) for record in records]
     for target in TARGET_NAMES:
         known = np.asarray(
             [record.target_known[target] for record in records], dtype=bool
@@ -241,23 +251,34 @@ def grouped_cross_validation(
 def combined_validation_gate(
     year_report: Mapping[str, Any],
     district_report: Mapping[str, Any],
+    basin_report: Mapping[str, Any] | None = None,
+    storm_report: Mapping[str, Any] | None = None,
 ) -> Mapping[str, Any]:
+    reports = {
+        "year": year_report,
+        "district": district_report,
+    }
+    if basin_report is not None:
+        reports["basin"] = basin_report
+    if storm_report is not None:
+        reports["storm"] = storm_report
     targets = {}
     for target in TARGET_NAMES:
-        year_metrics = year_report["overall"][target]
-        district_metrics = district_report["overall"][target]
-        passes = bool(
-            year_metrics["roc_auc"] >= 0.65
-            and district_metrics["roc_auc"] >= 0.65
-            and year_metrics["mse_skill_vs_prevalence"] > 0.0
-            and district_metrics["mse_skill_vs_prevalence"] > 0.0
+        metrics = {name: report["overall"][target] for name, report in reports.items()}
+        passes = all(
+            value["roc_auc"] is not None
+            and value["roc_auc"] >= 0.65
+            and value["mse_skill_vs_prevalence"] > 0.0
+            for value in metrics.values()
         )
         targets[target] = {
-            "year_grouped_roc_auc": year_metrics["roc_auc"],
-            "district_grouped_roc_auc": district_metrics["roc_auc"],
-            "positive_mse_skill_in_both": bool(
-                year_metrics["mse_skill_vs_prevalence"] > 0.0
-                and district_metrics["mse_skill_vs_prevalence"] > 0.0
+            **{
+                f"{name}_grouped_roc_auc": value["roc_auc"]
+                for name, value in metrics.items()
+            },
+            "positive_mse_skill_in_all": all(
+                value["mse_skill_vs_prevalence"] > 0.0
+                for value in metrics.values()
             ),
             "passes": passes,
         }
@@ -267,7 +288,7 @@ def combined_validation_gate(
         "status": "validated" if ready else "research_only",
         "policy": (
             "Every target must achieve ROC-AUC >= 0.65 and positive MSE skill "
-            "in both year-held-out and district-held-out evaluation."
+            "in every configured grouped evaluation."
         ),
         "targets": targets,
     }
@@ -276,15 +297,15 @@ def combined_validation_gate(
 def _fold_assignments(
     records: Sequence[FloodEventRecord], folds: int, grouping: str
 ) -> List[int]:
-    if grouping not in {"year", "district"}:
-        raise ValueError("grouping must be 'year' or 'district'")
+    if grouping not in {"year", "district", "basin", "storm"}:
+        raise ValueError("grouping must be year, district, basin, or storm")
     if grouping == "year":
         return [record.year % folds for record in records]
 
     group_counts: Dict[str, int] = {}
     for record in records:
-        district = normalize_district(record.district)
-        group_counts[district] = group_counts.get(district, 0) + 1
+        group = str(_group_key(record, grouping))
+        group_counts[group] = group_counts.get(group, 0) + 1
     fold_sizes = [0] * folds
     group_to_fold = {}
     ordered_groups = sorted(
@@ -298,7 +319,25 @@ def _fold_assignments(
         fold = min(range(folds), key=lambda value: (fold_sizes[value], value))
         group_to_fold[group] = fold
         fold_sizes[fold] += group_counts[group]
-    return [group_to_fold[normalize_district(record.district)] for record in records]
+    return [group_to_fold[str(_group_key(record, grouping))] for record in records]
+
+
+def _group_key(record: FloodEventRecord, grouping: str) -> object:
+    if grouping == "year":
+        return record.year
+    if grouping == "district":
+        return normalize_district(record.district)
+    if grouping == "basin":
+        return record.basin_id or f"district:{normalize_district(record.district)}"
+    if grouping == "storm":
+        if record.day <= 0:
+            return f"{record.year}-month-{record.month:02d}-unknown-day"
+        try:
+            ordinal = date(record.year, record.month, record.day).toordinal()
+        except ValueError:
+            return f"{record.year}-month-{record.month:02d}-invalid-day"
+        return f"four-day-window:{ordinal // 4}"
+    raise ValueError("grouping must be year, district, basin, or storm")
 
 
 def evaluate_locked_holdout(

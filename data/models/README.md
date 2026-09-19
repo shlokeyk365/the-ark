@@ -1,19 +1,16 @@
 # Generated model artifacts
 
-- `nepal_flood_model_benchmark.json`: year-held-out and district-held-out
-  results for logistic regression, histogram gradient boosting, random forest,
-  extra trees, CatBoost, and the soft-voting ensemble. The Nakkhu holdout was
-  not used to select the winner.
-- `nepal_flood_impact_ensemble.pkl.gz`: selected fitted ensemble used by the
+- `nepal_flood_model_benchmark.json`: results for six model families under
+  unseen-year, unseen-district, unseen-basin, and unseen-storm validation. The
+  Nakkhu holdout is not used in selection.
+- `nepal_flood_impact_selected.pkl.gz`: selected CatBoost model used by the
   simulation integration. Only load this pickle from the trusted repository.
-- `nepal_flood_impact_ensemble.pkl.manifest.json`: inspectable model type,
-  encoder, training data, holdout policy, and validation-gate metadata.
+- `nepal_flood_impact_selected.pkl.manifest.json`: inspectable encoder,
+  provenance, feature policy, and validation-gate metadata.
 - `nepal_flood_impact_model.json`: transparent logistic-regression baseline.
-- `nepal_flood_impact_report.json`: full baseline cross-validation report.
-- `nakkhu_2024_holdout_report.json`: one-time evaluation of the selected model
-  against the locked September 2024 Nakkhu outcomes.
+- `nepal_flood_impact_report.json`: complete baseline evaluation report.
+- `nakkhu_2024_holdout_report.json`: locked September 2024 Nakkhu evaluation.
 
-The selected model remains `research_only`. It beats the fold-specific
-prevalence MSE baseline for every target in both split strategies, but it does
-not meet the gate requiring every target to achieve ROC-AUC of at least 0.65 in
-both unseen-year and unseen-district evaluation.
+The selected model remains `research_only`. All 16 target/split combinations
+have positive MSE skill over a fold-specific prevalence baseline, but housing
+and severe-impact prediction do not reach ROC-AUC 0.65 in unseen-year testing.

@@ -1,46 +1,54 @@
 {
-  "schemaVersion": "1.0",
-  "eventId": "nakkhu-2024",
-  "modelPurpose": "historical_event_impact_prior",
-  "input": {
-    "year": 2024,
-    "month": 9,
-    "day": 28,
-    "region": "Central Region",
-    "district": "Lalitpur",
-    "cause": "HEAVY RAINS",
-    "latitude": 27.64646,
-    "longitude": 85.31348,
-    "district_area_sq_km": 397.01,
-    "elevation_m": 1963.0,
-    "terrain_relief_m": 1139.0,
-    "households_2011": 109797.0,
-    "population_2011": 468132.0,
-    "population_density_2011": 1179.1441,
-    "rainfall_1d_mm": 52.03,
-    "rainfall_3d_mm": 185.25,
-    "rainfall_7d_mm": 291.41,
-    "rainfall_30d_mm": 347.78,
-    "rainy_days_7d": 6.0,
-    "rainfall_7d_anomaly": 11.184,
-    "sub_basin_area_sq_km": 9894.8,
-    "upstream_area_sq_km": 9894.8,
-    "distance_to_outlet_km": 637.4,
-    "basin_order": 4.0,
-    "nearest_river_distance_km": 0.0263,
-    "river_average_discharge_cms": 2.078,
-    "river_upstream_area_sq_km": 57.3,
-    "river_strahler_order": 2.0,
-    "local_elevation_m": 1302.0,
-    "local_relief_m": 53.0
+  "model_type": "catboost",
+  "artifact": "nepal_flood_impact_selected.pkl.gz",
+  "feature_encoder": {
+    "policy": "city_identity_excluded_v1",
+    "regions": [
+      "Central Region",
+      "Eastern Region",
+      "Far Western Region",
+      "Mid-Western Region",
+      "Western Region"
+    ],
+    "causes": [
+      "DESIGN ERROR",
+      "FLOOD",
+      "HEAVY RAINS",
+      "HUMAN MISTAKE",
+      "LANDSLIDE",
+      "OTHER",
+      "RAIN",
+      "TECHNICAL FAILU",
+      "UNKNOWN"
+    ],
+    "numeric_medians": {
+      "latitude": 27.538177,
+      "longitude": 85.304584,
+      "district_area_sq_km": 1624.09,
+      "elevation_m": 208.0,
+      "terrain_relief_m": 262.0,
+      "households_2011": 106668.0,
+      "population_2011": 552583.0,
+      "population_density_2011": 260.439018701497,
+      "rainfall_1d_mm": 7.16,
+      "rainfall_3d_mm": 29.71,
+      "rainfall_7d_mm": 68.805,
+      "rainfall_30d_mm": 236.245,
+      "rainy_days_7d": 6.0,
+      "rainfall_7d_anomaly": 1.503,
+      "sub_basin_area_sq_km": 14880.1,
+      "upstream_area_sq_km": 25313.6,
+      "distance_to_outlet_km": 808.3,
+      "basin_order": 3.0,
+      "nearest_river_distance_km": 0.7756,
+      "river_average_discharge_cms": 0.997,
+      "river_upstream_area_sq_km": 32.1,
+      "river_strahler_order": 1.0,
+      "local_elevation_m": 208.0,
+      "local_relief_m": 40.0
+    }
   },
-  "impactProbabilities": {
-    "casualty_or_missing": 0.489031,
-    "housing_damage": 0.335107,
-    "transport_disruption": 0.130326,
-    "severe_impact": 0.364804
-  },
-  "trainingMetadata": {
+  "training_metadata": {
     "model_type": "catboost",
     "record_count": 4869,
     "event_count": 4869,
@@ -94,9 +102,5 @@
       }
     }
   },
-  "limitations": [
-    "These probabilities do not predict street-level flood extent or depth.",
-    "The historical records contain reporting bias and incomplete zero values.",
-    "Counterfactual rescue outcomes cannot be validated by this model."
-  ]
+  "warning": "Only load this pickle from the trusted project repository."
 }

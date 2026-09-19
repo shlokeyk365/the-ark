@@ -8,8 +8,10 @@ import numpy as np
 
 from the_arc_physics.bipad import read_bipad_floods
 from the_arc_physics.desinventar import read_desinventar_floods
+from the_arc_physics.episodes import consolidate_event_reports
 from the_arc_physics.features import EventInput, FeatureEncoder
 from the_arc_physics.integration import simulation_impact_prior
+from the_arc_physics.hydrography import BasinFeature, HydrologyIndex, RiverFeature
 from the_arc_physics.metrics import binary_metrics, grouped_roc_auc_interval, roc_auc
 from the_arc_physics.model import MultiLabelFloodImpactModel
 from the_arc_physics.pipeline import evaluate_locked_holdout, grouped_cross_validation
@@ -95,6 +97,50 @@ class TrainingPipelineTests(unittest.TestCase):
         self.assertNotIn("lalitpur", names)
         self.assertNotIn("jhapa", names)
         self.assertNotIn("district=", names)
+        self.assertNotIn("basin_id", names)
+
+    def test_hydrology_index_returns_basin_and_nearest_river_features(self):
+        basin = BasinFeature(
+            basin_id="test-basin",
+            sub_basin_area_sq_km=100.0,
+            upstream_area_sq_km=250.0,
+            distance_to_outlet_km=15.0,
+            basin_order=3.0,
+            geometry={
+                "type": "Polygon",
+                "coordinates": [[
+                    [85.0, 27.0],
+                    [86.0, 27.0],
+                    [86.0, 28.0],
+                    [85.0, 28.0],
+                    [85.0, 27.0],
+                ]],
+            },
+        )
+        river = RiverFeature(
+            river_id="test-river",
+            average_discharge_cms=12.0,
+            upstream_area_sq_km=75.0,
+            strahler_order=2.0,
+            lines=(((85.4, 27.0), (85.4, 28.0)),),
+        )
+        features = HydrologyIndex([basin], [river]).features_at(27.5, 85.5)
+        self.assertEqual(features.basin_id, "test-basin")
+        self.assertEqual(features.river_average_discharge_cms, 12.0)
+        self.assertGreater(features.nearest_river_distance_km, 0.0)
+
+    def test_people_affected_alone_does_not_define_severe_impact(self):
+        record = FloodEventRecord(
+            **{
+                **sample_records(1)[0].__dict__,
+                "people_affected": 10_000,
+                "deaths": 0,
+                "missing": 0,
+                "houses_destroyed": 0,
+                "houses_affected": 0,
+            }
+        )
+        self.assertEqual(record.targets["severe_impact"], 0)
 
     def test_district_grouped_folds_hold_out_complete_districts(self):
         records = sample_records(150)
@@ -122,6 +168,53 @@ class TrainingPipelineTests(unittest.TestCase):
             seen.extend(fold["validation_districts"])
         self.assertEqual(sorted(seen), sorted(districts))
 
+    def test_basin_and_storm_groups_are_held_out_together(self):
+        records = sample_records(150)
+        records = [
+            FloodEventRecord(
+                **{
+                    **record.__dict__,
+                    "basin_id": f"basin-{index % 10}",
+                    "year": 2000 + index // 30,
+                    "month": 7,
+                    "day": 1 + index % 20,
+                }
+            )
+            for index, record in enumerate(records)
+        ]
+        basin_report = grouped_cross_validation(records, folds=5, grouping="basin")
+        basin_groups = [
+            group
+            for fold in basin_report["folds"]
+            for group in fold["validation_groups"]
+        ]
+        self.assertEqual(len(basin_groups), len(set(basin_groups)))
+        storm_report = grouped_cross_validation(records, folds=5, grouping="storm")
+        storm_groups = [
+            group
+            for fold in storm_report["folds"]
+            for group in fold["validation_groups"]
+        ]
+        self.assertEqual(len(storm_groups), len(set(storm_groups)))
+
+    def test_repeated_reports_are_consolidated_into_one_episode(self):
+        records = sample_records(2)
+        records[1] = FloodEventRecord(
+            **{
+                **records[0].__dict__,
+                "event_id": "second-report",
+                "deaths": 2,
+                "houses_affected": 3,
+            }
+        )
+        episodes = consolidate_event_reports(records)
+        self.assertEqual(len(episodes), 1)
+        self.assertEqual(episodes[0].deaths, records[0].deaths + 2)
+        self.assertEqual(
+            episodes[0].houses_affected,
+            records[0].houses_affected + 3,
+        )
+
     def test_enriched_fields_round_trip_through_csv(self):
         record = FloodEventRecord(
             **{
@@ -129,6 +222,8 @@ class TrainingPipelineTests(unittest.TestCase):
                 "latitude": 27.5,
                 "rainfall_7d_mm": 123.4,
                 "population_density_2011": 456.7,
+                "basin_id": "4060901970",
+                "nearest_river_distance_km": 1.25,
             }
         )
         with tempfile.TemporaryDirectory() as directory:
@@ -138,6 +233,8 @@ class TrainingPipelineTests(unittest.TestCase):
         self.assertEqual(restored.latitude, 27.5)
         self.assertEqual(restored.rainfall_7d_mm, 123.4)
         self.assertEqual(restored.population_density_2011, 456.7)
+        self.assertEqual(restored.basin_id, "4060901970")
+        self.assertEqual(restored.nearest_river_distance_km, 1.25)
 
     def test_unknown_target_labels_are_excluded_from_metrics(self):
         records = sample_records(120)
