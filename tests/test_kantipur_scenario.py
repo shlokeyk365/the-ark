@@ -193,7 +193,27 @@ def test_model_prediction_pings_increase_with_local_flood_stage() -> None:
         ]
         assert values == sorted(values)
         assert len(set(values)) == len(values)
-        assert values[-1] == expected[initial_signal["target"]]
+        assert all(value <= expected[initial_signal["target"]] for value in values)
+
+    horizon_by_target = {
+        target: {
+            signal["probability"]
+            for signal in horizon
+            if signal["target"] == target
+        }
+        for target in expected
+    }
+    assert all(len(values) > 1 for values in horizon_by_target.values())
+    assert sorted(signal["priority_rank"] for signal in horizon) == list(range(1, 11))
+    assert min(signal["priority_score"] for signal in horizon) >= 0
+    assert max(signal["priority_score"] for signal in horizon) <= 100
+    assert all(
+        signal["score_type"] == "prototype_localized_risk_score"
+        for signal in horizon
+    )
+    assert next(
+        signal for signal in horizon if signal["ping_id"] == "nakkhu-risk-transport-central"
+    )["priority_rank"] == 1
 
     assert all(signal["state"] == "forecast" for signal in now)
     assert sum(signal["state"] == "active" for signal in plus_six) == 5

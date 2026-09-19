@@ -12,9 +12,11 @@ records grouped ROC-AUC/RMSE evaluation and known limitations.
 references, activation hours, explanations, and recommended actions for ten
 operational POIs derived from the four probabilities. The edge references let
 the scenario service adjust displayed risk using already-modeled local flood
-depth; they do not alter that depth or routing. Multiple POIs can share one
-event prior. The coordinates are map anchors and are not evidence of parcel- or
-building-level prediction.
+depth and infrastructure status; exposure-asset references supply the synthetic
+nearby population. They do not alter depth or routing. Multiple POIs can share
+one event prior. The coordinates are map anchors and are not evidence of parcel-
+or building-level prediction. Local scores and dispatch ranks are prototype
+decision-support outputs and have not been validated for operational use.
 
 ## Administrative context boundaries
 

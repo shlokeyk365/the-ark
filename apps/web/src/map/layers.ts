@@ -381,7 +381,15 @@ export const LAYERS: LayerSpecification[] = [
     type: "circle",
     source: SOURCE.predictions,
     paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 6, 16, 11],
+      "circle-radius": [
+        "interpolate",
+        ["linear"],
+        ["get", "priority_score"],
+        0,
+        5,
+        100,
+        12,
+      ],
       "circle-color": [
         "match",
         ["get", "target"],
@@ -395,7 +403,12 @@ export const LAYERS: LayerSpecification[] = [
       ],
       "circle-opacity": ["case", ["==", ["get", "state"], "active"], 1, 0.68],
       "circle-stroke-color": "#f7fbff",
-      "circle-stroke-width": 1.5,
+      "circle-stroke-width": [
+        "case",
+        ["==", ["get", "priority_level"], "critical"],
+        2.8,
+        1.5,
+      ],
     },
   },
   {
@@ -405,6 +418,9 @@ export const LAYERS: LayerSpecification[] = [
     layout: {
       "text-field": [
         "concat",
+        "#",
+        ["to-string", ["get", "priority_rank"]],
+        " ",
         ["get", "short_label"],
         " ",
         ["get", "percent_label"],

@@ -52,15 +52,16 @@ one immutable state version. It also contains `prediction_signals`, ten
 time-adjusted operational POIs spanning the model's four impact targets.
 
 Each prediction signal includes the frozen `base_probability` from the event
-model and a displayed `probability` adjusted for the current scenario frame.
-The adjustment combines flood depth on the ping's declared `anchor_edge_id`
-with elapsed simulation time. The signal also includes its rounded percentages,
-local flood depth, map anchor, activation hour, timeline state (`forecast` or
-`active`), a reason the location was flagged, and a recommended action.
+model and a displayed localized score adjusted for the current scenario frame.
+The adjustment combines absolute flood depth on the declared `anchor_edge_id`,
+its closure threshold and current status, route criticality, and the population
+of `exposure_asset_id`. The signal also includes `priority_score`,
+`priority_rank`, `priority_level`, local flood depth, activation state, the
+reason the location was flagged, and a recommended action.
 
-The adjusted value is a scenario risk projection, not a second ML inference or
-a calibrated hourly forecast. The model still predicts whole-event impacts,
-not street-level depth.
+`score_type` is `prototype_localized_risk_score`. Neither that score nor the
+priority rank is a calibrated hourly probability or validated dispatch rule.
+The model still predicts whole-event impacts, not street-level depth.
 
 The frame endpoint accepts a repeatable `events` query parameter so a caller can
 inspect any frame with injected events held active:

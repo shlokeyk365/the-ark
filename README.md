@@ -98,15 +98,18 @@ disabled: the fixture has no gauge observations yet.
 
 Prediction pings are clickable. Each explanation card separates current
 timeline risk from the shared event prior and shows nearby modeled flood depth,
-the reason the POI was flagged, and the recommended action.
+exposed population, location-specific responder priority, the reason the POI
+was flagged, and the recommended action. These rankings are research-only and
+not validated for live dispatch.
 
 The administrative boundaries are Kathmandu and Lalitpur Metropolitan City,
 visual context only — see `data/scenarios/kantipur-river/SOURCES.md` for
 provenance and licensing. The inundation polygons are a placeholder envelope
 derived from per-edge depth, not a hydraulic solve; `docs/scenario-contract.md`
 carries the fixture contract that will replace them. Each timeline percentage
-is a deterministic adjustment of a frozen event-level impact prior using nearby
-modeled depth and elapsed time. Map coordinates remain visualization anchors,
+is a deterministic adjustment of a frozen event-level impact prior using
+absolute nearby depth, infrastructure thresholds/status, route criticality, and
+synthetic exposed population. Map coordinates remain visualization anchors,
 not building-level forecasts.
 
 Useful endpoints:

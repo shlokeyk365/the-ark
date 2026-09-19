@@ -151,46 +151,97 @@ class ScenarioService:
         frame: Mapping[str, Any],
         edge_states_by_id: Mapping[str, Mapping[str, Any]],
     ) -> List[JsonObject]:
-        """Turn event priors into cumulative, frame-specific risk indicators.
+        """Localize event priors with hazard, exposure, and vulnerability proxies.
 
-        The CatBoost values remain immutable as ``base_probability``. A
-        transparent deterministic projection scales each prior by the nearby
-        edge's progress toward its maximum modeled depth (65%), elapsed scenario
-        time (20%), and initial exposure (15%). This creates monotonic timeline
-        values without presenting them as fresh ML inference.
+        The CatBoost values remain immutable as ``base_probability``. Displayed
+        values are prototype ranking scores informed by absolute local depth,
+        the edge's closure threshold and status, route criticality, and nearby
+        community population. They are not calibrated dispatch probabilities.
         """
 
         simulation_time_hours = frame["simulation_time_hours"]
-        horizon_hours = self.manifest["evaluation_horizon_hours"]
-        time_progress = min(1.0, simulation_time_hours / horizon_hours)
         probabilities = self.impact_prior["impactProbabilities"]
-        max_depth_by_edge: Dict[str, float] = {}
-        for modeled_frame in self.flood_frames["frames"]:
-            for condition in modeled_frame["edge_conditions"]:
-                edge_id = condition["edge_id"]
-                max_depth_by_edge[edge_id] = max(
-                    max_depth_by_edge.get(edge_id, 0.0),
-                    condition["flood_depth_m"],
-                )
+        global_max_depth = max(
+            condition["flood_depth_m"]
+            for modeled_frame in self.flood_frames["frames"]
+            for condition in modeled_frame["edge_conditions"]
+        )
+        assets_by_id = {
+            feature["properties"]["id"]: feature["properties"]
+            for feature in self.assets["features"]
+        }
+        max_population = max(
+            asset.get("population", 0) for asset in assets_by_id.values()
+        )
+        status_scores = {"open": 0.0, "restricted": 0.55, "closed": 1.0}
+        target_weights = {
+            "casualty_or_missing": {
+                "depth": 0.35,
+                "threshold": 0.25,
+                "status": 0.15,
+                "critical": 0.05,
+                "exposure": 0.20,
+            },
+            "housing_damage": {
+                "depth": 0.35,
+                "threshold": 0.25,
+                "status": 0.10,
+                "critical": 0.00,
+                "exposure": 0.30,
+            },
+            "transport_disruption": {
+                "depth": 0.30,
+                "threshold": 0.30,
+                "status": 0.20,
+                "critical": 0.15,
+                "exposure": 0.05,
+            },
+            "severe_impact": {
+                "depth": 0.35,
+                "threshold": 0.25,
+                "status": 0.15,
+                "critical": 0.10,
+                "exposure": 0.15,
+            },
+        }
 
         signals: List[JsonObject] = []
         for ping in self.prediction_pings["pings"]:
             base_probability = probabilities[ping["target"]]
             anchor_edge_id = ping["anchor_edge_id"]
-            local_depth = edge_states_by_id[anchor_edge_id]["flood_depth_m"]
-            maximum_depth = max_depth_by_edge[anchor_edge_id]
-            local_stage = (
-                min(1.0, local_depth / maximum_depth)
-                if maximum_depth > 0
-                else time_progress
-            )
-            cumulative_exposure = min(
+            edge_state = edge_states_by_id[anchor_edge_id]
+            local_depth = edge_state["flood_depth_m"]
+            exposure_asset_id = ping["exposure_asset_id"]
+            exposed_people = assets_by_id[exposure_asset_id].get("population", 0)
+            components = {
+                "depth": min(1.0, local_depth / global_max_depth),
+                "threshold": min(
+                    1.0,
+                    local_depth / edge_state["closure_depth_m"],
+                ),
+                "status": status_scores[edge_state["status"]],
+                "critical": 1.0 if edge_state["critical"] else 0.0,
+                "exposure": exposed_people / max_population,
+            }
+            weights = target_weights[ping["target"]]
+            local_danger = min(
                 1.0,
-                0.15 + (0.65 * local_stage) + (0.20 * time_progress),
+                sum(components[name] * weights[name] for name in weights),
             )
-            adjusted_probability = 1 - (
-                (1 - base_probability) ** cumulative_exposure
+            adjusted_probability = base_probability * (
+                0.10 + (0.90 * local_danger)
             )
+            priority_score = round(
+                100 * ((0.70 * local_danger) + (0.30 * base_probability))
+            )
+            if priority_score >= 70:
+                priority_level = "critical"
+            elif priority_score >= 55:
+                priority_level = "high"
+            elif priority_score >= 35:
+                priority_level = "elevated"
+            else:
+                priority_level = "low"
             signals.append({
                 "ping_id": ping["ping_id"],
                 "target": ping["target"],
@@ -206,7 +257,14 @@ class ScenarioService:
                 },
                 "anchor_asset_id": ping.get("anchor_asset_id"),
                 "anchor_edge_id": anchor_edge_id,
+                "exposure_asset_id": exposure_asset_id,
+                "exposed_people": exposed_people,
                 "local_flood_depth_m": local_depth,
+                "local_danger_score": round(local_danger, 6),
+                "priority_score": priority_score,
+                "priority_rank": 0,
+                "priority_level": priority_level,
+                "score_type": "prototype_localized_risk_score",
                 "activation_hours": ping["activation_hours"],
                 "state": (
                     "active"
@@ -217,6 +275,18 @@ class ScenarioService:
                 "recommended_action": ping["recommended_action"],
                 "source_type": "scenario_adjusted_model_prior",
             })
+
+        ranked = sorted(
+            signals,
+            key=lambda signal: (
+                -signal["priority_score"],
+                -signal["local_danger_score"],
+                -signal["exposed_people"],
+                signal["ping_id"],
+            ),
+        )
+        for rank, signal in enumerate(ranked, start=1):
+            signal["priority_rank"] = rank
         return signals
 
     def _impact_model_summary(self) -> JsonObject:

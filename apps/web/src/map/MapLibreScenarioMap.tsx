@@ -78,7 +78,8 @@ function predictionPopupContent(properties: Record<string, unknown>): HTMLDivEle
   const title = document.createElement("strong");
   title.textContent = text("label");
   const state = document.createElement("span");
-  state.textContent = text("state");
+  state.className = `priority-${text("priority_level")}`;
+  state.textContent = `#${text("priority_rank")} ${text("priority_level")}`;
   heading.append(title, state);
 
   const risk = document.createElement("div");
@@ -86,7 +87,7 @@ function predictionPopupContent(properties: Record<string, unknown>): HTMLDivEle
   const value = document.createElement("strong");
   value.textContent = `${text("percent")}%`;
   const valueLabel = document.createElement("span");
-  valueLabel.textContent = "current timeline risk";
+  valueLabel.textContent = "localized risk score";
   risk.append(value, valueLabel);
 
   const metrics = document.createElement("div");
@@ -96,7 +97,9 @@ function predictionPopupContent(properties: Record<string, unknown>): HTMLDivEle
   const depth = document.createElement("span");
   const depthValue = Number(properties.local_flood_depth_m ?? 0);
   depth.textContent = `Nearby depth ${depthValue.toFixed(2)} m`;
-  metrics.append(prior, depth);
+  const exposure = document.createElement("span");
+  exposure.textContent = `${Number(properties.exposed_people ?? 0).toLocaleString()} people nearby`;
+  metrics.append(prior, depth, exposure);
 
   const whyLabel = document.createElement("small");
   whyLabel.textContent = "Why this ping";
@@ -439,7 +442,11 @@ export function MapLibreScenarioMap({
     const animate = (timestamp: number) => {
       if (!mapRef.current || !map.getLayer("ark-prediction-pulse")) return;
       const phase = (timestamp % 1800) / 1800;
-      map.setPaintProperty("ark-prediction-pulse", "circle-radius", 14 + phase * 20);
+      map.setPaintProperty("ark-prediction-pulse", "circle-radius", [
+        "+",
+        12 + phase * 18,
+        ["*", ["get", "priority_score"], 0.07],
+      ]);
       map.setPaintProperty(
         "ark-prediction-pulse",
         "circle-opacity",

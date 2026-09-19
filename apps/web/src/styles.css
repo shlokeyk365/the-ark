@@ -1549,6 +1549,24 @@ input:focus-visible,
   border-radius: 3px;
 }
 
+.prediction-popup-heading span.priority-critical {
+  color: #ffb6c0;
+  background: rgba(242, 77, 99, 0.14);
+  border-color: rgba(242, 77, 99, 0.45);
+}
+
+.prediction-popup-heading span.priority-high {
+  color: #ffd08a;
+  background: rgba(240, 165, 42, 0.12);
+  border-color: rgba(240, 165, 42, 0.42);
+}
+
+.prediction-popup-heading span.priority-elevated {
+  color: #fff0a8;
+  background: rgba(255, 208, 90, 0.1);
+  border-color: rgba(255, 208, 90, 0.34);
+}
+
 .prediction-popup-risk {
   display: flex;
   gap: 8px;
@@ -1570,6 +1588,7 @@ input:focus-visible,
 
 .prediction-popup-metrics {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 

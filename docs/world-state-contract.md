@@ -32,9 +32,11 @@ Every snapshot contains:
 
 Every snapshot also carries `prediction_signals`. These are separately labeled
 `scenario_adjusted_model_prior` interpretations. Each retains the frozen
-event-impact `base_probability`, while its displayed probability increases with
-the anchor edge's modeled flood-stage progress and elapsed scenario time. Its
-`forecast`/`active` state changes separately at the configured activation hour.
+event-impact `base_probability`, while its displayed localized score changes
+with absolute depth, threshold exceedance, edge status, route criticality, and
+exposed population. `priority_rank` orders the current frame's POIs using an
+explicit prototype formula. Its `forecast`/`active` state changes separately at
+the configured activation hour.
 
 World-state versions are append-only. Applying an event creates a new version;
 it never edits an earlier snapshot in place.

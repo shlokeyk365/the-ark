@@ -212,6 +212,10 @@ def _validate_prediction_pings(
             raise ScenarioValidationError(
                 f"Prediction ping {ping['ping_id']} references an unknown asset"
             )
+        if ping.get("exposure_asset_id") not in asset_ids:
+            raise ScenarioValidationError(
+                f"Prediction ping {ping['ping_id']} references an unknown exposure asset"
+            )
         if ping.get("anchor_edge_id") not in edge_ids:
             raise ScenarioValidationError(
                 f"Prediction ping {ping['ping_id']} references an unknown edge"

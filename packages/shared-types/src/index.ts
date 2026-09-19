@@ -191,7 +191,14 @@ export interface PredictionSignal {
   geometry: PointGeometry;
   anchor_asset_id: string | null;
   anchor_edge_id: string;
+  exposure_asset_id: string;
+  exposed_people: number;
   local_flood_depth_m: number;
+  local_danger_score: number;
+  priority_score: number;
+  priority_rank: number;
+  priority_level: "critical" | "high" | "elevated" | "low";
+  score_type: "prototype_localized_risk_score";
   activation_hours: number;
   state: "forecast" | "active";
   reason: string;

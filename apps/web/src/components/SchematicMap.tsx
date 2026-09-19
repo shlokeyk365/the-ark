@@ -722,7 +722,7 @@ export function SchematicMap({
                   key={signal.ping_id}
                   role="button"
                   tabIndex={0}
-                  aria-label={`${signal.label}: ${signal.percent}% predicted risk, ${signal.state}`}
+                  aria-label={`Priority ${signal.priority_rank}, ${signal.label}: ${signal.percent}% localized risk score, ${signal.state}`}
                   onPointerDown={(event) => event.stopPropagation()}
                   onClick={() => setSelectedPredictionId(signal.ping_id)}
                   onKeyDown={(event) => {
@@ -737,7 +737,10 @@ export function SchematicMap({
                   >
                     <circle className="prediction-ring prediction-ring-outer" r="28" />
                     <circle className="prediction-ring prediction-ring-inner" r="19" />
-                    <circle className="prediction-core" r="11" />
+                    <circle
+                      className="prediction-core"
+                      r={7 + signal.priority_score * 0.05}
+                    />
                     <text className="prediction-mark" textAnchor="middle" y="4">
                       !
                     </text>
@@ -749,7 +752,7 @@ export function SchematicMap({
                     >
                       <rect width="122" height="36" rx="6" />
                       <text className="prediction-label" x="9" y="14">
-                        {signal.short_label}
+                        #{signal.priority_rank} {signal.short_label}
                       </text>
                       <text className="prediction-percent" x="9" y="29">
                         {signal.percent}% predicted
@@ -775,15 +778,18 @@ export function SchematicMap({
           </button>
           <div className="prediction-popup-heading">
             <strong>{selectedPrediction.label}</strong>
-            <span>{selectedPrediction.state}</span>
+            <span className={`priority-${selectedPrediction.priority_level}`}>
+              #{selectedPrediction.priority_rank} {selectedPrediction.priority_level}
+            </span>
           </div>
           <div className="prediction-popup-risk">
             <strong>{selectedPrediction.percent}%</strong>
-            <span>current timeline risk</span>
+            <span>localized risk score</span>
           </div>
           <div className="prediction-popup-metrics">
             <span>Event prior {selectedPrediction.base_percent}%</span>
             <span>Nearby depth {selectedPrediction.local_flood_depth_m.toFixed(2)} m</span>
+            <span>{selectedPrediction.exposed_people.toLocaleString()} people nearby</span>
           </div>
           <small>Why this ping</small>
           <p>{selectedPrediction.reason}</p>

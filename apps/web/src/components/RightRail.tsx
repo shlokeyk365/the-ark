@@ -174,7 +174,10 @@ export function RightRail({
           groups.set(signal.target, { signal, count: 1 });
         } else {
           groups.set(signal.target, {
-            signal: signal.percent > current.signal.percent ? signal : current.signal,
+            signal:
+              signal.priority_score > current.signal.priority_score
+                ? signal
+                : current.signal,
             count: current.count + 1,
           });
         }
@@ -234,7 +237,7 @@ export function RightRail({
               <div>
                 <strong>{signal.percent}%</strong>
                 <span>
-                  {signal.short_label.toLowerCase()} · {count} locations · prior {signal.base_percent}%
+                  #{signal.priority_rank} {signal.priority_level} · {count} locations · prior {signal.base_percent}%
                 </span>
               </div>
               <em>{signal.state}</em>
@@ -242,8 +245,9 @@ export function RightRail({
           ))}
         </div>
         <p className="model-signal-note">
-          Timeline risk combines the event prior with nearby modeled flood depth and scenario stage.
-          Pings remain area indicators, not building-level forecasts.
+          Local risk combines the event prior with hazard, access, and exposed population.
+          Pings remain area indicators, not building-level forecasts. Prototype only—not validated
+          for live dispatch.
         </p>
       </section>
 

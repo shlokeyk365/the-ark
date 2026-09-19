@@ -182,7 +182,14 @@ class PredictionSignal(WireModel):
     geometry: PointGeometry
     anchor_asset_id: Optional[str]
     anchor_edge_id: str
+    exposure_asset_id: str
+    exposed_people: int
     local_flood_depth_m: float
+    local_danger_score: float
+    priority_score: int
+    priority_rank: int
+    priority_level: Literal["critical", "high", "elevated", "low"]
+    score_type: Literal["prototype_localized_risk_score"]
     activation_hours: float
     state: Literal["forecast", "active"]
     reason: str
