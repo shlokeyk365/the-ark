@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.tsbuildinfo
+apps/web/vite.config.js
+apps/web/vite.config.d.ts
+.pytest_cache/
+__pycache__/
+*.py[cod]
+.env
+.env.local
+*.local
+work/
+
+# Regenerate with: npm run basemap
+apps/web/public/basemap/*.pmtiles
