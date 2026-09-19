@@ -111,7 +111,7 @@ export function responseDestinations(
     bootstrap.plans.find((plan) => plan.plan_id === selectedPlan.plan_id)
       ?.evaluation_deadline_minutes ?? null;
 
-  return selectedPlan.assignment_results.map((assignment, index) => {
+  const destinations = selectedPlan.assignment_results.map((assignment, index) => {
     const communityName = names.get(assignment.community_id) ?? assignment.community_id;
     const shelterName = names.get(assignment.shelter_id) ?? assignment.shelter_id;
     const access = accessByCommunity.get(assignment.community_id);
@@ -165,7 +165,7 @@ export function responseDestinations(
 
     return {
       id: `${selectedPlan.plan_id}:${assignment.community_id}:${assignment.shelter_id}:${index}`,
-      rank: index + 1,
+      rank: 0,
       communityId: assignment.community_id,
       communityName,
       shelterId: assignment.shelter_id,
@@ -186,6 +186,38 @@ export function responseDestinations(
       rationale,
     };
   });
+
+  const statusOrder: Record<ResponseDestinationStatus, number> = {
+    go_now: 0,
+    priority: 1,
+    planned: 2,
+    blocked: 3,
+  };
+  const missingNumber = Number.POSITIVE_INFINITY;
+
+  return destinations
+    .sort((left, right) => {
+      const byStatus = statusOrder[left.status] - statusOrder[right.status];
+      if (byStatus !== 0) return byStatus;
+
+      const byRisk =
+        (left.signal?.priority_rank ?? missingNumber) -
+        (right.signal?.priority_rank ?? missingNumber);
+      if (byRisk !== 0) return byRisk;
+
+      const byAccess =
+        (left.remainingAccessHours ?? missingNumber) -
+        (right.remainingAccessHours ?? missingNumber);
+      if (byAccess !== 0) return byAccess;
+
+      const byArrival =
+        (left.arrivalMinutes ?? missingNumber) -
+        (right.arrivalMinutes ?? missingNumber);
+      if (byArrival !== 0) return byArrival;
+
+      return left.communityId.localeCompare(right.communityId);
+    })
+    .map((destination, index) => ({ ...destination, rank: index + 1 }));
 }
 
 function countStatus(state: WorldStateSnapshot, status: string) {
