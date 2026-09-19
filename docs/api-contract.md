@@ -48,15 +48,15 @@ Provenance and licensing are recorded in
 
 Both return `WorldStateSnapshot`. The payload contains derived edge status,
 community access, routes, hazards, time-to-isolation, and Plan A/B/C results for
-one immutable state version. It also contains `prediction_signals`, four
-time-adjusted risk indicators used by the dashboard pings.
+one immutable state version. It also contains `prediction_signals`, ten
+time-adjusted operational POIs spanning the model's four impact targets.
 
 Each prediction signal includes the frozen `base_probability` from the event
 model and a displayed `probability` adjusted for the current scenario frame.
 The adjustment combines flood depth on the ping's declared `anchor_edge_id`
 with elapsed simulation time. The signal also includes its rounded percentages,
 local flood depth, map anchor, activation hour, timeline state (`forecast` or
-`active`), and a recommended action.
+`active`), a reason the location was flagged, and a recommended action.
 
 The adjusted value is a scenario risk projection, not a second ML inference or
 a calibrated hourly forecast. The model still predicts whole-event impacts,

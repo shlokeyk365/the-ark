@@ -181,20 +181,22 @@ def test_model_prediction_pings_increase_with_local_flood_stage() -> None:
     ]
     now, plus_six, plus_twelve, horizon = frames
 
+    assert len(now) == 10
     assert {signal["target"]: signal["base_probability"] for signal in now} == expected
-    for target, base_probability in expected.items():
+    for initial_signal in now:
+        ping_id = initial_signal["ping_id"]
         values = [
-            next(signal for signal in signals if signal["target"] == target)[
+            next(signal for signal in signals if signal["ping_id"] == ping_id)[
                 "probability"
             ]
             for signals in frames
         ]
         assert values == sorted(values)
         assert len(set(values)) == len(values)
-        assert values[-1] == base_probability
+        assert values[-1] == expected[initial_signal["target"]]
 
     assert all(signal["state"] == "forecast" for signal in now)
-    assert sum(signal["state"] == "active" for signal in plus_six) == 2
+    assert sum(signal["state"] == "active" for signal in plus_six) == 5
     assert all(signal["state"] == "active" for signal in plus_twelve)
     assert all(signal["state"] == "active" for signal in horizon)
     assert all(

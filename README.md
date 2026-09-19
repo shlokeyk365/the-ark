@@ -20,7 +20,7 @@ The fixture is synthetic demonstration data and is not operational guidance.
 - Any frame viewable with injected events held active, with time-to-isolation
   recomputed for that event set.
 - A frozen CatBoost impact prior trained on 4,869 historical Nepal flood events,
-  exposed as four research-only prediction pings on the timeline and map.
+  projected across ten research-only operational POIs on the timeline and map.
 
 ## Verify
 
@@ -95,6 +95,10 @@ inundation, roads, evacuation routes, hospitals and shelters, bridges, river
 gauges, alerts, model prediction pings, community labels, and administrative
 context — plus satellite and 3D terrain toggles. River gauges are listed but
 disabled: the fixture has no gauge observations yet.
+
+Prediction pings are clickable. Each explanation card separates current
+timeline risk from the shared event prior and shows nearby modeled flood depth,
+the reason the POI was flagged, and the recommended action.
 
 The administrative boundaries are Kathmandu and Lalitpur Metropolitan City,
 visual context only — see `data/scenarios/kantipur-river/SOURCES.md` for

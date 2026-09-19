@@ -81,8 +81,10 @@ routing, isolation, capacity, or plan viability.
 
 `model-impact-prior.json` stores the frozen Nakkhu 2024 event input and four
 probabilities produced by the CatBoost model. `prediction-pings.json` supplies
-display anchors, nearby network edges, activation hours, labels, and recommended
-actions. The scenario service joins them by target and returns the result as
+display anchors, nearby network edges, activation hours, explanation text, and
+recommended actions. Multiple POIs may share one target's event prior; their
+displayed risks differ because they are adjusted by different anchor-edge flood
+depths. The scenario service joins them by target and returns the result as
 `prediction_signals`.
 
 The base percentages stay constant because the trained model is an event-level

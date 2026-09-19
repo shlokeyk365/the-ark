@@ -9,10 +9,11 @@ identity excluded from predictors. Its status is `research_only`; the artifact
 records grouped ROC-AUC/RMSE evaluation and known limitations.
 
 `prediction-pings.json` adds presentation coordinates, nearby network-edge
-references, activation hours, and recommended actions for the four
-probabilities. The edge references let the scenario service adjust displayed
-risk using already-modeled local flood depth; they do not alter that depth or
-routing. The coordinates are map anchors and are not evidence of parcel- or
+references, activation hours, explanations, and recommended actions for ten
+operational POIs derived from the four probabilities. The edge references let
+the scenario service adjust displayed risk using already-modeled local flood
+depth; they do not alter that depth or routing. Multiple POIs can share one
+event prior. The coordinates are map anchors and are not evidence of parcel- or
 building-level prediction.
 
 ## Administrative context boundaries

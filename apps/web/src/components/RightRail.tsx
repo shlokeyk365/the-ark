@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type {
   PlanMetrics,
   PlanResult,
+  PredictionSignal,
   ScenarioBootstrapResponse,
   WorldStateSnapshot,
 } from "@the-ark/shared-types";
@@ -165,6 +166,23 @@ export function RightRail({
   }, []);
 
   const connected = worldState.community_access.filter((access) => !access.isolated).length;
+  const signalSummaries = Array.from(
+    worldState.prediction_signals.reduce(
+      (groups, signal) => {
+        const current = groups.get(signal.target);
+        if (!current) {
+          groups.set(signal.target, { signal, count: 1 });
+        } else {
+          groups.set(signal.target, {
+            signal: signal.percent > current.signal.percent ? signal : current.signal,
+            count: current.count + 1,
+          });
+        }
+        return groups;
+      },
+      new Map<string, { signal: PredictionSignal; count: number }>(),
+    ).values(),
+  );
 
   return (
     <aside className="right-rail" aria-label="Response plans, alerts and activity">
@@ -206,7 +224,7 @@ export function RightRail({
           <span>{bootstrap.impact_model.evaluation.unseen_district_roc_auc.toFixed(2)} AUC</span>
         </div>
         <div className="model-signal-grid">
-          {worldState.prediction_signals.map((signal) => (
+          {signalSummaries.map(({ signal, count }) => (
             <article
               className={`model-signal ${signal.target} ${signal.state}`}
               key={signal.ping_id}
@@ -215,7 +233,9 @@ export function RightRail({
               <i />
               <div>
                 <strong>{signal.percent}%</strong>
-                <span>{signal.label} · prior {signal.base_percent}%</span>
+                <span>
+                  {signal.short_label.toLowerCase()} · {count} locations · prior {signal.base_percent}%
+                </span>
               </div>
               <em>{signal.state}</em>
             </article>

@@ -1160,6 +1160,18 @@ input:focus-visible,
   pointer-events: none;
 }
 
+.prediction-ping {
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.prediction-ping:focus { outline: none; }
+
+.prediction-ping:focus .prediction-core {
+  stroke: var(--cyan-bright);
+  stroke-width: 3;
+}
+
 .prediction-ping.casualty_or_missing { color: var(--red); }
 .prediction-ping.housing_damage { color: var(--amber); }
 .prediction-ping.transport_disruption { color: #ffd05a; }
@@ -1470,6 +1482,159 @@ input:focus-visible,
 .maplibregl-ctrl-attrib.maplibregl-compact { min-height: 20px; }
 
 .maplibregl-canvas:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+
+.ark-prediction-popup .maplibregl-popup-content {
+  overflow: hidden;
+  padding: 0;
+  color: var(--text);
+  background: rgba(5, 13, 22, 0.97);
+  border: 1px solid rgba(85, 214, 255, 0.55);
+  border-radius: 8px;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.55), 0 0 24px rgba(0, 157, 255, 0.1);
+  backdrop-filter: blur(16px);
+}
+
+.ark-prediction-popup .maplibregl-popup-tip { display: none; }
+
+.ark-prediction-popup .maplibregl-popup-close-button {
+  z-index: 2;
+  top: 5px;
+  right: 5px;
+  width: 24px;
+  height: 24px;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 20px;
+  background: transparent;
+  border-radius: 4px;
+}
+
+.ark-prediction-popup .maplibregl-popup-close-button:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.prediction-popup-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 290px;
+  padding: 13px 14px 14px;
+  font-family: var(--sans);
+}
+
+.prediction-popup-heading {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.prediction-popup-heading strong {
+  color: #f2f8fd;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.prediction-popup-heading span {
+  padding: 2px 5px;
+  color: var(--cyan-bright);
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(85, 214, 255, 0.1);
+  border: 1px solid rgba(85, 214, 255, 0.3);
+  border-radius: 3px;
+}
+
+.prediction-popup-risk {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.prediction-popup-risk strong {
+  color: var(--cyan-bright);
+  font-family: var(--mono);
+  font-size: 25px;
+  line-height: 1;
+}
+
+.prediction-popup-risk span {
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.prediction-popup-metrics {
+  display: flex;
+  gap: 6px;
+}
+
+.prediction-popup-metrics span {
+  padding: 4px 6px;
+  color: #a9bfd2;
+  font-family: var(--mono);
+  font-size: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+}
+
+.prediction-popup-card small {
+  margin-top: 2px;
+  color: var(--cyan-bright);
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.prediction-popup-card p {
+  margin: -3px 0 0;
+  color: #b9cad9;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.prediction-popup-card .prediction-popup-action {
+  color: #e6f4fc;
+  font-weight: 600;
+}
+
+.schematic-prediction-popup {
+  position: absolute;
+  z-index: 8;
+  top: 58px;
+  left: 12px;
+  color: var(--text);
+  background: rgba(5, 13, 22, 0.97);
+  border: 1px solid rgba(85, 214, 255, 0.55);
+  border-radius: 8px;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.55), 0 0 24px rgba(0, 157, 255, 0.1);
+  backdrop-filter: blur(16px);
+}
+
+.schematic-prediction-close {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 24px;
+  height: 24px;
+  color: var(--muted);
+  font-size: 18px;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+}
+
+.schematic-prediction-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
 
 /* Layer-panel extras used by the Mapbox renderer. */
 

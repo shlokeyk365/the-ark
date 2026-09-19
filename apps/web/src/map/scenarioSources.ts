@@ -248,6 +248,7 @@ export function predictionSignalsCollection(
         activation_hours: signal.activation_hours,
         anchor_edge_id: signal.anchor_edge_id,
         local_flood_depth_m: signal.local_flood_depth_m,
+        reason: signal.reason,
         recommended_action: signal.recommended_action,
         source_type: signal.source_type,
       },

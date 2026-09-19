@@ -213,6 +213,7 @@ class ScenarioService:
                     if simulation_time_hours >= ping["activation_hours"]
                     else "forecast"
                 ),
+                "reason": ping["reason"],
                 "recommended_action": ping["recommended_action"],
                 "source_type": "scenario_adjusted_model_prior",
             })

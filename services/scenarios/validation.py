@@ -195,10 +195,10 @@ def _validate_prediction_pings(
     probabilities = impact_prior["impactProbabilities"]
     pings = prediction_pings["pings"]
     _assert_unique((ping["ping_id"] for ping in pings), "prediction ping ID")
-    targets = _assert_unique((ping["target"] for ping in pings), "prediction target")
+    targets = {ping["target"] for ping in pings}
     if targets != set(probabilities):
         raise ScenarioValidationError(
-            "Prediction pings must cover every model target exactly once"
+            "Prediction pings must cover every model target at least once"
         )
 
     for target, probability in probabilities.items():
@@ -207,7 +207,8 @@ def _validate_prediction_pings(
                 f"Prediction probability for {target} must be between 0 and 1"
             )
     for ping in pings:
-        if ping.get("anchor_asset_id") not in asset_ids:
+        anchor_asset_id = ping.get("anchor_asset_id")
+        if anchor_asset_id is not None and anchor_asset_id not in asset_ids:
             raise ScenarioValidationError(
                 f"Prediction ping {ping['ping_id']} references an unknown asset"
             )

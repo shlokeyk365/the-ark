@@ -194,6 +194,7 @@ export interface PredictionSignal {
   local_flood_depth_m: number;
   activation_hours: number;
   state: "forecast" | "active";
+  reason: string;
   recommended_action: string;
   source_type: "scenario_adjusted_model_prior";
 }

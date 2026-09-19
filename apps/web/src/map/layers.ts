@@ -413,8 +413,9 @@ export const LAYERS: LayerSpecification[] = [
       "text-size": ["interpolate", ["linear"], ["zoom"], 11, 9.5, 16, 12.5],
       "text-offset": [0, 1.8],
       "text-anchor": "top",
-      "text-allow-overlap": true,
-      "text-ignore-placement": true,
+      "text-allow-overlap": false,
+      "text-optional": true,
+      "text-padding": 4,
     },
     paint: {
       "text-color": "#ffffff",

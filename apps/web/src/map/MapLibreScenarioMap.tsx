@@ -68,6 +68,50 @@ function registerPmtilesProtocol() {
   protocolRegistered = true;
 }
 
+function predictionPopupContent(properties: Record<string, unknown>): HTMLDivElement {
+  const text = (key: string) => String(properties[key] ?? "");
+  const root = document.createElement("div");
+  root.className = "prediction-popup-card";
+
+  const heading = document.createElement("div");
+  heading.className = "prediction-popup-heading";
+  const title = document.createElement("strong");
+  title.textContent = text("label");
+  const state = document.createElement("span");
+  state.textContent = text("state");
+  heading.append(title, state);
+
+  const risk = document.createElement("div");
+  risk.className = "prediction-popup-risk";
+  const value = document.createElement("strong");
+  value.textContent = `${text("percent")}%`;
+  const valueLabel = document.createElement("span");
+  valueLabel.textContent = "current timeline risk";
+  risk.append(value, valueLabel);
+
+  const metrics = document.createElement("div");
+  metrics.className = "prediction-popup-metrics";
+  const prior = document.createElement("span");
+  prior.textContent = `Event prior ${text("base_percent")}%`;
+  const depth = document.createElement("span");
+  const depthValue = Number(properties.local_flood_depth_m ?? 0);
+  depth.textContent = `Nearby depth ${depthValue.toFixed(2)} m`;
+  metrics.append(prior, depth);
+
+  const whyLabel = document.createElement("small");
+  whyLabel.textContent = "Why this ping";
+  const why = document.createElement("p");
+  why.textContent = text("reason");
+  const actionLabel = document.createElement("small");
+  actionLabel.textContent = "Recommended action";
+  const action = document.createElement("p");
+  action.className = "prediction-popup-action";
+  action.textContent = text("recommended_action");
+
+  root.append(heading, risk, metrics, whyLabel, why, actionLabel, action);
+  return root;
+}
+
 /**
  * Basemap layers, plus the subset that is labels-only.
  *
@@ -212,6 +256,7 @@ export function MapLibreScenarioMap({
 }: MapLibreScenarioMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const predictionPopupRef = useRef<maplibregl.Popup | null>(null);
   const [ready, setReady] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
   const [satellite, setSatellite] = useState(false);
@@ -334,15 +379,38 @@ export function MapLibreScenarioMap({
       map.getCanvas().style.cursor = "";
       setHovered(null);
     };
+    const showPrediction = (event: maplibregl.MapLayerMouseEvent) => {
+      const feature = event.features?.[0];
+      if (!feature || feature.geometry.type !== "Point") return;
+      const coordinates = feature.geometry.coordinates as [number, number];
+      predictionPopupRef.current?.remove();
+      predictionPopupRef.current = new maplibregl.Popup({
+        className: "ark-prediction-popup",
+        closeButton: true,
+        closeOnClick: true,
+        maxWidth: "310px",
+        offset: 16,
+      })
+        .setLngLat(coordinates)
+        .setDOMContent(
+          predictionPopupContent(feature.properties as Record<string, unknown>),
+        )
+        .addTo(map);
+    };
 
     HOVERABLE_ROAD_LAYERS.forEach((layerId) => {
       map.on("mouseenter", layerId, enter);
       map.on("mousemove", layerId, move);
       map.on("mouseleave", layerId, leave);
     });
+    map.on("mouseenter", "ark-prediction-ping", enter);
+    map.on("mouseleave", "ark-prediction-ping", leave);
+    map.on("click", "ark-prediction-ping", showPrediction);
 
     return () => {
       window.clearTimeout(watchdog);
+      predictionPopupRef.current?.remove();
+      predictionPopupRef.current = null;
       setReady(false);
       mapRef.current = null;
       map.remove();
@@ -439,6 +507,11 @@ export function MapLibreScenarioMap({
       }
     });
   }, [collections, ready]);
+
+  useEffect(() => {
+    predictionPopupRef.current?.remove();
+    predictionPopupRef.current = null;
+  }, [worldState.world_state_version]);
 
   /* ---------------------------------------------------- layer visibility */
 
@@ -652,7 +725,7 @@ export function MapLibreScenarioMap({
       ) : null}
 
       <div className="map-provenance">
-        Water extent is a scenario envelope; pings are frozen event-level model predictions.
+        Water is a scenario envelope; POI risk adjusts a shared event prior by local depth and time.
       </div>
     </section>
   );

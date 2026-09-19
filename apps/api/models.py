@@ -185,6 +185,7 @@ class PredictionSignal(WireModel):
     local_flood_depth_m: float
     activation_hours: float
     state: Literal["forecast", "active"]
+    reason: str
     recommended_action: str
     source_type: Literal["scenario_adjusted_model_prior"]
 

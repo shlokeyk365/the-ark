@@ -11,6 +11,7 @@ import type {
   DerivedEdgeState,
   PlanResult,
   Position,
+  PredictionSignal,
   ScenarioBootstrapResponse,
   WorldStateSnapshot,
 } from "@the-ark/shared-types";
@@ -114,6 +115,7 @@ export function SchematicMap({
     h: DEFAULT_BASE_H,
   });
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+  const [selectedPredictionId, setSelectedPredictionId] = useState<string | null>(null);
   const [layersOpen, setLayersOpen] = useState(true);
   // Once the operator chooses, stop auto-collapsing on resize.
   const [layersPinned, setLayersPinned] = useState(false);
@@ -294,6 +296,15 @@ export function SchematicMap({
       })),
     [project, worldState.prediction_signals],
   );
+  const selectedPrediction: PredictionSignal | undefined = selectedPredictionId
+    ? worldState.prediction_signals.find(
+        (signal) => signal.ping_id === selectedPredictionId,
+      )
+    : undefined;
+
+  useEffect(() => {
+    setSelectedPredictionId(null);
+  }, [worldState.world_state_version]);
 
   /**
    * The floating map chrome sits above the SVG, so its footprint is reserved
@@ -700,17 +711,26 @@ export function SchematicMap({
 
         {layers.predictions ? (
           <g className="prediction-layer">
-            {predictionSignals.map((signal, index) => {
-              const labelLeft = index >= 2;
-              const labelBelow = index === 1;
+            {predictionSignals.map((signal) => {
+              const labelLeft = signal.point.x > BASE_W / 2;
+              const labelBelow = signal.point.y < 72;
               const labelX = labelLeft ? -142 : 20;
               const labelY = labelBelow ? 19 : -48;
               return (
                 <g
                   className={`prediction-ping ${signal.target} ${signal.state}`}
                   key={signal.ping_id}
-                  role="img"
+                  role="button"
+                  tabIndex={0}
                   aria-label={`${signal.label}: ${signal.percent}% predicted risk, ${signal.state}`}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={() => setSelectedPredictionId(signal.ping_id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedPredictionId(signal.ping_id);
+                    }
+                  }}
                 >
                   <g
                     transform={`translate(${signal.point.x} ${signal.point.y}) scale(${counter})`}
@@ -722,24 +742,55 @@ export function SchematicMap({
                       !
                     </text>
                   </g>
-                  <g
-                    className="prediction-label-card"
-                    transform={`translate(${signal.point.x} ${signal.point.y}) scale(${counter}) translate(${labelX} ${labelY})`}
-                  >
-                    <rect width="122" height="36" rx="6" />
-                    <text className="prediction-label" x="9" y="14">
-                      {signal.short_label}
-                    </text>
-                    <text className="prediction-percent" x="9" y="29">
-                      {signal.percent}% predicted
-                    </text>
-                  </g>
+                  {selectedPredictionId === signal.ping_id ? (
+                    <g
+                      className="prediction-label-card"
+                      transform={`translate(${signal.point.x} ${signal.point.y}) scale(${counter}) translate(${labelX} ${labelY})`}
+                    >
+                      <rect width="122" height="36" rx="6" />
+                      <text className="prediction-label" x="9" y="14">
+                        {signal.short_label}
+                      </text>
+                      <text className="prediction-percent" x="9" y="29">
+                        {signal.percent}% predicted
+                      </text>
+                    </g>
+                  ) : null}
                 </g>
               );
             })}
           </g>
         ) : null}
       </svg>
+
+      {selectedPrediction ? (
+        <div className="schematic-prediction-popup prediction-popup-card" role="dialog">
+          <button
+            className="schematic-prediction-close"
+            type="button"
+            aria-label="Close prediction details"
+            onClick={() => setSelectedPredictionId(null)}
+          >
+            ×
+          </button>
+          <div className="prediction-popup-heading">
+            <strong>{selectedPrediction.label}</strong>
+            <span>{selectedPrediction.state}</span>
+          </div>
+          <div className="prediction-popup-risk">
+            <strong>{selectedPrediction.percent}%</strong>
+            <span>current timeline risk</span>
+          </div>
+          <div className="prediction-popup-metrics">
+            <span>Event prior {selectedPrediction.base_percent}%</span>
+            <span>Nearby depth {selectedPrediction.local_flood_depth_m.toFixed(2)} m</span>
+          </div>
+          <small>Why this ping</small>
+          <p>{selectedPrediction.reason}</p>
+          <small>Recommended action</small>
+          <p className="prediction-popup-action">{selectedPrediction.recommended_action}</p>
+        </div>
+      ) : null}
 
       {layers.context ? (
         <div className="context-credit">
@@ -802,7 +853,7 @@ export function SchematicMap({
         )}
       </div>
       <div className="map-provenance">
-        Water extent is a scenario envelope; pings are frozen event-level model predictions.
+        Water is a scenario envelope; POI risk adjusts a shared event prior by local depth and time.
       </div>
     </section>
   );
