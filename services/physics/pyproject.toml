@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "the-arc-physics"
+version = "0.1.0"
+description = "Historical flood learning and physical simulation components for The Arc."
+requires-python = ">=3.9"
+dependencies = [
+  "catboost>=1.2,<1.3",
+  "numpy>=2.0,<3",
+  "pyshp>=2.3,<3",
+  "scikit-learn>=1.3,<1.7",
+]
+
+[project.scripts]
+the-arc-flood-model = "the_arc_physics.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

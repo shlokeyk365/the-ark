@@ -6,10 +6,13 @@ apps/web/vite.config.d.ts
 .pytest_cache/
 __pycache__/
 *.py[cod]
+.venv/
+*.egg-info/
 .env
 .env.local
 *.local
 work/
+data/raw/
 
 # Regenerate with: npm run basemap
 apps/web/public/basemap/*.pmtiles

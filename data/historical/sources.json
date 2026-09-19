@@ -1,0 +1,86 @@
+{
+  "training_sources": [
+    {
+      "name": "UNDRR DesInventar Nepal",
+      "url": "https://www.desinventar.net/DesInventar/download/DI_export_npl.zip",
+      "record_type": "historical disaster impact datacards",
+      "training_use": "3,953 event-level flood records and impact labels from 1971 through 2013",
+      "limitations": [
+        "Records are administrative event reports, not pixel-level flood maps.",
+        "Zero values can mean either no impact or incomplete reporting."
+      ]
+    },
+    {
+      "name": "Government of Nepal BIPAD Portal",
+      "url": "https://bipadportal.gov.np/api/",
+      "record_type": "verified or approved flood incident records",
+      "training_use": "1,396 event-level records and available impact labels from 2014 through 2023",
+      "limitations": [
+        "Transport-loss values were uniformly zero in the imported records, so those labels are marked unknown instead of negative.",
+        "The import stops at 2023 to protect the locked 2024 holdout."
+      ]
+    },
+    {
+      "name": "NASA POWER Daily API",
+      "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/",
+      "record_type": "daily precipitation estimates",
+      "training_use": "1-, 3-, 7-, and 30-day rainfall totals, rainy-day count, and rainfall anomaly",
+      "limitations": [
+        "Daily gridded estimates are not river-gauge or street-level observations.",
+        "Weather enrichment is available from 1981 onward."
+      ]
+    },
+    {
+      "name": "Nepal National Statistics Office 2011 Census",
+      "url": "https://nsonepal.gov.np/content/7695/7695-population-2011/",
+      "record_type": "district population and household counts",
+      "training_use": "district exposure and population-density features",
+      "limitations": [
+        "A single census snapshot does not capture population changes over the full historical period."
+      ]
+    },
+    {
+      "name": "GADM 4.1 Nepal boundaries",
+      "url": "https://gadm.org/data.html",
+      "record_type": "administrative boundary geometry",
+      "training_use": "historical 75-district centroids and areas",
+      "limitations": [
+        "District aliases are normalized so old and new spellings cannot land in different validation folds."
+      ]
+    },
+    {
+      "name": "Open-Meteo Elevation API",
+      "url": "https://open-meteo.com/en/docs/elevation-api",
+      "record_type": "sampled elevation",
+      "training_use": "district and location-level elevation and terrain-relief features",
+      "limitations": [
+        "District samples summarize terrain and do not represent property-level elevation."
+      ]
+    },
+    {
+      "name": "HydroBASINS level 6 and HydroRIVERS",
+      "url": "https://www.hydrosheds.org/products",
+      "record_type": "catchment polygons and river-reach network",
+      "training_use": "basin area, upstream area, outlet distance, river proximity, long-term discharge, and river order",
+      "limitations": [
+        "Level-6 catchments and global river reaches do not resolve every urban drainage channel.",
+        "Long-term average discharge is not event-time river stage or discharge."
+      ]
+    }
+  ],
+  "training_summary": {
+    "source_report_count": 5349,
+    "consolidated_episode_count": 4869,
+    "year_min": 1971,
+    "year_max": 2023,
+    "normalized_district_groups": 75,
+    "hydrobasins_level_6_groups": 17,
+    "city_or_district_identity_used_as_predictor": false,
+    "basin_identity_used_as_predictor": false
+  },
+  "reserved_holdout": {
+    "event_id": "nakkhu-2024",
+    "start_date": "2024-09-27",
+    "rule": "No 2024-or-later event or Nakkhu outcome label may be included in training, model selection, or threshold tuning."
+  }
+}
