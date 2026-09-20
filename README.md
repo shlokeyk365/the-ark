@@ -31,6 +31,20 @@ hazard and response plan is <em>derived</em> from it — never guessed, never dr
 
 <sub><b>Incident command, exercise mode.</b> Modeled flood extent over the Nakkhu corridor, live route status, prediction pings, and a 24-hour scrub timeline.</sub>
 
+The hybrid Incident Copilot requires an Anthropic API key for open-ended questions
+and generated map briefings. Exact map-status lookups and supported field
+updates remain deterministic and work without Claude.
+
+```bash
+export ANTHROPIC_API_KEY="your-key"
+export ANTHROPIC_MODEL="claude-sonnet-4-6"
+```
+
+```bash
+PYTHONPYCACHEPREFIX=/private/tmp/pycache-the-ark \
+python3 -m uvicorn apps.api.main:app --reload
+```
+
 </div>
 
 ---

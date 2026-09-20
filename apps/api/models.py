@@ -121,6 +121,72 @@ class IntelligenceDecisionResponse(WireModel):
     updated_world_state: "WorldStateSnapshot"
 
 
+class CopilotChatRequest(WireModel):
+    message: str = Field(min_length=1, max_length=4000)
+    frame_id: str
+    event_ids: List[str] = Field(default_factory=list)
+    intelligence_report_ids: List[str] = Field(default_factory=list)
+
+
+class CopilotAnswer(WireModel):
+    answer_id: str
+    provider: Literal["deterministic", "claude"]
+    model: Optional[str]
+    question: str
+    message: str
+    evidence_ids: List[str]
+    source_world_state_version: str
+    limitations: List[str]
+
+
+class CopilotUpdateResponse(WireModel):
+    mode: Literal["deterministic_update"]
+    report: IntelligenceReport
+    baseline_changed: Literal[False]
+    tentative_world_state: Optional["WorldStateSnapshot"]
+
+
+class CopilotAnswerResponse(WireModel):
+    mode: Literal["deterministic_answer", "claude_answer"]
+    answer: CopilotAnswer
+
+
+CopilotChatResponse = Union[CopilotUpdateResponse, CopilotAnswerResponse]
+
+
+class MapSummaryRequest(WireModel):
+    frame_id: str
+    event_ids: List[str] = Field(default_factory=list)
+    intelligence_report_ids: List[str] = Field(default_factory=list)
+
+
+class MapSummaryFacts(WireModel):
+    routes_total: int
+    routes_closed: int
+    routes_restricted: int
+    communities_total: int
+    communities_isolated: int
+    hospital_accessible_communities: int
+    active_hazards: int
+    active_events: int
+    viable_plans: int
+
+
+class MapSummaryResponse(WireModel):
+    scenario_id: str
+    frame_id: str
+    source_world_state_version: str
+    headline: str
+    overview: str
+    priorities: List[str]
+    recommended_plan: Optional[str]
+    facts: MapSummaryFacts
+    limitations: List[str]
+    provider: Literal["claude"]
+    model: str
+    evidence_ids: List[str]
+
+
 class SourceMetadata(WireModel):
     source_type: Literal["modeled_input", "operator_injected", "derived_result"]
     model_name: Optional[str] = None

@@ -1,15 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import type { CopilotResponse, IntelligenceReport, WorldStateSnapshot } from "@the-ark/shared-types";
+import type {
+  CopilotAnswer,
+  IntelligenceReport,
+  MapSummaryResponse,
+  WorldStateSnapshot,
+} from "@the-ark/shared-types";
 import { getCopilotStatus } from "../api";
 
 interface IncidentCopilotProps {
   busy: boolean;
+  answers: CopilotAnswer[];
   reports: IntelligenceReport[];
-  replies: CopilotResponse[];
+  summary: MapSummaryResponse | null;
   baseline: WorldStateSnapshot;
   tentative: WorldStateSnapshot | null;
   onSubmit: (message: string) => Promise<void>;
+  onSummarize: () => Promise<void>;
+  onDismissSummary: () => void;
+  onDeleteAnswer: (answerId: string) => void;
+  onDelete: (reportId: string) => Promise<void>;
   onDecision: (
     reportId: string,
     decision: "confirm" | "keep_tentative" | "reject",
@@ -38,11 +48,16 @@ function impactSummary(
 
 export function IncidentCopilot({
   busy,
+  answers,
   reports,
-  replies,
+  summary,
   baseline,
   tentative,
   onSubmit,
+  onSummarize,
+  onDismissSummary,
+  onDeleteAnswer,
+  onDelete,
   onDecision,
 }: IncidentCopilotProps) {
   const [message, setMessage] = useState("");
@@ -57,7 +72,9 @@ export function IncidentCopilot({
     const timer = window.setInterval(refresh, 15000);
     return () => { cancelled = true; window.clearInterval(timer); };
   }, []);
-  useEffect(() => { feed.current?.scrollTo({ top: feed.current.scrollHeight }); }, [replies, busy]);
+  useEffect(() => {
+    feed.current?.scrollTo({ top: feed.current.scrollHeight });
+  }, [answers, reports, summary, busy]);
   const impact = useMemo(
     () => impactSummary(baseline, tentative),
     [baseline, tentative],
@@ -75,29 +92,124 @@ export function IncidentCopilot({
       </header>
 
       <div className="copilot-feed" aria-live="polite" ref={feed}>
-        {replies.length === 0 ? (
+        {!summary && answers.length === 0 && reports.length === 0 ? (
           <div className="copilot-empty">
-            Ask about the map, compare plan results, or report a road or bridge
-            status. Changes appear as previews until you confirm them.
-            {configured === false ? <p>Complete the private server assistant setup to enable questions. Status commands work now.</p> : null}
+            Ask about the current map, responder simulation, or plans. A supported
+            field report will propose a map change without altering the baseline.
           </div>
-        ) : (
-          replies.map((reply, index) => (
-            <article className="intel-message" key={`${reply.context_digest}-${index}`}>
+        ) : null}
+        {summary ? (
+          <article className="intel-message map-summary-message">
+            <div className="intel-message-meta">
+              <span>Claude map briefing</span>
+              <div className="intel-message-actions">
+                <b data-status="confirmed">current</b>
+                <button
+                  aria-label="Delete map summary"
+                  className="intel-delete"
+                  disabled={busy}
+                  onClick={onDismissSummary}
+                  title="Delete summary"
+                  type="button"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <strong className="map-summary-headline">{summary.headline}</strong>
+            <p>{summary.overview}</p>
+            <div className="map-summary-priorities">
+              <strong>Operational priorities</strong>
+              <ol>
+                {summary.priorities.map((priority) => (
+                  <li key={priority}>{priority}</li>
+                ))}
+              </ol>
+            </div>
+            {summary.recommended_plan ? (
+              <p className="map-summary-plan">{summary.recommended_plan}</p>
+            ) : null}
+            <div className="copilot-evidence">
+              <strong>Grounded evidence</strong>
+              <span>{summary.evidence_ids.join(" · ")}</span>
+            </div>
+            <small>
+              {summary.model} · State {summary.source_world_state_version} · {summary.limitations[0]}
+            </small>
+          </article>
+        ) : null}
+        {answers.slice(0, 5).map((answer) => {
+          const current = answer.source_world_state_version === baseline.world_state_version;
+          return (
+            <article className="intel-message copilot-answer" key={answer.answer_id}>
               <div className="intel-message-meta">
-                <span>You</span>
-                <b>Incident briefing</b>
+                <span>
+                  {answer.provider === "claude"
+                    ? "Claude · grounded answer"
+                    : "Deterministic map lookup"}
+                </span>
+                <div className="intel-message-actions">
+                  <b data-status={current ? "confirmed" : "rejected"}>
+                    {current ? "current" : "older state"}
+                  </b>
+                  <button
+                    aria-label="Delete chatbot answer"
+                    className="intel-delete"
+                    disabled={busy}
+                    onClick={() => onDeleteAnswer(answer.answer_id)}
+                    title="Delete answer"
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
-              <p>{reply.message}</p>
-              <div className="intel-interpretation">
-                <strong>Ark</strong>
-                <span style={{ whiteSpace: "pre-wrap" }}>{reply.answer}</span>
-                <small>{reply.frame_id} · {reply.world_state_version}</small>
-                {reply.world_state_version !== baseline.world_state_version ? <small>Earlier snapshot — ask again for the current map.</small> : null}
+              <strong className="copilot-question">{answer.question}</strong>
+              <p>{answer.message}</p>
+              <div className="copilot-evidence">
+                <strong>Evidence</strong>
+                <span>{answer.evidence_ids.join(" · ")}</span>
               </div>
+              <small>
+                {answer.model ? `${answer.model} · ` : ""}
+                State {answer.source_world_state_version}
+                {answer.limitations[0] ? ` · ${answer.limitations[0]}` : ""}
+              </small>
             </article>
-          ))
-        )}
+          );
+        })}
+        {reports.slice(0, 3).map((report) => (
+          <article className="intel-message" key={report.report_id}>
+            <div className="intel-message-meta">
+              <span>{report.source.name}</span>
+              <div className="intel-message-actions">
+                <b data-status={report.status}>{report.status}</b>
+                <button
+                  aria-label={`Delete report from ${report.source.name}`}
+                  className="intel-delete"
+                  disabled={busy}
+                  onClick={() => void onDelete(report.report_id)}
+                  title="Delete report"
+                  type="button"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <p>{report.message}</p>
+            <div className="intel-interpretation">
+              <strong>Ark interpretation</strong>
+              <span>{report.claim.summary}</span>
+              <small>
+                {report.asset_match
+                  ? `${report.asset_match.display_name} · location match ${Math.round(
+                      report.asset_match.confidence * 100,
+                    )}%`
+                  : "No map asset resolved"}
+              </small>
+            </div>
+          </article>
+        ))}
         {busy ? <p className="copilot-empty">Reading the current state…</p> : null}
       </div>
 
@@ -144,13 +256,23 @@ export function IncidentCopilot({
         }}
       >
         <textarea
-          aria-label="Message Incident Copilot"
-          placeholder="Ask about this map, or try: ktp-bridge-02 is blocked"
+          aria-label="Field communication"
+          placeholder="Ask about routes and responders, or report that a mapped road is blocked."
           maxLength={4000}
           value={message}
           onChange={(event) => setMessage(event.target.value)}
         />
-        <button type="submit" disabled={busy || !message.trim()}>Send</button>
+        <div className="copilot-submit-row">
+          <button
+            className="copilot-summary-button"
+            disabled={busy}
+            onClick={() => void onSummarize()}
+            type="button"
+          >
+            Summarize map
+          </button>
+          <button type="submit" disabled={busy || !message.trim()}>Analyze</button>
+        </div>
       </form>
     </section>
   );

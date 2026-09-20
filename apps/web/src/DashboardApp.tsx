@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
-  CopilotResponse,
+  CopilotAnswer,
   IntelligenceReport,
+  MapSummaryResponse,
   PlanMetrics,
   ScenarioBootstrapResponse,
   WorldStateSnapshot,
@@ -10,10 +11,12 @@ import type {
 
 import {
   applyEvent,
-  askCopilot,
+  deleteIntelligenceReport,
   decideIntelligenceReport,
   getBootstrap,
   getFrame,
+  sendCopilotMessage,
+  summarizeCurrentMap,
 } from "./api";
 import { eventsActiveAt, formatHours, type FrameSeriesEntry } from "./derive";
 import type { MapSelection } from "./map/selection";
@@ -86,12 +89,13 @@ export function App() {
   const [intelligenceReports, setIntelligenceReports] = useState<
     IntelligenceReport[]
   >([]);
-  const [chatReplies, setChatReplies] = useState<CopilotResponse[]>([]);
   const [confirmedIntelligenceIds, setConfirmedIntelligenceIds] = useState<
     string[]
   >([]);
   const [tentativeWorldState, setTentativeWorldState] =
     useState<WorldStateSnapshot | null>(null);
+  const [mapSummary, setMapSummary] = useState<MapSummaryResponse | null>(null);
+  const [copilotAnswers, setCopilotAnswers] = useState<CopilotAnswer[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState("ktp-plan-a");
   /*
    * One selection for the whole dashboard.
@@ -199,6 +203,14 @@ export function App() {
     () => series.find((entry) => entry.frameId === selectedFrameId)?.state,
     [series, selectedFrameId],
   );
+
+  useEffect(() => {
+    setMapSummary((current) =>
+      current?.source_world_state_version === worldState?.world_state_version
+        ? current
+        : null,
+    );
+  }, [worldState?.world_state_version]);
 
   const seriesComplete = Boolean(
     bootstrap && series.length === bootstrap.available_frames.length,
@@ -335,23 +347,44 @@ export function App() {
       setBusy(true);
       setError(null);
       try {
-        const response = await askCopilot({
+        const response = await sendCopilotMessage(
           message,
-          frame_id: worldState.frame_id,
-          event_ids: activeEventIds,
-          intelligence_report_ids: confirmedIntelligenceIds,
-        });
-        setChatReplies((current) => [...current.slice(-19), response]);
-        const report = response.report;
-        if (report) {
-          setIntelligenceReports((current) => [report, ...current.filter((item) => item.report_id !== report.report_id)]);
-          setTentativeWorldState(response.tentative_world_state);
+          worldState.frame_id,
+          activeEventIds,
+          confirmedIntelligenceIds,
+        );
+        if (response.mode !== "deterministic_update") {
+          setCopilotAnswers((current) => [
+            response.answer,
+            ...current.filter(
+              (answer) => answer.answer_id !== response.answer.answer_id,
+            ),
+          ]);
+          pushLog(
+            logEntry(
+              "intelligence",
+              response.mode === "claude_answer"
+                ? "Claude answered from grounded context"
+                : "Deterministic map lookup answered",
+              response.answer.message,
+              response.answer.source_world_state_version,
+            ),
+          );
+          return;
         }
+        setIntelligenceReports((current) => [
+          response.report,
+          ...current.filter(
+            (report) => report.report_id !== response.report.report_id,
+          ),
+        ]);
+        setMapSummary(null);
+        setTentativeWorldState(response.tentative_world_state);
         pushLog(
           logEntry(
             "intelligence",
-            report ? `${report.status} field report received` : "Copilot answered",
-            response.answer,
+            `${response.report.status} field report received`,
+            response.report.claim.summary,
             worldState.world_state_version,
           ),
         );
@@ -366,6 +399,99 @@ export function App() {
       }
     },
     [activeEventIds, confirmedIntelligenceIds, pushLog, worldState],
+  );
+
+  const onSummarizeMap = useCallback(async () => {
+    if (!worldState) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const summary = await summarizeCurrentMap(
+        worldState.frame_id,
+        activeEventIds,
+        confirmedIntelligenceIds,
+      );
+      setMapSummary(summary);
+      pushLog(
+        logEntry(
+          "intelligence",
+          "Current map summarized",
+          summary.headline,
+          summary.source_world_state_version,
+        ),
+      );
+    } catch (summaryError) {
+      setError(
+        summaryError instanceof Error
+          ? summaryError.message
+          : "Unable to summarize the current map",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }, [activeEventIds, confirmedIntelligenceIds, pushLog, worldState]);
+
+  const onDeleteIntelligence = useCallback(
+    async (reportId: string) => {
+      if (!bootstrap || !worldState) return;
+      const report = intelligenceReports.find(
+        (candidate) => candidate.report_id === reportId,
+      );
+      setBusy(true);
+      setError(null);
+      try {
+        const deleted = await deleteIntelligenceReport(reportId);
+        const wasConfirmed = confirmedIntelligenceIds.includes(reportId);
+        const nextIds = confirmedIntelligenceIds.filter((id) => id !== reportId);
+
+        setIntelligenceReports((current) =>
+          current.filter((candidate) => candidate.report_id !== reportId),
+        );
+        setMapSummary(null);
+        setConfirmedIntelligenceIds(nextIds);
+        setTentativeWorldState(null);
+
+        let stateVersion = worldState.world_state_version;
+        if (wasConfirmed) {
+          const entries = await loadSeries(
+            bootstrap,
+            activeEventIds,
+            undefined,
+            nextIds,
+          );
+          setSeries(entries);
+          const updated =
+            entries.find((entry) => entry.frameId === worldState.frame_id) ??
+            entries[0];
+          stateVersion = updated.state.world_state_version;
+        }
+
+        pushLog(
+          logEntry(
+            "intelligence",
+            "Field report deleted",
+            report?.claim.summary ?? deleted.claim.summary,
+            stateVersion,
+          ),
+        );
+      } catch (deleteError) {
+        setError(
+          deleteError instanceof Error
+            ? deleteError.message
+            : "Unable to delete field report",
+        );
+      } finally {
+        setBusy(false);
+      }
+    },
+    [
+      activeEventIds,
+      bootstrap,
+      confirmedIntelligenceIds,
+      intelligenceReports,
+      pushLog,
+      worldState,
+    ],
   );
 
   const onIntelligenceDecision = useCallback(
@@ -389,6 +515,7 @@ export function App() {
             report.report_id === reportId ? response.report : report,
           ),
         );
+        setMapSummary(null);
         if (decision === "confirm") {
           const nextIds = Array.from(
             new Set([...confirmedIntelligenceIds, reportId]),
@@ -537,12 +664,21 @@ export function App() {
           />
           <div className="operations-right-stack">
             <IncidentCopilot
-              replies={chatReplies}
+              answers={copilotAnswers}
               baseline={worldState}
               busy={busy}
+              onDelete={onDeleteIntelligence}
               onDecision={onIntelligenceDecision}
+              onDismissSummary={() => setMapSummary(null)}
+              onDeleteAnswer={(answerId) =>
+                setCopilotAnswers((current) =>
+                  current.filter((answer) => answer.answer_id !== answerId),
+                )
+              }
               onSubmit={onSubmitIntelligence}
+              onSummarize={onSummarizeMap}
               reports={intelligenceReports}
+              summary={mapSummary}
               tentative={tentativeWorldState}
             />
             <SelectedAssetPanel

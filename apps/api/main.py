@@ -1,12 +1,13 @@
 """FastAPI surface for the deterministic Kantipur scenario."""
 
+import hashlib
 import os
 from pathlib import Path
 from typing import Annotated, List, Literal, Optional
 
 from apps.api.models import (
-    CopilotRequest,
-    CopilotResponse,
+    CopilotChatRequest,
+    CopilotChatResponse,
     EventRecomputeResponse,
     HealthResponse,
     IntelligenceDecisionRequest,
@@ -14,6 +15,8 @@ from apps.api.models import (
     IntelligenceMessageRequest,
     IntelligenceMessageResponse,
     IntelligenceReport,
+    MapSummaryRequest,
+    MapSummaryResponse,
     ScenarioBootstrapResponse,
     SimulationReport,
     SimulationRun,
@@ -25,8 +28,12 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from services.intelligence import FieldIntelligenceService, ReportNotFoundError
-from services.intelligence.copilot import CopilotService
-from services.intelligence.config import claude_settings
+from services.intelligence.context import CopilotContextBuilder
+from services.intelligence.claude import (
+    ClaudeGroundedClient,
+    ClaudeNotConfiguredError,
+    ClaudeProviderError,
+)
 from services.reports import ReportRepository, SimulationReportService
 from services.scenarios import ScenarioService
 
@@ -48,7 +55,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["DELETE", "GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
 scenario_service = ScenarioService()
@@ -62,23 +69,15 @@ simulation_report_service = SimulationReportService(
     scenario_service, report_repository
 )
 intelligence_service = FieldIntelligenceService(scenario_service)
-copilot_service = CopilotService(scenario_service, intelligence_service, report_repository)
+copilot_context_builder = CopilotContextBuilder(
+    scenario_service, simulation_report_service
+)
+claude_client = ClaudeGroundedClient()
 
 
 @app.get("/intelligence/status", tags=["field-intelligence"])
 def copilot_status() -> dict:
-    key, _ = claude_settings()
-    return {"assistant_configured": bool(key)}
-
-
-@app.post("/intelligence/chat", response_model=CopilotResponse, tags=["field-intelligence"])
-def chat(request: CopilotRequest) -> dict:
-    try:
-        return copilot_service.ask(request)
-    except KeyError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {"assistant_configured": claude_client.configured}
 
 
 @app.get("/health", response_model=HealthResponse, tags=["system"])
@@ -180,6 +179,127 @@ def ingest_intelligence_message(request: IntelligenceMessageRequest) -> dict:
         ) from error
 
 
+def _copilot_answer(
+    question: str,
+    state: dict,
+    provider: str,
+    model: Optional[str],
+    result: dict,
+) -> dict:
+    material = "|".join(
+        [state["world_state_version"], provider, question, result["answer"]]
+    )
+    return {
+        "answer_id": "answer-" + hashlib.sha256(material.encode()).hexdigest()[:12],
+        "provider": provider,
+        "model": model,
+        "question": question,
+        "message": result["answer"],
+        "evidence_ids": result["evidence_ids"],
+        "source_world_state_version": state["world_state_version"],
+        "limitations": result["limitations"],
+    }
+
+
+def _build_tentative_update(
+    message: str,
+    frame_id: str,
+    event_ids: List[str],
+    report_ids: List[str],
+) -> dict:
+    report = intelligence_service.ingest(
+        message,
+        "operator",
+        "Incident Command",
+        frame_id,
+    )
+    existing_events = intelligence_service.events_for(report_ids)
+    tentative_events = intelligence_service.events_for(
+        [report.report_id],
+        include_probable=True,
+    )
+    tentative = None
+    if tentative_events:
+        tentative = scenario_service.build_world_state(
+            frame_id,
+            event_ids,
+            existing_events + tentative_events,
+        )
+    return {
+        "mode": "deterministic_update",
+        "report": report.as_dict(),
+        "baseline_changed": False,
+        "tentative_world_state": tentative,
+    }
+
+
+@app.post(
+    "/intelligence/chat",
+    response_model=CopilotChatResponse,
+    tags=["field-intelligence"],
+)
+def chat_with_incident_copilot(request: CopilotChatRequest) -> dict:
+    try:
+        intelligence_events = intelligence_service.events_for(
+            request.intelligence_report_ids
+        )
+        state = scenario_service.build_world_state(
+            request.frame_id,
+            request.event_ids,
+            intelligence_events,
+        )
+        if intelligence_service.is_supported_change(request.message):
+            return _build_tentative_update(
+                request.message,
+                request.frame_id,
+                request.event_ids,
+                request.intelligence_report_ids,
+            )
+        deterministic = intelligence_service.answer_map_query(
+            request.message, state
+        )
+        if deterministic:
+            return {
+                "mode": "deterministic_answer",
+                "answer": _copilot_answer(
+                    request.message,
+                    state,
+                    "deterministic",
+                    None,
+                    deterministic,
+                ),
+            }
+        context, evidence_ids = copilot_context_builder.build(
+            state, intelligence_service.list()
+        )
+        generated = claude_client.answer(
+            request.message,
+            context,
+            evidence_ids,
+        )
+        return {
+            "mode": "claude_answer",
+            "answer": _copilot_answer(
+                request.message,
+                state,
+                "claude",
+                claude_client.model,
+                generated,
+            ),
+        }
+    except ClaudeNotConfiguredError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except ClaudeProviderError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    except ReportNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unknown intelligence report: {error.args[0]}",
+        ) from error
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
 @app.get(
     "/intelligence/reports",
     response_model=List[IntelligenceReport],
@@ -187,6 +307,68 @@ def ingest_intelligence_message(request: IntelligenceMessageRequest) -> dict:
 )
 def list_intelligence_reports() -> list[dict]:
     return intelligence_service.list()
+
+
+@app.post(
+    "/intelligence/map-summary",
+    response_model=MapSummaryResponse,
+    tags=["field-intelligence"],
+)
+def summarize_current_map(request: MapSummaryRequest) -> dict:
+    try:
+        intelligence_events = intelligence_service.events_for(
+            request.intelligence_report_ids
+        )
+        state = scenario_service.build_world_state(
+            request.frame_id,
+            request.event_ids,
+            intelligence_events,
+        )
+        deterministic = intelligence_service.summarize_map(state)
+        context, evidence_ids = copilot_context_builder.build(
+            state, intelligence_service.list()
+        )
+        generated = claude_client.briefing(
+            context,
+            deterministic,
+            evidence_ids,
+        )
+        return {
+            **deterministic,
+            "headline": generated["headline"],
+            "overview": generated["overview"],
+            "priorities": generated["priorities"],
+            "recommended_plan": generated["recommended_plan"],
+            "provider": "claude",
+            "model": claude_client.model,
+            "evidence_ids": generated["evidence_ids"],
+        }
+    except ClaudeNotConfiguredError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except ClaudeProviderError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    except ReportNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unknown intelligence report: {error.args[0]}",
+        ) from error
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.delete(
+    "/intelligence/reports/{report_id}",
+    response_model=IntelligenceReport,
+    tags=["field-intelligence"],
+)
+def delete_intelligence_report(report_id: str) -> dict:
+    try:
+        return intelligence_service.delete(report_id).as_dict()
+    except ReportNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unknown intelligence report: {error.args[0]}",
+        ) from error
 
 
 @app.post(

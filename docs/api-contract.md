@@ -82,6 +82,57 @@ Status codes:
 - `404` — unknown frame or event ID.
 - `409` — the event exists but is not yet effective at the requested frame.
 
+## Incident Copilot hybrid chat
+
+`POST /intelligence/chat`
+
+The Copilot follows a strict routing boundary:
+
+- Supported road/bridge blockage observations are parsed deterministically and
+  returned as tentative updates requiring operator confirmation.
+- Exact questions about mapped road, bridge, facility, or community status are
+  answered deterministically from the requested `WorldStateSnapshot`.
+- Other questions are sent to Claude with a bounded, read-only grounding
+  bundle. Claude cannot mutate the world state.
+
+The Claude bundle contains the canonical world state, mapped assets, routed
+network, timeline metadata, available events, plan definitions, field
+intelligence, the responder-simulation fixture, the latest saved full-horizon
+map report, and the latest persisted validated MiroFish proposal result when
+one exists. Raw basemap imagery and flood-polygon coordinates are omitted
+because they are visual-only; routed-edge depths and consequences remain in the
+canonical state.
+
+Claude uses constrained JSON-schema output, a no-outside-knowledge system
+instruction, and evidence IDs validated against the supplied bundle. This
+reduces unsupported output but does not turn generated prose into physical
+truth; safety-critical status lookups remain deterministic.
+
+Set `ANTHROPIC_API_KEY` on the API process. `ANTHROPIC_MODEL` defaults to the
+active `claude-sonnet-4-6`. Missing configuration returns `503`; provider or grounding
+validation failure returns `502`.
+
+## Incident Copilot map briefing
+
+`POST /intelligence/map-summary`
+
+Accepts a `frame_id` plus the active scenario-event and confirmed
+field-intelligence report IDs. The API rebuilds that canonical world state and
+builds deterministic facts and asks Claude to phrase a grounded
+`MapSummaryResponse` containing:
+
+- A headline and plain-language overview of route, community, hospital,
+  hazard, event, and plan status.
+- Prioritized actions derived from isolation timing, route state, and the
+  highest-ranked model signal.
+- The strongest currently evaluated response plan using the existing plan
+  metrics.
+- Machine-readable counts and explicit limitations.
+
+Claude cannot change the machine-readable facts or mutate the simulation. The
+source world-state version is returned so the frontend can discard a briefing
+as soon as the operator changes frames or events.
+
 ## Injected event
 
 `POST /scenarios/kantipur-river/events/{event_id}`

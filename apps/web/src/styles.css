@@ -515,7 +515,7 @@ input:focus-visible,
 .copilot-header,
 .copilot-review-title,
 .intel-message-meta,
-.copilot-source-row {
+.copilot-submit-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -532,8 +532,35 @@ input:focus-visible,
 .intel-message-meta b { color: #b1a08b; font: 7px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
 .intel-message-meta b[data-status="confirmed"] { color: #93a99a; }
 .intel-message-meta b[data-status="rejected"] { color: #c78b90; }
+.intel-message-actions { display: flex; align-items: center; gap: 7px; }
+.intel-delete {
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  color: #8f9994;
+  font: 14px/1 var(--mono);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.intel-delete:hover:not(:disabled) { color: #e39599; background: rgba(199, 83, 91, .12); border-color: rgba(199, 83, 91, .35); }
+.intel-delete:disabled { opacity: .4; cursor: not-allowed; }
 .intel-message p,
 .copilot-review p { margin: 0; color: #d0d1cb; font-size: 8.5px; line-height: 1.45; }
+.map-summary-message { border-color: rgba(84, 143, 165, .38); background: rgba(23, 46, 56, .62); }
+.map-summary-headline { color: #d7e8e5; font-size: 9px; line-height: 1.4; }
+.map-summary-priorities { display: grid; gap: 4px; padding: 6px; background: rgba(10, 20, 25, .42); border-radius: 4px; }
+.map-summary-priorities strong { color: #9fc4c4; font: 7px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.map-summary-priorities ol { display: grid; gap: 3px; margin: 0; padding-left: 14px; color: #aeb9b5; font-size: 7.5px; line-height: 1.4; }
+.map-summary-plan { color: #b8d1c1 !important; }
+.map-summary-message > small { color: #72817d; font-size: 6.5px; line-height: 1.35; }
+.copilot-answer { border-color: rgba(94, 126, 151, .32); }
+.copilot-question { color: #b9c9d1; font-size: 8px; line-height: 1.35; }
+.copilot-evidence { display: grid; gap: 3px; padding: 5px 6px; background: rgba(10,15,18,.42); border-radius: 4px; }
+.copilot-evidence strong { color: #91aeb9; font: 6.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.copilot-evidence span,
+.copilot-answer > small { color: #778681; font-size: 6.5px; line-height: 1.35; overflow-wrap: anywhere; }
 .intel-interpretation { display: grid; gap: 3px; padding: 6px; background: rgba(10,15,18,.42); border-radius: 4px; }
 .intel-interpretation strong { color: #c0c9c4; font: 7px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
 .intel-interpretation span,
@@ -547,8 +574,6 @@ input:focus-visible,
 .copilot-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
 .copilot-actions button,
 .copilot-composer button,
-.copilot-composer input,
-.copilot-composer select,
 .copilot-composer textarea {
   color: #c8cbc6;
   font: 7px var(--mono);
@@ -563,10 +588,9 @@ input:focus-visible,
 .copilot-composer button:disabled { opacity: .45; cursor: not-allowed; }
 .copilot-composer { display: grid; gap: 7px; padding: 9px; }
 .copilot-composer textarea { min-height: 58px; padding: 7px; line-height: 1.4; resize: vertical; }
-.copilot-source-row { gap: 5px; }
-.copilot-source-row select { width: 92px; padding: 6px 4px; }
-.copilot-source-row input { min-width: 0; padding: 6px; }
-.copilot-source-row button { padding-inline: 8px; }
+.copilot-submit-row { gap: 6px; }
+.copilot-submit-row button { min-width: 78px; padding-inline: 12px; }
+.copilot-submit-row .copilot-summary-button { color: #9fc4c4; border-color: rgba(95, 151, 169, .5); }
 
 /* ---------------------------------------------------------- topbar */
 

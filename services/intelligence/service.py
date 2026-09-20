@@ -20,6 +20,12 @@ _FLOOD = re.compile(
 _RISING = re.compile(r"\b(rising|getting higher|increasing)\b", re.IGNORECASE)
 _OPEN = re.compile(r"\b(open|reopened|clear|cleared|passable)\b", re.IGNORECASE)
 _QUESTION = re.compile(r"^(is|are|was|were|why|what|which|how|can|could|would|should|do|does|will|tell|explain|show|list|compare|describe|summarize)\b", re.IGNORECASE)
+_STATUS_QUERY = re.compile(
+    r"\b(open|closed|blocked|restricted|passable|impassable|status|depth|"
+    r"isolated|isolation|accessible|access|reachable|route|road|bridge|"
+    r"hospital|shelter)\b",
+    re.IGNORECASE,
+)
 _DEPTH = re.compile(
     r"(?P<value>\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)"
     r"\s*(?P<unit>feet|foot|ft|meters?|metres?|m)\b",
@@ -133,6 +139,159 @@ class FieldIntelligenceService:
             )
         ]
 
+    def delete(self, report_id: str) -> StoredReport:
+        report = self.get(report_id)
+        del self._reports[report_id]
+        return report
+
+    def summarize_map(self, state: JsonObject) -> JsonObject:
+        """Build a deterministic briefing from one canonical world state."""
+        assets = {
+            feature["properties"]["id"]: feature["properties"]
+            for feature in self.scenario_service.assets["features"]
+        }
+        edge_states = state["edge_states"]
+        communities = state["community_access"]
+        closed = [edge for edge in edge_states if edge["status"] == "closed"]
+        restricted = [
+            edge for edge in edge_states if edge["status"] == "restricted"
+        ]
+        isolated = [
+            community for community in communities if community["isolated"]
+        ]
+        at_risk = sorted(
+            (
+                community
+                for community in communities
+                if not community["isolated"]
+                and community["time_to_isolation_hours"] is not None
+            ),
+            key=lambda community: (
+                community["time_to_isolation_hours"],
+                community["community_id"],
+            ),
+        )
+        hospital_accessible = sum(
+            1 for community in communities if community["hospital_accessible"]
+        )
+        viable_plans = [
+            plan
+            for plan in state["plan_results"]
+            if plan["metrics"]["plan_viable"]
+        ]
+        ranked_plans = sorted(
+            state["plan_results"],
+            key=lambda plan: (
+                not plan["metrics"]["plan_viable"],
+                -plan["metrics"]["people_evacuated_by_deadline"],
+                plan["metrics"]["people_isolated"],
+                plan["metrics"]["evacuation_completion_minutes"]
+                if plan["metrics"]["evacuation_completion_minutes"] is not None
+                else float("inf"),
+                plan["plan_id"],
+            ),
+        )
+        recommended = ranked_plans[0] if ranked_plans else None
+
+        if isolated:
+            headline = f"{len(isolated)} communities are isolated at this frame."
+        elif closed:
+            headline = f"{len(closed)} routes are closed at this frame."
+        elif restricted:
+            headline = f"{len(restricted)} routes are restricted at this frame."
+        else:
+            headline = "The modeled network remains fully traversable at this frame."
+
+        time_label = (
+            "Now"
+            if state["simulation_time_hours"] == 0
+            else f"+{state['simulation_time_hours']:g}h"
+        )
+        overview = (
+            f"At {time_label}, {len(closed)} of {len(edge_states)} routes are closed "
+            f"and {len(restricted)} are restricted. {len(isolated)} of "
+            f"{len(communities)} communities are isolated; hospital access remains "
+            f"available from {hospital_accessible} of {len(communities)} communities. "
+            f"The state contains "
+            f"{len(state['hazards'])} active hazards and "
+            f"{len(state['active_event_ids'])} injected events."
+        )
+
+        priorities: List[str] = []
+        if isolated:
+            names = ", ".join(
+                assets.get(item["community_id"], {}).get(
+                    "name", item["community_id"]
+                )
+                for item in isolated[:3]
+            )
+            priorities.append(f"Restore or provide alternate access for {names}.")
+        if at_risk:
+            community = at_risk[0]
+            name = assets.get(community["community_id"], {}).get(
+                "name", community["community_id"]
+            )
+            priorities.append(
+                f"Monitor {name}; modeled isolation is "
+                f"{community['time_to_isolation_hours']:g} hours away."
+            )
+        if closed:
+            names = ", ".join(
+                assets.get(item["edge_id"], {}).get("name", item["edge_id"])
+                for item in closed[:3]
+            )
+            priorities.append(f"Keep response traffic off closed routes: {names}.")
+        elif restricted:
+            names = ", ".join(
+                assets.get(item["edge_id"], {}).get("name", item["edge_id"])
+                for item in restricted[:3]
+            )
+            priorities.append(f"Use caution on restricted routes: {names}.")
+        ranked_signals = sorted(
+            state.get("prediction_signals", []),
+            key=lambda signal: (signal["priority_rank"], signal["ping_id"]),
+        )
+        if ranked_signals:
+            priorities.append(ranked_signals[0]["recommended_action"])
+        if not priorities:
+            priorities.append(
+                "Maintain monitoring and preserve access to both shelters and the hospital."
+            )
+
+        recommended_plan = None
+        if recommended:
+            metrics = recommended["metrics"]
+            recommended_plan = (
+                f"{recommended['plan_name']} evacuates "
+                f"{metrics['people_evacuated_by_deadline']:,} people by the deadline "
+                f"and is {'viable' if metrics['plan_viable'] else 'not currently viable'}."
+            )
+
+        return {
+            "scenario_id": state["scenario_id"],
+            "frame_id": state["frame_id"],
+            "source_world_state_version": state["world_state_version"],
+            "headline": headline,
+            "overview": overview,
+            "priorities": priorities[:4],
+            "recommended_plan": recommended_plan,
+            "facts": {
+                "routes_total": len(edge_states),
+                "routes_closed": len(closed),
+                "routes_restricted": len(restricted),
+                "communities_total": len(communities),
+                "communities_isolated": len(isolated),
+                "hospital_accessible_communities": hospital_accessible,
+                "active_hazards": len(state["hazards"]),
+                "active_events": len(state["active_event_ids"]),
+                "viable_plans": len(viable_plans),
+            },
+            "limitations": [
+                "Modeled synthetic decision support, not a live dispatch order.",
+                "Flow velocity is unavailable in the current scenario model.",
+            ],
+        }
+
     def _edge_labels(self) -> Dict[str, str]:
         assets_by_edge = {
             feature["properties"].get("edge_id"): feature["properties"]["name"]
@@ -173,6 +332,142 @@ class FieldIntelligenceService:
                 or (_BLOCKED.search(message) and _OPEN.search(message))):
             return "clarify"
         return "report"
+
+    @staticmethod
+    def is_question(message: str) -> bool:
+        return message.rstrip().endswith("?") or bool(_QUESTION.search(message))
+
+    def is_supported_change(self, message: str) -> bool:
+        edge_id, _, _ = self._match_edge(message)
+        return bool(
+            edge_id
+            and not self.is_question(message)
+            and (_BLOCKED.search(message) or _FLOOD.search(message))
+        )
+
+    def answer_map_query(
+        self,
+        message: str,
+        state: JsonObject,
+    ) -> Optional[JsonObject]:
+        """Answer exact status lookups without sending safety facts to an LLM."""
+        if not _STATUS_QUERY.search(message):
+            return None
+        lowered = message.lower()
+        edge_id, edge_label, _ = self._match_edge(message)
+        edges = {edge["edge_id"]: edge for edge in state["edge_states"]}
+        if edge_id:
+            edge = edges[edge_id]
+            travel = (
+                "unavailable"
+                if edge["effective_travel_minutes"] is None
+                else f"{edge['effective_travel_minutes']:g} minutes"
+            )
+            reason = (
+                f" Reason: {edge['closure_reason']}."
+                if edge["closure_reason"]
+                else ""
+            )
+            return {
+                "answer": (
+                    f"{edge_label} is {edge['status']} in "
+                    f"{state['world_state_version']}. Modeled flood depth is "
+                    f"{edge['flood_depth_m']:.2f} m and effective travel time is "
+                    f"{travel}.{reason}"
+                ),
+                "evidence_ids": [edge_id, state["world_state_version"]],
+                "limitations": [
+                    "This is the current modeled or operator-confirmed state, "
+                    "not a field dispatch order."
+                ],
+            }
+
+        asset_match = None
+        for feature in self.scenario_service.assets["features"]:
+            asset = feature["properties"]
+            if asset["id"].lower() in lowered or asset["name"].lower() in lowered:
+                asset_match = asset
+                break
+        if asset_match and asset_match["asset_type"] == "community":
+            access = next(
+                item
+                for item in state["community_access"]
+                if item["community_id"] == asset_match["id"]
+            )
+            isolation = (
+                "isolated now"
+                if access["isolated"]
+                else (
+                    f"modeled to isolate at +{access['time_to_isolation_hours']:g}h"
+                    if access["time_to_isolation_hours"] is not None
+                    else "not modeled to isolate within the horizon"
+                )
+            )
+            return {
+                "answer": (
+                    f"{asset_match['name']} is {isolation}. It can reach "
+                    f"{len(access['reachable_shelter_ids'])} shelters; hospital access "
+                    f"is {'available' if access['hospital_accessible'] else 'unavailable'}."
+                ),
+                "evidence_ids": [
+                    asset_match["id"],
+                    state["world_state_version"],
+                ],
+                "limitations": [
+                    "Accessibility is graph-derived from the current modeled frame."
+                ],
+            }
+        if asset_match and asset_match["asset_type"] in {"hospital", "shelter"}:
+            status = "open" if asset_match.get("open") else "closed"
+            return {
+                "answer": f"{asset_match['name']} is {status} in the scenario fixture.",
+                "evidence_ids": [
+                    asset_match["id"],
+                    state["world_state_version"],
+                ],
+                "limitations": [
+                    "The fixture does not provide a live facility-status feed."
+                ],
+            }
+
+        route_words = any(
+            word in lowered
+            for word in ("road", "roads", "route", "routes", "bridge", "bridges")
+        )
+        requested_status = next(
+            (
+                status
+                for status in ("closed", "restricted", "open")
+                if status in lowered
+            ),
+            None,
+        )
+        if requested_status is None and any(
+            word in lowered for word in ("blocked", "impassable")
+        ):
+            requested_status = "closed"
+        if route_words and requested_status:
+            matching = [
+                edge
+                for edge in state["edge_states"]
+                if edge["status"] == requested_status
+            ]
+            labels = self._edge_labels()
+            names = [labels[edge["edge_id"]] for edge in matching]
+            description = ", ".join(names) if names else "none"
+            evidence = [edge["edge_id"] for edge in matching]
+            evidence.append(state["world_state_version"])
+            return {
+                "answer": (
+                    f"{len(matching)} routes are {requested_status} in the current "
+                    f"map state: {description}."
+                ),
+                "evidence_ids": evidence,
+                "limitations": [
+                    "Route status comes from modeled depth plus confirmed operator events."
+                ],
+            }
+        return None
 
     @staticmethod
     def _depth(message: str) -> Optional[float]:

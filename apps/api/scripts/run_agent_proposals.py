@@ -24,7 +24,7 @@ WORLD = ROOT / "data/scenarios/kantipur-river/nepal_nakkhu_demo_v1.json"
 FIXTURE = ROOT / "apps/api/tests/fixtures/mirofish/interview_success.json"
 
 
-async def run(live=False):
+async def run(live=False, output_path=None):
     scenario = SimulationRequest.model_validate_json(WORLD.read_text(encoding="utf-8"))
     request = make_request(scenario.world_state, scenario.duration_minutes)
     providers = [
@@ -67,7 +67,10 @@ async def run(live=False):
             viable=result.viable,
             score=result.score,
         )
-    print(json.dumps(output, indent=2, sort_keys=True))
+    rendered = json.dumps(output, indent=2, sort_keys=True)
+    if output_path:
+        output_path.write_text(rendered + "\n", encoding="utf-8")
+    print(rendered)
     return 0 if batch.proposals else 1
 
 
@@ -76,9 +79,15 @@ def main():
     parser.add_argument(
         "--live", action="store_true", help="Attempt configured MiroFish"
     )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=ROOT / "data/runtime/mirofish-latest.json",
+        help="Persist the latest validated proposal result for Copilot grounding.",
+    )
     args = parser.parse_args()
     try:
-        return asyncio.run(run(args.live))
+        return asyncio.run(run(args.live, args.output))
     except (ValueError, KeyError, OSError):
         print("Agent demo failed: invalid configuration or unavailable input.")
         return 1

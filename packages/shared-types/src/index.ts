@@ -96,6 +96,69 @@ export interface IntelligenceDecisionResponse {
   updated_world_state: WorldStateSnapshot;
 }
 
+export interface CopilotChatRequest {
+  message: string;
+  frame_id: string;
+  event_ids: string[];
+  intelligence_report_ids: string[];
+}
+
+export interface CopilotAnswer {
+  answer_id: string;
+  provider: "deterministic" | "claude";
+  model: string | null;
+  question: string;
+  message: string;
+  evidence_ids: string[];
+  source_world_state_version: string;
+  limitations: string[];
+}
+
+export type CopilotChatResponse =
+  | {
+      mode: "deterministic_update";
+      report: IntelligenceReport;
+      baseline_changed: false;
+      tentative_world_state: WorldStateSnapshot | null;
+    }
+  | {
+      mode: "deterministic_answer" | "claude_answer";
+      answer: CopilotAnswer;
+    };
+
+export interface MapSummaryRequest {
+  frame_id: string;
+  event_ids: string[];
+  intelligence_report_ids: string[];
+}
+
+export interface MapSummaryFacts {
+  routes_total: number;
+  routes_closed: number;
+  routes_restricted: number;
+  communities_total: number;
+  communities_isolated: number;
+  hospital_accessible_communities: number;
+  active_hazards: number;
+  active_events: number;
+  viable_plans: number;
+}
+
+export interface MapSummaryResponse {
+  scenario_id: string;
+  frame_id: string;
+  source_world_state_version: string;
+  headline: string;
+  overview: string;
+  priorities: string[];
+  recommended_plan: string | null;
+  facts: MapSummaryFacts;
+  limitations: string[];
+  provider: "claude";
+  model: string;
+  evidence_ids: string[];
+}
+
 export type Position = [number, number];
 
 export interface PointGeometry {

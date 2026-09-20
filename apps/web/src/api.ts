@@ -1,9 +1,10 @@
 import type {
-  CopilotRequest,
-  CopilotResponse,
+  CopilotChatResponse,
   EventRecomputeResponse,
   IntelligenceDecisionResponse,
   IntelligenceMessageResponse,
+  IntelligenceReport,
+  MapSummaryResponse,
   ScenarioBootstrapResponse,
   SimulationReport,
   SimulationRun,
@@ -12,14 +13,6 @@ import type {
 } from "@the-ark/shared-types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
-
-export function askCopilot(request: CopilotRequest) {
-  return fetchJson<CopilotResponse>("/intelligence/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(request),
-  });
-}
 
 export function getCopilotStatus() {
   return fetchJson<{ assistant_configured: boolean }>("/intelligence/status");
@@ -152,6 +145,26 @@ export function ingestIntelligenceMessage(
   });
 }
 
+export function sendCopilotMessage(
+  message: string,
+  frameId: string,
+  eventIds: string[],
+  intelligenceReportIds: string[],
+  signal?: AbortSignal,
+) {
+  return fetchJson<CopilotChatResponse>("/intelligence/chat", {
+    method: "POST",
+    signal,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message,
+      frame_id: frameId,
+      event_ids: eventIds,
+      intelligence_report_ids: intelligenceReportIds,
+    }),
+  });
+}
+
 export function decideIntelligenceReport(
   reportId: string,
   decision: "confirm" | "keep_tentative" | "reject",
@@ -174,6 +187,34 @@ export function decideIntelligenceReport(
       }),
     },
   );
+}
+
+export function deleteIntelligenceReport(
+  reportId: string,
+  signal?: AbortSignal,
+) {
+  return fetchJson<IntelligenceReport>(
+    `/intelligence/reports/${encodeURIComponent(reportId)}`,
+    { method: "DELETE", signal },
+  );
+}
+
+export function summarizeCurrentMap(
+  frameId: string,
+  eventIds: string[],
+  intelligenceReportIds: string[],
+  signal?: AbortSignal,
+) {
+  return fetchJson<MapSummaryResponse>("/intelligence/map-summary", {
+    method: "POST",
+    signal,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      frame_id: frameId,
+      event_ids: eventIds,
+      intelligence_report_ids: intelligenceReportIds,
+    }),
+  });
 }
 
 export async function applyEvent(eventId: string, signal?: AbortSignal) {
