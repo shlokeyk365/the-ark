@@ -36,6 +36,7 @@ export interface FullscreenState {
 export function useFullscreen(
   element: React.RefObject<HTMLElement | null>,
   key = "f",
+  enabled = true,
 ): FullscreenState {
   /*
    * Climb from the supplied element to the shell that owns the whole layout.
@@ -87,6 +88,8 @@ export function useFullscreen(
   }, [element, fallback, targetFor]);
 
   useEffect(() => {
+    if (!enabled) return undefined;
+
     const onKeyDown = (event: KeyboardEvent) => {
       // Escape leaves the fallback, mirroring what it does for real fullscreen.
       if (event.key === "Escape") {
@@ -103,7 +106,7 @@ export function useFullscreen(
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [key, toggle]);
+  }, [enabled, key, toggle]);
 
   // Escape and the browser's own controls exit fullscreen without telling us,
   // so the flag follows the document rather than the toggle.

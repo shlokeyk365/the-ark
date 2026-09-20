@@ -127,15 +127,31 @@ export function App() {
 
   useEffect(() => {
     const controller = new AbortController();
+    void import("./map/MapLibreScenarioMap");
 
     (async () => {
       try {
         const loaded = await getBootstrap(controller.signal);
-        const entries = await loadSeries(loaded, [], controller.signal);
+        const frameLoads = loaded.available_frames.map(async (frame) => ({
+          frameId: frame.frame_id,
+          hours: frame.simulation_time_hours,
+          state: await getFrame(
+            frame.frame_id,
+            eventsActiveAt(loaded, [], frame.simulation_time_hours),
+            controller.signal,
+          ),
+        }));
+        const initialIndex = Math.max(
+          0,
+          loaded.available_frames.findIndex(
+            (frame) => frame.frame_id === loaded.initial_frame_id,
+          ),
+        );
+        const first = await frameLoads[initialIndex];
         if (controller.signal.aborted) return;
         setBootstrap(loaded);
-        setSeries(entries);
-        setSelectedFrameId(loaded.initial_frame_id);
+        setSeries([first]);
+        setSelectedFrameId(first.frameId);
         setSelection((current) => {
           if (current) return current;
           const eventEdgeId = loaded.events[0]?.changes[0]?.edge_id;
@@ -149,6 +165,17 @@ export function App() {
           logEntry(
             "load",
             "Baseline world state loaded",
+            `Frame ${first.frameId} ready; remaining modeled frames loading`,
+            first.state.world_state_version,
+          ),
+        );
+        const entries = await Promise.all(frameLoads);
+        if (controller.signal.aborted) return;
+        setSeries(entries);
+        pushLog(
+          logEntry(
+            "load",
+            "Horizon frames ready",
             `${entries.length} modeled frames over a ${loaded.evaluation_horizon_hours}h horizon`,
             loaded.initial_world_state_version,
           ),
@@ -171,11 +198,16 @@ export function App() {
     [series, selectedFrameId],
   );
 
-  // Last frame in the horizon drives the predicted-inundation layer.
-  const horizonState = useMemo(
-    () => series[series.length - 1]?.state,
-    [series],
+  const seriesComplete = Boolean(
+    bootstrap && series.length === bootstrap.available_frames.length,
   );
+
+  // Last *loaded* horizon frame drives the predicted-inundation layer.
+  const horizonState = useMemo(() => {
+    if (!bootstrap) return undefined;
+    const horizonId = bootstrap.available_frames.at(-1)?.frame_id;
+    return series.find((entry) => entry.frameId === horizonId)?.state;
+  }, [bootstrap, series]);
 
   const selectedPlan = useMemo(
     () =>
@@ -547,11 +579,13 @@ export function App() {
             activeEventIds={activeEventIds}
             bootstrap={bootstrap}
             busy={busy}
+            loadedFrameIds={series.map((entry) => entry.frameId)}
             onApplyEvent={onApplyEvent}
             onClearEvent={onClearEvent}
             onSelectFrame={selectFrame}
             onTogglePlay={onTogglePlay}
             playing={playing}
+            seriesComplete={seriesComplete}
             worldState={worldState}
           />
         </section>

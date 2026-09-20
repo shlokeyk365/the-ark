@@ -16,5 +16,7 @@ work/
 data/raw/
 data/runtime/
 
-# Regenerate with: npm run basemap
+# Other PMTiles extracts stay local. The Kantipur MVP archive is tracked so
+# production can serve /basemap/kantipur.pmtiles without extracting the planet.
 apps/web/public/basemap/*.pmtiles
+!apps/web/public/basemap/kantipur.pmtiles

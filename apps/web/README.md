@@ -51,14 +51,16 @@ never presents prediction pings as confirmed rescue requests.
 
 ## Basemap
 
-Keyless. From the repository root, fetch the tile archive once:
+Keyless. The Kantipur archive ships at `public/basemap/kantipur.pmtiles`.
+Refresh it from the repository root with:
 
 ```bash
 npm run basemap
 ```
 
 Everything in `.env.example` is optional. Without the archive the dashboard
-renders the SVG schematic instead and explains why.
+renders the SVG schematic instead and explains why. The production Vite build
+refuses to ship that fallback.
 
 ## Map architecture
 
