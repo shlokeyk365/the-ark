@@ -1,5 +1,9 @@
-import { ShellIcon } from "./ShellIcon";
+import { useCallback, useEffect, useState } from "react";
+
 import type { WorldStateSnapshot } from "@the-ark/shared-types";
+
+import { CommandChatOverlay } from "./CommandChatOverlay";
+import { ShellIcon } from "./ShellIcon";
 
 interface TopBarProps {
   alertCount?: number;
@@ -14,6 +18,22 @@ export function TopBar({
   activeView = "operations",
   onNavigate,
 }: TopBarProps) {
+  const [chatOpen, setChatOpen] = useState(false);
+  const closeChat = useCallback(() => setChatOpen(false), []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k") {
+        return;
+      }
+      event.preventDefault();
+      setChatOpen((open) => !open);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   return (
     <header className="topbar">
       <a className="brand" href="/" aria-label="Back to ARK landing page" title="Back to landing page">
@@ -59,6 +79,17 @@ export function TopBar({
             <span>{worldState.world_state_version}</span>
           </span>
         ) : null}
+        <button
+          className={`icon-button${chatOpen ? " is-open" : ""}`}
+          type="button"
+          aria-label="Open command chat"
+          aria-haspopup="dialog"
+          aria-expanded={chatOpen}
+          title="Ask ARK (⌘K)"
+          onClick={() => setChatOpen((open) => !open)}
+        >
+          <ShellIcon name="computer" size={17} />
+        </button>
         <button className="icon-button" type="button" aria-label={`${alertCount} active alerts`} title={`${alertCount} active alerts`}>
           <ShellIcon name="bell" size={17} />
           {alertCount > 0 ? <span className="notification-dot" /> : null}
@@ -68,6 +99,8 @@ export function TopBar({
           <span>EXERCISE MODE</span>
         </div>
       </div>
+
+      <CommandChatOverlay open={chatOpen} onClose={closeChat} />
     </header>
   );
 }

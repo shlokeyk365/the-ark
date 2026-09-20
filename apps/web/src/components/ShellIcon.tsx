@@ -7,6 +7,7 @@ export type IconName =
   | "chevron"
   | "clock"
   | "compass"
+  | "computer"
   | "crosshair"
   | "drop"
   | "history"
@@ -71,6 +72,12 @@ export function ShellIcon({ name, size = 16, strokeWidth = 1.7 }: ShellIconProps
       <>
         <circle cx="12" cy="12" r="9" />
         <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
+      </>
+    ),
+    computer: (
+      <>
+        <rect x="3" y="4" width="18" height="13" rx="2" />
+        <path d="M8 21h8M12 17v4" />
       </>
     ),
     crosshair: (
