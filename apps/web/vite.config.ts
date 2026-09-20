@@ -27,6 +27,12 @@ function requireBasemap(): Plugin {
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), requireBasemap()],
+  // The workspace can otherwise resolve lucide-react and react-dom through
+  // different physical React installations, which causes an invalid hook call
+  // and leaves the development page blank.
+  resolve: {
+    dedupe: ["react", "react-dom"],
+  },
   // MapLibre spawns its own module worker. Vite's dependency pre-bundling
   // rewrites the worker entry in a way that breaks that handshake in dev, so
   // the style never loads. Serving MapLibre's own ESM keeps it intact.
