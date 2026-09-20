@@ -9,6 +9,93 @@ export interface HealthResponse {
   status: "ok";
 }
 
+export type IntelligenceReportStatus =
+  | "possible"
+  | "probable"
+  | "confirmed"
+  | "unresolved"
+  | "disputed"
+  | "rejected"
+  | "expired";
+
+export type IntelligenceChangeType =
+  | "close_edge"
+  | "restrict_edge"
+  | "open_edge"
+  | "none";
+
+export interface IntelligenceEvidenceScores {
+  source_reliability: number;
+  extraction_confidence: number;
+  location_confidence: number;
+  corroboration: number;
+  freshness: number;
+  physical_plausibility: number;
+  operational_impact: number;
+}
+
+export interface IntelligenceReport {
+  report_id: string;
+  scenario_id: string;
+  message: string;
+  source: {
+    type: "operator" | "field_responder" | "official" | "public" | "unknown";
+    name: string;
+  };
+  frame_id: string;
+  status: IntelligenceReportStatus;
+  asset_match: {
+    asset_type: "edge";
+    asset_id: string;
+    display_name: string;
+    confidence: number;
+  } | null;
+  claim: {
+    summary: string;
+    water_depth_m: number | null;
+    trend: string | null;
+  };
+  scores: IntelligenceEvidenceScores;
+  verification_priority: number;
+  requires_operator_confirmation: true;
+  proposed_change: {
+    change_type: IntelligenceChangeType;
+    edge_id: string | null;
+    reason: string;
+  };
+  note: string | null;
+}
+
+export interface IntelligenceMessageResponse {
+  report: IntelligenceReport;
+  baseline_changed: false;
+  tentative_world_state: WorldStateSnapshot | null;
+}
+
+export interface CopilotRequest {
+  message: string;
+  frame_id: string;
+  event_ids: string[];
+  intelligence_report_ids: string[];
+}
+
+export interface CopilotResponse {
+  message: string;
+  answer: string;
+  world_state_version: string;
+  frame_id: string;
+  context_digest: string;
+  report: IntelligenceReport | null;
+  tentative_world_state: WorldStateSnapshot | null;
+  baseline_changed: false;
+}
+
+export interface IntelligenceDecisionResponse {
+  report: IntelligenceReport;
+  baseline_changed: boolean;
+  updated_world_state: WorldStateSnapshot;
+}
+
 export type Position = [number, number];
 
 export interface PointGeometry {

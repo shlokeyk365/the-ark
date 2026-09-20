@@ -1,0 +1,95 @@
+{
+  "duration_minutes": 60,
+  "random_seed": 42,
+  "world_state": {
+    "scenario_id": "nepal-nakkhu-demo-v1",
+    "current_minute": 0,
+    "nodes": [
+      {"id":"staging","name":"Synthetic primary responder staging","is_safe_zone":true},
+      {"id":"kantipur","name":"Kantipur Colony rescue zone"},
+      {"id":"nakhipot","name":"Nakhipot residential evacuation zone"},
+      {"id":"secondary","name":"Synthetic secondary at-risk zone"},
+      {"id":"shelter-ground","name":"Synthetic safe-ground shelter","is_safe_zone":true},
+      {"id":"medical-transfer","name":"Synthetic medical transfer point","is_safe_zone":true}
+    ],
+    "hazards": [
+      {"id":"synthetic-flood","type":"flood","affected_node_ids":["kantipur","nakhipot","secondary"],"start_minute":0,"severity":4,"source":"synthetic demonstration input, not measured flood physics","observed":false}
+    ],
+    "routes": [
+      {"id":"water-staging-kantipur","origin_node_id":"staging","destination_node_id":"kantipur","base_travel_minutes":3,"status":"restricted","allowed_capabilities":["water_travel"]},
+      {"id":"road-staging-kantipur","origin_node_id":"staging","destination_node_id":"kantipur","base_travel_minutes":2,"status":"open","closure_minute":10,"allowed_capabilities":["road_travel","foot_travel"],"hazard_reason":"Synthetic access loss at minute 10"},
+      {"id":"road-staging-nakhipot","origin_node_id":"staging","destination_node_id":"nakhipot","base_travel_minutes":4,"status":"open","closure_minute":18,"allowed_capabilities":["road_travel","foot_travel"],"hazard_reason":"Synthetic approach closure at minute 18"},
+      {"id":"road-nakhipot-shelter","origin_node_id":"nakhipot","destination_node_id":"shelter-ground","base_travel_minutes":5,"status":"open","closure_minute":18,"allowed_capabilities":["road_travel","foot_travel"],"hazard_reason":"Synthetic evacuation road closure at minute 18"},
+      {"id":"water-nakhipot-shelter","origin_node_id":"nakhipot","destination_node_id":"shelter-ground","base_travel_minutes":7,"status":"restricted","allowed_capabilities":["water_travel"]},
+      {"id":"water-staging-nakhipot","origin_node_id":"staging","destination_node_id":"nakhipot","base_travel_minutes":6,"status":"restricted","allowed_capabilities":["water_travel"]},
+      {"id":"road-staging-secondary","origin_node_id":"staging","destination_node_id":"secondary","base_travel_minutes":5,"status":"open","allowed_capabilities":["road_travel","foot_travel"]},
+      {"id":"foot-secondary-medical","origin_node_id":"secondary","destination_node_id":"medical-transfer","base_travel_minutes":4,"status":"open","allowed_capabilities":["road_travel","foot_travel"]},
+      {"id":"road-medical-shelter","origin_node_id":"medical-transfer","destination_node_id":"shelter-ground","base_travel_minutes":4,"status":"open","allowed_capabilities":["road_travel","foot_travel"]},
+      {"id":"road-staging-shelter","origin_node_id":"staging","destination_node_id":"shelter-ground","base_travel_minutes":7,"status":"open","allowed_capabilities":["road_travel","foot_travel"]}
+    ],
+    "responders": [
+      {"id":"01-water-team","name":"Synthetic water-rescue team A","type":"boat","current_node_id":"staging","capacity":4,"capabilities":["water_travel","rescue","evacuation"],"status":"available"},
+      {"id":"02-water-team","name":"Synthetic water-rescue team B","type":"boat","current_node_id":"staging","capacity":4,"capabilities":["water_travel","rescue","evacuation"],"status":"available"},
+      {"id":"03-medical-unit","name":"Synthetic ambulance unit","type":"ambulance","current_node_id":"staging","capacity":2,"capabilities":["road_travel","rescue","medical","evacuation"],"status":"available"},
+      {"id":"04-ground-team","name":"Synthetic ground rescue team","type":"rescue_team","current_node_id":"staging","capacity":3,"capabilities":["foot_travel","rescue","evacuation"],"status":"available"},
+      {"id":"05-evacuation-bus","name":"Synthetic evacuation bus","type":"bus","current_node_id":"staging","capacity":10,"capabilities":["road_travel","evacuation"],"status":"available"}
+    ],
+    "rescue_requests": [
+      {"id":"kantipur-cohort-a","node_id":"kantipur","people_count":4,"urgency":5,"reported_minute":0,"isolation_minute":10,"required_capabilities":["water_travel"],"status":"pending"},
+      {"id":"kantipur-cohort-b","node_id":"kantipur","people_count":4,"urgency":4,"reported_minute":0,"isolation_minute":10,"required_capabilities":["water_travel"],"status":"pending"},
+      {"id":"secondary-medical-cohort","node_id":"secondary","people_count":2,"urgency":5,"reported_minute":0,"required_capabilities":["medical"],"medical_priority":true,"status":"pending"},
+      {"id":"secondary-ground-cohort","node_id":"secondary","people_count":3,"urgency":3,"reported_minute":0,"required_capabilities":["foot_travel"],"status":"pending"}
+    ],
+    "communities": [
+      {"id":"nakhipot-households","name":"Synthetic Nakhipot household cohort","node_id":"nakhipot","population":20,"isolation_minute":18,"status":"at_risk"}
+    ],
+    "shelters": [
+      {"id":"safe-ground-shelter","name":"Synthetic safe-ground shelter","node_id":"shelter-ground","capacity":20,"occupancy":2,"status":"open"}
+    ],
+    "metadata": {
+      "fixture_version":"1.0.0",
+      "disclaimer":"This scenario is a synthetic operational reconstruction inspired by the September 2024 Nakkhu River flood near Kantipur Colony and Nakhipot, Lalitpur, Nepal. Exact responder positions, population counts, routes, travel times, closure times, and outcomes are demonstration assumptions rather than verified historical records.",
+      "documented_context": {
+        "period":"September 2024",
+        "river":"Nakkhu River",
+        "places":["Kantipur Colony","Nakhipot","Lalitpur, Nepal"],
+        "summary":"News reports describe flooding and rising river water, people awaiting rescue near Kantipur Colony in Nakhipot, and difficult rescue access. Rapid river rise is qualitative context only, not a measured rise rate or calibrated timeline.",
+        "sources":[
+          {"title":"Four missing while waiting for rescue in Nakkhu River flood","publisher":"Khabarhub","published":"2024-09-28","url":"https://english.khabarhub.com/2024/28/402033/","supports":"Nakkhu River flood near Kantipur Colony, Nakhipot, Lalitpur; people awaiting rescue. Early reports are context, not fixture casualty counts."},
+          {"title":"Government faces criticism over slow rescue as disasters claim lives, property","publisher":"The Kathmandu Post","published":"2024-09-29","url":"https://kathmandupost.com/national/2024/09/29/government-faces-criticism-over-slow-rescue-as-disasters-claim-lives-property","supports":"September flood and rescue-access difficulties in Lalitpur, including swollen river conditions and poor visibility."}
+        ]
+      },
+      "synthetic_assumptions": {
+        "population_counts":"Every demand count is invented: two separate Kantipur groups of 4, medical group of 2, ground-assistance group of 3, and Nakhipot household group of 20. None identifies historical individuals.",
+        "responders":"Every responder, capability, initial position at staging, and capacity (4, 4, 2, 3, 10) is synthetic. The two boats are assumed transport-ready at staging.",
+        "routes":"Every route, direction, mode restriction, and base travel time is invented. Coordinates are deliberately omitted; this is a topology, not a surveyed street map.",
+        "closure_times":"Every closure/isolation time is synthetic: Kantipur road minute 10; Nakhipot road approaches minute 18. Water links remain available by assumption, not a physical safety prediction.",
+        "shelter_capacity":"Shelter location, operational status, capacity 20, and initial occupancy 2 are invented; 18 new admissions are possible. Initial occupants are a separate cohort.",
+        "hazards":"Hazard severity and affected zones are synthetic scenario inputs, not observations. No water movement is calculated.",
+        "outcomes":"Every resulting metric, ranking, and intervention outcome is a demonstration calculation, not a verified historical record or a counterfactual claim about lives saved.",
+        "time_origin":"Minute 0 is an arbitrary common decision point, not a historical wall-clock timestamp.",
+        "alternate_route":"Staging to shelter direct road costs 7; the permanent staging-secondary-medical-shelter alternative costs 13.",
+        "operational_tradeoff":"Five single-assignment responders must divide between 13 rescue-demand people and 20 separate community members, with only 18 free shelter places. Water teams can rescue Kantipur cohorts or evacuate households, but cannot do both in this baseline policy. The ground team can handle its separate lower-urgency request or evacuate households."
+      },
+      "location_roles": {
+        "primary_staging":"staging",
+        "kantipur_rescue_zone":"kantipur",
+        "nakhipot_evacuation_zone":"nakhipot",
+        "secondary_at_risk_zone":"secondary",
+        "operational_shelter":"shelter-ground",
+        "medical_transfer_point":"medical-transfer"
+      },
+      "population_accounting": {
+        "rule":"Each listed record represents disjoint synthetic people. Rescue cohorts are not members of the Nakhipot community; initial shelter occupants are separate from all demand cohorts. Person labels are illustrative bookkeeping, not real identities.",
+        "cohorts": [
+          {"record_id":"kantipur-cohort-a","kind":"rescue_request","person_ids":["synthetic-ka-1","synthetic-ka-2","synthetic-ka-3","synthetic-ka-4"]},
+          {"record_id":"kantipur-cohort-b","kind":"rescue_request","person_ids":["synthetic-kb-1","synthetic-kb-2","synthetic-kb-3","synthetic-kb-4"]},
+          {"record_id":"secondary-medical-cohort","kind":"rescue_request","person_ids":["synthetic-med-1","synthetic-med-2"]},
+          {"record_id":"secondary-ground-cohort","kind":"rescue_request","person_ids":["synthetic-ground-1","synthetic-ground-2","synthetic-ground-3"]},
+          {"record_id":"nakhipot-households","kind":"community","person_ids":["synthetic-n-01","synthetic-n-02","synthetic-n-03","synthetic-n-04","synthetic-n-05","synthetic-n-06","synthetic-n-07","synthetic-n-08","synthetic-n-09","synthetic-n-10","synthetic-n-11","synthetic-n-12","synthetic-n-13","synthetic-n-14","synthetic-n-15","synthetic-n-16","synthetic-n-17","synthetic-n-18","synthetic-n-19","synthetic-n-20"]},
+          {"record_id":"safe-ground-shelter","kind":"initial_shelter_occupants","person_ids":["synthetic-initial-1","synthetic-initial-2"]}
+        ]
+      }
+    }
+  }
+}

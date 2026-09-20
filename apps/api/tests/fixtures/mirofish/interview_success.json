@@ -1,0 +1,57 @@
+{
+  "provenance": "synthetic",
+  "scenario_id": "nepal-nakkhu-demo-v1",
+  "snapshot_hash": "308e8ca8bb524d452c544ca1a54c1145214abf7f58b3c60ab8d57040b7604d56",
+  "actions": [
+    {
+      "responder_id": "01-water-team",
+      "action_type": "rescue",
+      "target_node_id": "kantipur",
+      "start_minute": 0,
+      "people_count": 4,
+      "request_id": "kantipur-cohort-a",
+      "community_id": null,
+      "shelter_id": null
+    },
+    {
+      "responder_id": "02-water-team",
+      "action_type": "rescue",
+      "target_node_id": "kantipur",
+      "start_minute": 0,
+      "people_count": 4,
+      "request_id": "kantipur-cohort-b",
+      "community_id": null,
+      "shelter_id": null
+    },
+    {
+      "responder_id": "03-medical-unit",
+      "action_type": "rescue",
+      "target_node_id": "secondary",
+      "start_minute": 0,
+      "people_count": 2,
+      "request_id": "secondary-medical-cohort",
+      "community_id": null,
+      "shelter_id": null
+    },
+    {
+      "responder_id": "04-ground-team",
+      "action_type": "evacuate",
+      "target_node_id": "nakhipot",
+      "start_minute": 0,
+      "people_count": 3,
+      "request_id": null,
+      "community_id": "nakhipot-households",
+      "shelter_id": "safe-ground-shelter"
+    },
+    {
+      "responder_id": "05-evacuation-bus",
+      "action_type": "evacuate",
+      "target_node_id": "nakhipot",
+      "start_minute": 0,
+      "people_count": 10,
+      "request_id": null,
+      "community_id": "nakhipot-households",
+      "shelter_id": "safe-ground-shelter"
+    }
+  ]
+}

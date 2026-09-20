@@ -4,13 +4,16 @@ import os
 from pathlib import Path
 from typing import Annotated, List, Literal, Optional
 
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
-
 from apps.api.models import (
+    CopilotRequest,
+    CopilotResponse,
     EventRecomputeResponse,
     HealthResponse,
+    IntelligenceDecisionRequest,
+    IntelligenceDecisionResponse,
+    IntelligenceMessageRequest,
+    IntelligenceMessageResponse,
+    IntelligenceReport,
     ScenarioBootstrapResponse,
     SimulationReport,
     SimulationRun,
@@ -18,6 +21,12 @@ from apps.api.models import (
     SimulationRunSummary,
     WorldStateSnapshot,
 )
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
+from services.intelligence import FieldIntelligenceService, ReportNotFoundError
+from services.intelligence.copilot import CopilotService
+from services.intelligence.config import claude_settings
 from services.reports import ReportRepository, SimulationReportService
 from services.scenarios import ScenarioService
 
@@ -52,6 +61,24 @@ report_repository = ReportRepository(
 simulation_report_service = SimulationReportService(
     scenario_service, report_repository
 )
+intelligence_service = FieldIntelligenceService(scenario_service)
+copilot_service = CopilotService(scenario_service, intelligence_service, report_repository)
+
+
+@app.get("/intelligence/status", tags=["field-intelligence"])
+def copilot_status() -> dict:
+    key, _ = claude_settings()
+    return {"assistant_configured": bool(key)}
+
+
+@app.post("/intelligence/chat", response_model=CopilotResponse, tags=["field-intelligence"])
+def chat(request: CopilotRequest) -> dict:
+    try:
+        return copilot_service.ask(request)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @app.get("/health", response_model=HealthResponse, tags=["system"])
@@ -89,13 +116,114 @@ def get_frame(
         Optional[List[str]],
         Query(description="Event IDs to hold active while viewing this frame."),
     ] = None,
+    intelligence_reports: Annotated[
+        Optional[List[str]],
+        Query(description="Confirmed field-intelligence report IDs to apply."),
+    ] = None,
 ) -> dict:
     try:
-        return scenario_service.build_world_state(frame_id, events or [])
+        intelligence_events = intelligence_service.events_for(
+            intelligence_reports or []
+        )
+        return scenario_service.build_world_state(
+            frame_id, events or [], intelligence_events
+        )
     except KeyError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
+    except ReportNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unknown intelligence report: {error.args[0]}",
+        ) from error
+
+
+@app.post(
+    "/intelligence/messages",
+    response_model=IntelligenceMessageResponse,
+    tags=["field-intelligence"],
+)
+def ingest_intelligence_message(request: IntelligenceMessageRequest) -> dict:
+    try:
+        report = intelligence_service.ingest(
+            request.message,
+            request.source.type,
+            request.source.name,
+            request.frame_id,
+        )
+        existing_events = intelligence_service.events_for(
+            request.intelligence_report_ids
+        )
+        tentative_events = intelligence_service.events_for(
+            [report.report_id],
+            include_probable=True,
+        )
+        tentative = None
+        if tentative_events:
+            tentative = scenario_service.build_world_state(
+                request.frame_id,
+                request.event_ids,
+                existing_events + tentative_events,
+            )
+        return {
+            "report": report.as_dict(),
+            "baseline_changed": False,
+            "tentative_world_state": tentative,
+        }
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ReportNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unknown intelligence report: {error.args[0]}",
+        ) from error
+
+
+@app.get(
+    "/intelligence/reports",
+    response_model=List[IntelligenceReport],
+    tags=["field-intelligence"],
+)
+def list_intelligence_reports() -> list[dict]:
+    return intelligence_service.list()
+
+
+@app.post(
+    "/intelligence/reports/{report_id}/decision",
+    response_model=IntelligenceDecisionResponse,
+    tags=["field-intelligence"],
+)
+def decide_intelligence_report(
+    report_id: str, request: IntelligenceDecisionRequest
+) -> dict:
+    try:
+        report = intelligence_service.decide(
+            report_id, request.decision, request.note
+        )
+        report_ids = list(request.intelligence_report_ids)
+        if request.decision == "confirm" and report_id not in report_ids:
+            report_ids.append(report_id)
+        confirmed_events = intelligence_service.events_for(report_ids)
+        updated = scenario_service.build_world_state(
+            request.frame_id,
+            request.event_ids,
+            confirmed_events,
+        )
+        return {
+            "report": report.as_dict(),
+            "baseline_changed": request.decision == "confirm",
+            "updated_world_state": updated,
+        }
+    except ReportNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unknown intelligence report: {error.args[0]}",
+        ) from error
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @app.post(

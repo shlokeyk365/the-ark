@@ -59,7 +59,8 @@ class ScenarioService:
         """Time-to-isolation for the supplied event set, memoized per event set."""
 
         event_list = list(events)
-        key = tuple(sorted(event["event_id"] for event in event_list))
+        # Field reopening makes event order significant.
+        key = tuple(event["event_id"] for event in event_list)
         if key not in self._isolation_cache:
             self._isolation_cache[key] = calculate_time_to_isolation(
                 self.assets,
@@ -93,10 +94,13 @@ class ScenarioService:
         return events
 
     def build_world_state(
-        self, frame_id: str, event_ids: Iterable[str] = ()
+        self,
+        frame_id: str,
+        event_ids: Iterable[str] = (),
+        additional_events: Iterable[Mapping[str, Any]] = (),
     ) -> JsonObject:
         frame = self._frame(frame_id)
-        events = self._events(event_ids)
+        events = self._events(event_ids) + list(additional_events)
         inactive = [
             event["event_id"]
             for event in events

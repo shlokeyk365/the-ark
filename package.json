@@ -6,6 +6,7 @@
     "packages/shared-types"
   ],
   "scripts": {
+    "dev:local": "powershell -NoProfile -File scripts/start-local.ps1 -RestartApi",
     "dev": "npm --workspace apps/web run dev",
     "dev:api": "python3 -m uvicorn apps.api.main:app --reload --port ${API_PORT:-8000}",
     "dev:web": "npm --prefix apps/web run dev",

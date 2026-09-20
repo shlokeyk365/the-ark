@@ -18,16 +18,33 @@ def _conditions_by_edge(frame: Mapping[str, Any]) -> Dict[str, float]:
     }
 
 
-def _forced_closures(events: Iterable[Mapping[str, Any]]) -> Dict[str, JsonObject]:
-    closures: Dict[str, JsonObject] = {}
+def _forced_changes(events: Iterable[Mapping[str, Any]]) -> Dict[str, JsonObject]:
+    changes: Dict[str, JsonObject] = {}
+    field_changes: Dict[str, JsonObject] = {}
     for event in events:
         for change in event["changes"]:
-            if change["change_type"] == "force_close_edge":
-                closures[change["edge_id"]] = {
+            is_field = event.get("event_type") == "field_intelligence"
+            if change["change_type"] == "clear_field_restriction" and is_field:
+                field_changes.pop(change["edge_id"], None)
+                continue
+            if change["change_type"] in {
+                "force_close_edge",
+                "force_restrict_edge",
+            }:
+                target = field_changes if is_field else changes
+                target[change["edge_id"]] = {
                     "event_id": event["event_id"],
                     "reason": change["reason"],
+                    "status": (
+                        "closed"
+                        if change["change_type"] == "force_close_edge"
+                        else "restricted"
+                    ),
                 }
-    return closures
+    for edge_id, change in field_changes.items():
+        if edge_id not in changes or changes[edge_id]["status"] != "closed":
+            changes[edge_id] = change
+    return changes
 
 
 def derive_edge_states(
@@ -38,19 +55,24 @@ def derive_edge_states(
     """Translate one flood frame plus active events into edge states."""
 
     conditions = _conditions_by_edge(frame)
-    forced_closures = _forced_closures(events)
+    forced_changes = _forced_changes(events)
     states: Dict[str, JsonObject] = {}
 
     for feature in network["features"]:
         edge = feature["properties"]
         edge_id = edge["id"]
         depth = conditions[edge_id]
-        event = forced_closures.get(edge_id)
+        event = forced_changes.get(edge_id)
 
-        if event is not None:
-            status = "closed"
+        if event is not None and (event["status"] == "closed" or depth < float(edge["closure_depth_m"])):
+            status = event["status"]
             closure_reason = event["reason"]
-            travel_minutes: Optional[float] = None
+            travel_minutes = (
+                None
+                if status == "closed"
+                else float(edge["baseline_travel_minutes"])
+                * float(edge["penalty_multiplier"])
+            )
             event_id: Optional[str] = event["event_id"]
         elif depth >= float(edge["closure_depth_m"]):
             status = "closed"
