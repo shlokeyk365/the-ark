@@ -36,27 +36,34 @@ team in a message does not upgrade its source to verified official evidence.
 
 Road/bridge IDs or exact names plus clear closed/blocked/flooded/open status
 use deterministic rules. Questions, ambiguous matches, negation and conflicting
-statuses do not create changes. Simple edge-status questions are answered from
-the selected map frame without a model. Other map entities are available for
-questions but do not yet support mutation commands.
+statuses do not create changes. Map status questions about a named road, bridge,
+community, hospital, or shelter — including which assets are open, closed, or
+isolated — are answered from the selected map frame without a model. If the
+question names `+6h` or `+12h`, the server rebuilds that flood frame first.
+Explanatory and comparison questions still go to the assistant. Other map
+entities do not yet support mutation commands.
 
 The additive `open_edge` report produces a `clear_field_restriction` event.
 It clears only preceding field-intelligence restrictions on that edge. It
 cannot override flood thresholds or fixture bridge failures. Event order is
 preserved, including in isolation-cache keys. Confirmation is still required.
 
-For other questions, Claude receives current derived map state, asset/network
-metadata, flood inputs, plans, prediction metadata, active reports, the latest
-five saved simulation reports, and the first-responder demo's validated
-proposals and simulated results. Rendering coordinate arrays are omitted;
-Claude does not see basemap pixels or infer terrain. No historical report is
-silently relabeled as the current map state.
+For other questions, Gemini (or Claude) receives a compact current-map status
+index, the full derived map state, asset/network metadata, flood inputs, plans,
+prediction metadata, active reports, the latest five saved simulation reports,
+and the first-responder/MiroFish demo's validated proposals and simulated
+results. Rendering coordinate arrays are omitted; the model does not see basemap
+pixels or infer terrain. No historical or first-responder report is silently
+relabeled as the current map state. The prompt requires answers to use only
+supplied evidence.
 
 The MiroFish fixture path is executed through the existing proposal validator
-and deterministic simulator, then cached until API restart. It is labeled
-**separate synthetic first-responder demo**, with its original scenario ID and
-snapshot hash. It is not live MiroFish output and uses a different snapshot
-from the map. Missing integration dependencies are reported as unavailable.
+and deterministic simulator, then cached until API restart. Chat context
+includes both a compact first-responder/MiroFish summary and the full validated
+demo payload, labeled **separate synthetic first-responder demo**, with its
+original scenario ID and snapshot hash. It is not live MiroFish output and uses
+a different snapshot from the map. Missing integration dependencies are
+reported as unavailable.
 
 Claude uses the official [Messages API structured-output format](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)
 to return three briefing fields plus internal `evidence_ids`. The server renders
@@ -67,8 +74,8 @@ truncation, timeouts and API failures produce an explicit unavailable response.
 Answers without evidence are replaced by an abstention. Claude cannot
 invoke tools, submit events, confirm reports or change plan scores. Valid IDs do
 not prove that generated prose is entailed by the selected records. Grounding is
-prompt-constrained synthesis, not a guarantee against hallucinations. Simple status
-lookups remain deterministic; explanatory questions go to Claude.
+prompt-constrained synthesis, not a guarantee against hallucinations. Named map
+status lookups remain deterministic; explanatory questions go to the assistant.
 
 Requests have a 750 KB context limit, 45-second HTTP timeout and 4,096 output
 token limit. Oversize context fails visibly rather than being silently truncated.

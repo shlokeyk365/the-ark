@@ -52,12 +52,68 @@ def test_context_contains_separate_responder_simulation_and_current_map(copilot)
     rows = copilot.context(copilot.scenario.baseline(), [])
     text = json.dumps(rows)
     assert "CURRENT MAP" in text
+    assert "CURRENT MAP STATUS INDEX" in text
     assert "synthetic" in text
     assert "accepted_proposals" in text
+    assert "accepted_actions" in text
     assert "snapshot_hash" in text
     assert "nepal-nakkhu-demo-v1" in text
+    assert "MIROFISH" in text
     assert "Rendering coordinates omitted" in text
     assert "No saved simulation reports available" in text
+    assert "Nakkhu East Bridge" in text
+    assert "ktp-bridge-02" in text
+
+
+def test_map_status_questions_are_answered_from_the_map(copilot):
+    def forbidden(_req):
+        raise AssertionError("model should not be called for map status questions")
+
+    copilot.transport = httpx.MockTransport(forbidden)
+    baseline = copilot.scenario.baseline()
+    bridge = next(edge for edge in baseline["edge_states"] if edge["edge_id"] == "ktp-bridge-02")
+    hospital = copilot.ask(request("Is the hospital open?"))
+    named = copilot.ask(request("Is the Nakkhu East Bridge open or closed?"))
+    first = copilot.ask(request("Which community becomes isolated first?"))
+    closed = copilot.ask(request("Which roads are closed?", frame_id="ktp-frame-plus-12h"))
+    access = copilot.ask(request("Hospital access at +12h"))
+    assert named["report"] is None
+    assert named["answer"].startswith("STATUS: Nakkhu East Bridge is")
+    assert bridge["status"] in named["answer"]
+    assert "Lalitpur Emergency Hospital is recorded open" in hospital["answer"]
+    assert "Nakkhu Riverbend is first to isolate" in first["answer"]
+    assert "ktp-road-09" in closed["answer"] or "closed" in closed["answer"].lower()
+    assert access["frame_id"] == "ktp-frame-plus-12h"
+    assert "Lalitpur Emergency Hospital" in access["answer"]
+
+
+def test_explanatory_questions_still_use_the_model(copilot):
+    called = {"count": 0}
+
+    def handler(req):
+        called["count"] += 1
+        payload = json.loads(req.content)
+        data = json.loads(payload["messages"][0]["content"])
+        sources = {row["source"] for row in data["evidence"]}
+        assert any(name.startswith("CURRENT MAP") for name in sources)
+        assert any("MIROFISH" in name or "FIRST-RESPONDER" in name for name in sources)
+        row = next(
+            r for r in data["evidence"]
+            if "ktp-bridge-02" in r["text"] and r["source"].startswith("CURRENT MAP")
+        )
+        return httpx.Response(200, json={"stop_reason": "end_turn", "content": [{"type": "text", "text": json.dumps({
+            "status": "Plan comparison depends on current map metrics.",
+            "threat": "Isolation and route loss differ across plans.",
+            "action": "Use the current plan scores and reassess after the next event.",
+            "action_metric": "3 plans scored",
+            "detail_topics": [],
+            "evidence_ids": [row["evidence_id"]],
+        })}]})
+
+    copilot.transport = httpx.MockTransport(handler)
+    answer = copilot.ask(request("Compare Plan A, B, and C"))
+    assert called["count"] == 1
+    assert answer["answer"].startswith("STATUS: Plan comparison depends")
 
 
 @pytest.mark.parametrize("source_count", [1, 20, 33])
