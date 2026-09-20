@@ -1,222 +1,333 @@
-# the ark
+<div align="center">
 
-the ark is a map-centric, real-time disaster-response world model for flood
-emergencies. The MVP is a deterministic, replayable Nakkhu River scenario
-that derives infrastructure status, safe routes, community isolation, hazards,
-and comparable response-plan outcomes from one canonical world state.
+<h1>🌊 &nbsp;THE ARK</h1>
 
-The fixture is synthetic demonstration data and is not operational guidance.
+<h3>A real-time world model for flood emergencies</h3>
 
-## Current backend slice
+<p>
+One canonical world state. Every closure, safe route, isolated community,<br/>
+hazard and response plan is <em>derived</em> from it — never guessed, never drawn by hand.
+</p>
 
-- Five communities, two bridges, one hospital, and two shelters.
-- Nine flood frames at 3-hour intervals from now through +24h. The original
-  now/+6h/+12h/+24h depths remain anchors; intervening frames are explicitly
-  labeled linear interpolations for smoother demonstration playback.
-- Deterministic edge closures and travel penalties.
-- Safe-path, access, and time-to-isolation calculations.
-- Plan A/B/C evaluation against a frozen state.
-- An injected East River Bridge failure with stale-result retention and
-  recomputation.
-- FastAPI endpoints returning frontend-ready state.
-- Any frame viewable with injected events held active, with time-to-isolation
-  recomputed for that event set.
-- A frozen CatBoost impact prior trained on 4,869 historical Nepal flood events,
-  projected across ten research-only operational POIs on the timeline and map.
-- Durable full-horizon simulation runs with one immutable analysis report per
-  run, including timeline and event-counterfactual changes.
-- Report archive with JSON, CSV, and printable HTML/PDF exports.
+<p>
+  <img alt="Python 3.9+" src="https://img.shields.io/badge/Python-3.9%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img alt="MapLibre GL" src="https://img.shields.io/badge/MapLibre_GL-395BB8?style=for-the-badge&logo=maplibre&logoColor=white" />
+  <img alt="CatBoost" src="https://img.shields.io/badge/CatBoost-FFCC00?style=for-the-badge&logo=catboost&logoColor=black" />
+</p>
 
-## Verify
+<p>
+  <img alt="Status" src="https://img.shields.io/badge/status-MVP-0EA5E9?style=flat-square" />
+  <img alt="Basemap" src="https://img.shields.io/badge/basemap-self--hosted%20PMTiles-22C55E?style=flat-square" />
+  <img alt="Tile cost" src="https://img.shields.io/badge/tile%20API%20cost-%240.00-22C55E?style=flat-square" />
+  <img alt="Data" src="https://img.shields.io/badge/scenario-synthetic%20demonstration-F59E0B?style=flat-square" />
+</p>
 
-```bash
-npm test
-```
+<br/>
 
-## Run the API
+<img src="docs/assets/dashboard.webp" alt="The Ark operations dashboard — satellite basemap of the Nakkhu River corridor with modeled flood extent, response routes, impact predictions and the selected-asset panel" width="100%" />
 
-```bash
-PYTHONPYCACHEPREFIX=/private/tmp/pycache-the-ark \
-python3 -m uvicorn apps.api.main:app --reload
-```
+<sub><b>Incident command, exercise mode.</b> Modeled flood extent over the Nakkhu corridor, live route status, prediction pings, and a 24-hour scrub timeline.</sub>
 
-## Run the dashboard
+</div>
 
-Install the pinned frontend dependencies once:
+---
+
+## What this is
+
+The Ark is a **map-centric, deterministic, replayable** disaster-response world model. The MVP simulates a Nakkhu River flood across Kathmandu and Lalitpur and answers the questions an incident commander actually asks:
+
+> *Which roads are gone? Who is cut off, and in how many hours? Can an ambulance still reach the hospital? If this bridge fails, which plan survives?*
+
+Everything on screen is computed server-side from one canonical world state and handed to the browser fully derived. **The frontend recalculates no domain logic** — the map is a projection of truth, not a second source of it.
+
+> [!IMPORTANT]
+> The scenario fixture is **synthetic demonstration data**. The historical impact model is **research-only**. Neither is validated for live dispatch or operational guidance.
+
+<br/>
+
+## Highlights
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 🗺️ Terrain-derived flood surface
+Water isn't drawn — it's **computed**. AWS Terrarium DEM tiles are decoded, depressions filled, D8 flow routed to find the channel, and height-above-nearest-drainage contoured into four depth bands. Terrain gives the shape; canonical per-edge depths give the growth curve.
+
+</td>
+<td width="50%" valign="top">
+
+### 🛣️ Streets, not rectangles
+`network:snap` routes every scenario edge along real OpenStreetMap centrelines; bridges take only the ~200 m that actually crosses water. Topology, travel times and every domain result are **unchanged** — routing never reads geometry.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### ⏱️ Nine frames, instant scrub
+Every modeled frame loads on start, so the timeline scrubs and plays back with zero latency and the sparklines plot real per-frame values. Playback advances one 3-hour frame every 2.4 s across a 24-hour horizon.
+
+</td>
+<td width="50%" valign="top">
+
+### 💥 Counterfactual injection
+Inject the Nakkhu East Bridge failure and the world recomputes — closures, safe paths, isolation clocks and Plan A/B/C scores — while stale results are retained for comparison rather than silently overwritten.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 🧾 Immutable audit trail
+An explicit full-horizon run freezes its event set and fixture digest, persists all world-state snapshots to SQLite, and emits **one immutable report**. Browsing a frame creates nothing. Exports render stored findings — they never recalculate.
+
+</td>
+<td width="50%" valign="top">
+
+### 💸 Zero tile bill
+MapLibre GL over self-hosted **Protomaps PMTiles**. No token, no account, no metered tile API. A range-request extract pulls ~20 MB instead of the 138 GB planet, and production is plain static hosting on S3/R2/any CDN.
+
+</td>
+</tr>
+</table>
+
+<br/>
+
+## Quickstart
+
+<details open>
+<summary><b>1 — Install &amp; verify</b></summary>
 
 ```bash
 npm install --prefix apps/web
+npm test
 ```
 
-Keep the API running, then start the Vite frontend in a second terminal:
+</details>
+
+<details open>
+<summary><b>2 — Run the API</b></summary>
+
+```bash
+PYTHONPYCACHEPREFIX=/private/tmp/pycache-the-ark python3 -m uvicorn apps.api.main:app --reload
+```
+
+</details>
+
+<details open>
+<summary><b>3 — Run the dashboard</b></summary>
 
 ```bash
 npm run dev:web
 ```
 
-Open `http://127.0.0.1:5173`. The development server proxies `/api` requests to
-the local FastAPI process on port `8000`.
+Open **`http://127.0.0.1:5173`**. Vite proxies `/api` to FastAPI on port `8000`.
 
-The dashboard loads every modeled frame on start, so scrubbing the timeline and
-frame playback are instant and the sparklines plot real per-frame values. All
-domain results come from the API; the browser derives no routing or plan logic.
-Playback advances one 3-hour frame every 2.4 seconds.
+</details>
 
-The Reports tab creates explicit full-horizon runs. Browsing or scrubbing a
-frame does not create a report. Every completed run freezes its event set and
-fixture digest, persists all four world-state snapshots in SQLite, and creates
-one report from those stored results. Set `THE_ARK_REPORT_DB_PATH` to override
-the default `data/runtime/the-ark.sqlite3` location.
+The basemap archive is fetched automatically on a fresh clone — or on demand with `npm run basemap`. If it's missing or MapLibre fails to start, the dashboard falls back to a self-contained SVG schematic of the *same derived state* and says why, so the scenario stays inspectable offline and in CI.
 
-The Reports tab creates explicit full-horizon runs. Browsing or scrubbing a
-frame does not create a report. Every completed run freezes its event set and
-fixture digest, persists all four world-state snapshots in SQLite, and creates
-one report from those stored results. Set `THE_ARK_REPORT_DB_PATH` to override
-the default `data/runtime/the-ark.sqlite3` location.
+<br/>
 
-### Basemap
+## Architecture
 
-The map renders on **MapLibre GL JS** over a **Protomaps PMTiles** vector
-basemap, with optional satellite imagery and 3D terrain. There is no access
-token, no account, and no metered tile API.
+```mermaid
+flowchart TD
+    A["🌧️ curated flood frame<br/>+ injected event"] --> B["🧊 canonical world-state version"]
+    B --> C["🛣️ edge status / routing"]
+    B --> D["⚠️ hazards / access"]
+    C --> E["📋 frozen Plan A/B/C evaluation"]
+    D --> E
+    E --> F["⏳ full-horizon simulation run"]
+    F --> G["🧾 immutable report<br/>+ frontend payload"]
 
-Fetch the Nakkhu/Kantipur Colony basemap once:
-
-```bash
-npm run basemap
+    style B fill:#0EA5E9,stroke:#0369A1,color:#fff
+    style E fill:#8B5CF6,stroke:#6D28D9,color:#fff
+    style G fill:#22C55E,stroke:#15803D,color:#fff
 ```
 
-`npm run dev` also performs this fetch automatically when the archive is
-missing, so a fresh clone starts with the geographic map without an extra setup
-step.
+The world state is the shared source of truth. Physics publishes flood conditions; routing translates them into infrastructure consequences; scenarios branch and score immutable snapshots; the API returns the derived result.
 
-That extracts the scenario's bounding box from the Protomaps daily planet build
-over HTTP range requests — about 20 MB transferred for an 18 MB archive, rather
-than the 138 GB planet — and writes
-`apps/web/public/basemap/kantipur.pmtiles`. The archive is git-ignored and
-regenerable; the script pins the bbox, max zoom, and pmtiles CLI version.
+| Module | Responsibility |
+| :-- | :-- |
+| `data/scenarios/kantipur-river/` | Deterministic topology, flood, plan, event and context fixtures |
+| `services/physics/` | Flood-surface generation and normalized edge-level depths |
+| `services/routing/` | Edge derivation, graph construction, safe paths, access, time-to-isolation |
+| `services/scenarios/` | Fixture validation, plan scoring, invalidation, event recomputation |
+| `services/reports/` | Run orchestration, delta analysis, SQLite persistence, export rendering |
+| `apps/api/` | Strict Pydantic wire models + FastAPI endpoints |
+| `apps/web/` | React operations shell, MapLibre map, timeline, incident focus |
+| `packages/shared-types/` | TypeScript wire contracts for frontend consumers |
 
-Serving it is just static file hosting with range-request support, so in
-production point `VITE_BASEMAP_PMTILES` at S3, R2, or any CDN.
+**Stable boundaries.** Flood producers never mutate route or plan results. Routing consumes the canonical frame and optional active events. Scenario evaluation consumes a frozen derived state. Agents may *explain* completed results but can never alter a safety field or a score.
+
+<br/>
+
+## The scenario
+
+<table>
+<tr><td><b>Area</b></td><td>Nakkhu River corridor — Kathmandu &amp; Lalitpur Metropolitan City</td></tr>
+<tr><td><b>Assets</b></td><td>5 communities · 2 bridges · 1 hospital · 2 shelters</td></tr>
+<tr><td><b>Horizon</b></td><td>9 flood frames at 3-hour intervals, now → +24h</td></tr>
+<tr><td><b>Anchors</b></td><td>now / +6h / +12h / +24h depths are canonical; intervening frames are explicitly labeled linear interpolations</td></tr>
+<tr><td><b>Event</b></td><td>Operator-injected Nakkhu East Bridge failure, effective +12h</td></tr>
+</table>
+
+<br/>
+
+## Map design
+
+<details>
+<summary><b>Visual grammar</b> — shape carries type, colour carries status</summary>
+
+<br/>
+
+- **Shape = entity, colour = status.** Communities are circles, shelters houses, the hospital a cross, hazards triangles, closures a crossed circle. A shelter that can't be reached is still a house, just muted.
+- **Solid = current, dashed = modeled.** Current flood extent, the active route and confirmed closures are solid; the +24h envelope and alternate plans are dashed. Operator-injected state is **amber**, so an event the operator caused never reads as an observation.
+- **Hazards are drawn on the thing that is hazardous.** A blocked road is restyled along its own geometry with a heavier casing and a status label; a failed bridge is marked on that span, not on a marker beside it.
+- **Detail arrives with zoom.** Far out: flood extent, network, communities, critical hazards. Closer: facility labels, closures, routes. Closest: depth bands, population, per-segment status.
+
+The OSM basemap is deliberately restyled for operations — POI and address symbols dropped, minor roads faded and held until z13, buildings until z15, waterways *brightened* rather than suppressed. The flood story is a river story. Place names stay legible throughout.
+
+</details>
+
+<details>
+<summary><b>Layers</b> — what the operator can toggle</summary>
+
+<br/>
+
+Flood depth (current) · modeled +24h extent · roads &amp; closures · active response routes · alternate plan routes · shelters &amp; hospital · bridges · river gauges · hazards · impact predictions · community labels · administrative context.
+
+The basemap is a radio choice between the operational vector style and satellite imagery, with 3D terrain as a separate toggle. River gauges are listed but disabled — the fixture has no gauge observations yet — and alternate plan routes are off by default.
 
 | Layer | Source | Cost |
-| --- | --- | --- |
-| Vector basemap | Protomaps PMTiles from OpenStreetMap, self-hosted | free (ODbL attribution) |
-| Terrain DEM | AWS Open Data terrain tiles, Terrarium-encoded | free, no key |
-| Satellite imagery | Esri World Imagery | free with attribution — confirm terms for your deployment |
-| Glyphs & sprites | Protomaps basemap assets | free; self-hostable |
+| :-- | :-- | :-- |
+| Vector basemap | Protomaps PMTiles from OpenStreetMap, self-hosted | Free (ODbL attribution) |
+| Terrain DEM | AWS Open Data terrain tiles, Terrarium-encoded | Free, no key |
+| Satellite imagery | Esri World Imagery | Free with attribution — confirm terms for your deployment |
+| Glyphs &amp; sprites | Protomaps basemap assets | Free, self-hostable |
 
-If the archive is missing or the basemap fails to start, the dashboard falls
-back to a self-contained SVG schematic of the same derived state and says why,
-so the scenario stays inspectable offline and in CI. MapLibre is code-split, so
-that path stays light.
+</details>
 
-Map layers follow the operator list: flood depth (current), the modeled +24h
-extent, roads and closures, active response routes, alternate plan routes,
-shelters and the hospital, bridges, river gauges, hazards, model prediction
-pings, community labels, and administrative context. The basemap itself is a radio choice between the
-operational vector style and satellite imagery, with 3D terrain as a separate
-toggle. River gauges are listed but disabled: the fixture has no gauge
-observations yet, and alternate plan routes are off by default.
+<details>
+<summary><b>Motion</b> — two things move, and both move because the state changed</summary>
 
-The visual grammar is consistent across every layer:
+<br/>
 
-- **Shape carries entity type, colour carries status.** Communities are circles,
-  shelters houses, the hospital a cross, hazards triangles, closures a crossed
-  circle. A shelter that cannot be reached is still a house, just muted.
-- **Solid is current, dashed is modeled.** The current flood extent, the active
-  route and confirmed closures are solid; the +24h envelope and alternate plans
-  are dashed. Operator-injected state is amber, so an event the operator caused
-  never reads as an observation.
-- **Hazards are drawn on the thing that is hazardous.** A blocked road is
-  restyled along its own geometry with a heavier casing and a status label; a
-  failed bridge is marked on that span, not on a marker beside it.
-- **Detail arrives with zoom.** Far out you see the flood extent, the network,
-  communities and critical hazards; closer in, facility labels, closures and
-  routes; closest, depth bands, population and per-segment status.
+Response teams travel the selected plan's routes, staggered so they don't run in lockstep, with destination and ETA shown only for the focused route. A route crossing a failed edge carries **no team**, because no team is driving it.
 
-The OpenStreetMap basemap is deliberately restyled for operations: POI and
-address symbols are dropped, minor roads fade back and hold until z13, buildings
-wait for z15, and waterways are brightened rather than suppressed — the flood
-story is a river story. Place names stay legible throughout.
+Separately, a hazard that has just escalated to critical pulses for ~5 seconds and stops — one at a time, never on first load, cancelled early if the operator selects it. Hazard IDs carry the world-state version and change every frame, so escalation is tracked per *asset*; across a full nine-frame baseline that fires twice.
 
-Two things on the map move, and both move because the world state changed.
-Response teams travel the selected plan's routes, staggered so they do not run
-in lockstep, with their destination and ETA shown only for the focused route; a
-route that crosses a failed edge carries no team, because no team is driving it.
-Separately, a hazard that has just escalated to critical pulses for about five
-seconds and then stops — one at a time, never on first load, and cancelled early
-if the operator selects it. Hazard ids carry the world-state version and so
-change every frame; escalation is therefore tracked per asset, which across a
-full nine-frame baseline fires twice. Both effects share one animation frame
-loop that parks itself when idle, and neither runs under
-`prefers-reduced-motion` — teams are placed but held still.
+Both effects share one animation frame loop that parks itself when idle, and **neither runs under `prefers-reduced-motion`** — teams are placed but held still.
 
-Press **F** to fullscreen the dashboard, or use the toggle in the map toolbar.
-It expands the whole shell rather than the map panel alone, so the tactical
-list, the asset panel and the timeline stay put and only the browser chrome is
-reclaimed. Where the Fullscreen API is refused — an embedded pane, a kiosk
-frame, anywhere a Permissions-Policy withholds it — the shell expands to fill
-the viewport instead, so the shortcut always does something. Escape leaves
-either mode.
+</details>
 
-Clicking a community, road, bridge or hazard — on the map or in either rail —
-enters incident focus. The camera frames the affected area, everything outside
-the incident dims, and a panel states the affected population, the nearest
-reachable facility, the route time and what has become unreachable. "Exit focus"
-restores the full picture.
+<details>
+<summary><b>Interaction</b> — incident focus, fullscreen, prediction pings</summary>
 
-Prediction pings are hoverable. Each explanation card separates current
-timeline risk from the shared event prior and shows nearby modeled flood depth,
-exposed population, location-specific responder priority, the reason the POI was
-flagged, and the recommended action. They are drawn in their own colour family —
-keyed to impact target rather than to status — so a model prediction is never
-read as an observed closure. These rankings are research-only and not validated
-for live dispatch.
+<br/>
 
-The administrative boundaries are Kathmandu and Lalitpur Metropolitan City,
-visual context only — see `data/scenarios/kantipur-river/SOURCES.md` for
-provenance and licensing.
+**Incident focus.** Click a community, road, bridge or hazard — on the map or in either rail — and the camera frames the affected area, everything outside the incident dims, and a panel states the affected population, the nearest reachable facility, the route time and what has become unreachable. *Exit focus* restores the full picture.
 
-The flood surface is generated from public elevation data rather than drawn.
-`npm run flood:generate` decodes AWS Terrarium DEM tiles over the scenario
-extent, fills depressions, routes D8 flow to find the channel, computes height
-above nearest drainage, and contours the resulting depth field into the four
-contract depth bands. Terrain gives the bands their shape; the canonical
-per-edge depths in `flood-frames.json` give them their depths and their growth
-curve, so every frame carries a surface and the water spreads along the valley
-instead of blinking between hand-drawn stills. It is still a synthetic
-demonstration surface, not a hydraulic solve or operational forecast.
+**Fullscreen.** Press <kbd>F</kbd>, or use the map toolbar toggle. It expands the whole shell rather than the map panel alone, so the tactical list, asset panel and timeline stay put and only browser chrome is reclaimed. Where the Fullscreen API is refused — an embedded pane, a kiosk frame, a restrictive Permissions-Policy — the shell expands to fill the viewport instead, so the shortcut always does something. <kbd>Esc</kbd> leaves either mode.
 
-The previous hand-authored surface is kept at
-`flood-polygons.curated-v1.geojson`; `npm run flood:restore` puts it back, and
-both pass the fixture contract and test suite.
+**Prediction pings** are hoverable. Each card separates current timeline risk from the shared event prior and shows nearby modeled flood depth, exposed population, location-specific responder priority, why the POI was flagged, and the recommended action. They're drawn in their own colour family — keyed to *impact target* rather than status — so a model prediction is never read as an observed closure.
 
-The road network is reshaped the same way. `npm run network:snap` reads the
-OpenStreetMap `roads` layer out of the basemap archive and routes each scenario
-edge along real street centrelines, so the network follows the city instead of
-drawing a rectangle over it; bridges take only the ~200 m of their route that
-crosses the water. Topology, travel times and every domain result are unchanged
-— routing never reads geometry. `npm run network:restore` brings the authored
-straight lines back. Route safety still
-comes from the canonical per-edge flood conditions; see
-`docs/scenario-contract.md` for the separation of concerns.
+</details>
 
-Useful endpoints:
+<br/>
 
-- `GET /health`
-- `GET /scenarios/kantipur-river/bootstrap`
-- `GET /scenarios/kantipur-river/baseline`
-- `GET /scenarios/kantipur-river/frames/ktp-frame-plus-12h`
-- `GET /scenarios/kantipur-river/frames/ktp-frame-plus-24h?events=ktp-event-bridge-02-failure`
-- `POST /scenarios/kantipur-river/events/ktp-event-bridge-02-failure`
-- `POST /scenarios/kantipur-river/runs`
-- `GET /scenarios/kantipur-river/runs`
-- `GET /scenarios/kantipur-river/runs/{run_id}`
-- `GET /reports/{report_id}`
-- `GET /reports/{report_id}/export?format=json|csv|html`
-- `GET /docs`
-- `GET /openapi.json`
+## The impact model
 
-See `docs/api-contract.md`, `docs/world-state-contract.md`, and
-`docs/scenario-contract.md` for payload semantics.
+A **frozen CatBoost prior** trained on **4,869 location-level flood episodes (1971–2023)**, consolidated from 5,349 DesInventar and BIPAD reports, projected across ten research-only operational POIs on the timeline and map.
+
+Every candidate was evaluated four ways — holding out complete **years**, complete **districts**, complete **HydroBASINS level-6 catchments**, and complete **four-day nationwide storm windows** — so reports from the same storm in different cities can't straddle the train/validation split.
+
+| Candidate | Mean macro ROC-AUC | Mean RMSE |
+| :-- | --: | --: |
+| Logistic regression | 0.6320 | 0.4258 |
+| Histogram gradient boosting | 0.6613 | 0.4219 |
+| Extra Trees | 0.6625 | 0.4190 |
+| Random forest | 0.6649 | 0.4184 |
+| Soft-voting ensemble | 0.6738 | 0.4170 |
+| **CatBoost** ✅ | **0.6760** | **0.4166** |
+
+The September 2024 Nakkhu event is a **locked holdout** — not used in training, feature selection, model selection, threshold selection or tuning, and the 0.5 classification threshold is unchanged after evaluation.
+
+> [!NOTE]
+> The historical prior is recorded in provenance as research context. It does **not** feed routing, isolation, plan scoring, or report conclusions. Full methodology: [`docs/model-evaluation.md`](docs/model-evaluation.md).
+
+<br/>
+
+## API
+
+<details>
+<summary><b>Endpoints</b></summary>
+
+<br/>
+
+| Method | Path |
+| :-- | :-- |
+| `GET` | `/health` |
+| `GET` | `/scenarios/kantipur-river/bootstrap` |
+| `GET` | `/scenarios/kantipur-river/baseline` |
+| `GET` | `/scenarios/kantipur-river/frames/{frame_id}` |
+| `GET` | `/scenarios/kantipur-river/frames/{frame_id}?events={event_id}` |
+| `POST` | `/scenarios/kantipur-river/events/{event_id}` |
+| `POST` | `/scenarios/kantipur-river/runs` |
+| `GET` | `/scenarios/kantipur-river/runs` |
+| `GET` | `/scenarios/kantipur-river/runs/{run_id}` |
+| `GET` | `/reports/{report_id}` |
+| `GET` | `/reports/{report_id}/export?format=json\|csv\|html` |
+| `GET` | `/docs` · `/openapi.json` |
+
+Set `THE_ARK_REPORT_DB_PATH` to override the default `data/runtime/the-ark.sqlite3` location.
+
+</details>
+
+<br/>
+
+## Scripts
+
+| Command | What it does |
+| :-- | :-- |
+| `npm test` | Full Python suite — fixtures, routing, scenarios, reports |
+| `npm run dev:api` | FastAPI with reload |
+| `npm run dev:web` | Vite dev server (fetches the basemap if missing) |
+| `npm run build` | Typecheck + production frontend build |
+| `npm run basemap` | Extract the Kantipur bbox from the Protomaps planet over range requests |
+| `npm run flood:generate` | Regenerate the terrain-derived flood surface |
+| `npm run flood:restore` | Restore the hand-authored `flood-polygons.curated-v1.geojson` |
+| `npm run network:snap` | Snap scenario edges to OSM street centrelines |
+| `npm run network:restore` | Restore the authored straight-line network |
+
+Both flood surfaces and both networks pass the fixture contract and the full test suite.
+
+<br/>
+
+## Documentation
+
+| Document | Contents |
+| :-- | :-- |
+| [`docs/architecture.md`](docs/architecture.md) | Data flow, module boundaries, run/report lifecycle |
+| [`docs/api-contract.md`](docs/api-contract.md) | Endpoint payload semantics |
+| [`docs/world-state-contract.md`](docs/world-state-contract.md) | Canonical world-state shape |
+| [`docs/scenario-contract.md`](docs/scenario-contract.md) | Fixture rules and separation of concerns |
+| [`docs/kantipur-river-topology.md`](docs/kantipur-river-topology.md) | Network topology reference |
+| [`docs/model-evaluation.md`](docs/model-evaluation.md) | Model card, splits, ablations, holdout |
+| [`data/scenarios/kantipur-river/SOURCES.md`](data/scenarios/kantipur-river/SOURCES.md) | Provenance and licensing |
+
+<br/>
+
+---
+
+<div align="center">
+<sub>
+Administrative boundaries are visual context only and are not loaded by routing or scenario services.<br/>
+Basemap © OpenStreetMap contributors (ODbL) · Terrain © AWS Open Data · Imagery © Esri
+</sub>
+</div>
