@@ -8,6 +8,7 @@
 # rather than the 138 GB planet.
 #
 # Usage:  ./scripts/fetch-basemap.sh [YYYYMMDD]
+#         FORCE=1 ./scripts/fetch-basemap.sh   # refresh even if the archive exists
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,12 +18,29 @@ MAXZOOM=15
 OUT="$REPO_ROOT/apps/web/public/basemap/kantipur.pmtiles"
 PMTILES_VERSION="1.31.2"
 
+if [ "${FORCE:-0}" != "1" ] && [ -s "$OUT" ]; then
+  echo "exists: $OUT ($(du -h "$OUT" | cut -f1)); set FORCE=1 to refresh"
+  exit 0
+fi
+
+probe_build() {
+  # Range GET, not HEAD: some CDNs (including Cloudflare from CI IPs) 403 HEAD.
+  curl -sf -r 0-15 -o /dev/null "$1"
+}
+
 # Protomaps keeps roughly two weeks of daily builds.
 BUILD="${1:-}"
 if [ -z "$BUILD" ]; then
   for offset in 1 2 3 4 5 6 7; do
-    candidate=$(date -u -v-"${offset}"d +%Y%m%d 2>/dev/null || date -u -d "$offset days ago" +%Y%m%d)
-    if curl -sfI "https://build.protomaps.com/${candidate}.pmtiles" >/dev/null 2>&1; then
+    candidate=""
+    if candidate=$(date -u -d "${offset} days ago" +%Y%m%d 2>/dev/null); then
+      :
+    elif candidate=$(date -u -v-"${offset}"d +%Y%m%d 2>/dev/null); then
+      :
+    else
+      continue
+    fi
+    if probe_build "https://build.protomaps.com/${candidate}.pmtiles"; then
       BUILD="$candidate"
       break
     fi

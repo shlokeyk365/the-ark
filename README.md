@@ -135,7 +135,7 @@ For a public demo on Render’s free Hobby plan, follow
 `docs/render-deploy-handoff.md`. Use a GoDaddy promo for a domain only, not for
 hosting.
 
-The basemap archive is fetched automatically on a fresh clone — or on demand with `npm run basemap`. If it's missing or MapLibre fails to start, the dashboard falls back to a self-contained SVG schematic of the *same derived state* and says why, so the scenario stays inspectable offline and in CI.
+The Kantipur PMTiles archive ships at `apps/web/public/basemap/kantipur.pmtiles`. Refresh it with `npm run basemap`. If it's missing or MapLibre fails to start, the dashboard falls back to a self-contained SVG schematic of the *same derived state* and says why, so the scenario stays inspectable offline and in CI.
 
 <br/>
 
@@ -305,7 +305,7 @@ Set `THE_ARK_REPORT_DB_PATH` to override the default `data/runtime/the-ark.sqlit
 | `npm run dev:api` | FastAPI with reload |
 | `npm run dev:web` | Vite dev server (fetches the basemap if missing) |
 | `npm run build` | Typecheck + production frontend build |
-| `npm run basemap` | Extract the Kantipur bbox from the Protomaps planet over range requests |
+| `npm run basemap` | Refresh the Kantipur PMTiles extract (`FORCE=1` to rebuild from the planet) |
 | `npm run flood:generate` | Regenerate the terrain-derived flood surface |
 | `npm run flood:restore` | Restore the hand-authored `flood-polygons.curated-v1.geojson` |
 | `npm run network:snap` | Snap scenario edges to OSM street centrelines |

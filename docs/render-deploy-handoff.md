@@ -26,7 +26,9 @@ Do not deploy `services/physics`. The API reads frozen fixtures under
 - GitHub repo the deployer can access (Render deploys from Git).
 - Render account on the **Hobby** plan.
 - Node is not required on your laptop if Render builds the frontend.
-- The PMTiles archive is gitignored. The static-site build must fetch it.
+- The Kantipur PMTiles archive is tracked at
+  `apps/web/public/basemap/kantipur.pmtiles` (~18 MB). Vite copies `public/`
+  into `dist`. Do not re-extract the planet during the Render build.
 
 ## 1. API web service
 
@@ -81,7 +83,7 @@ Dashboard → **New → Static Site** → same repo.
 Build command (paste as one block):
 
 ```bash
-chmod +x scripts/fetch-basemap.sh && ./scripts/fetch-basemap.sh; rm -f package-lock.json; npm install; VITE_API_BASE_URL=https://<api>.onrender.com npm exec --workspace apps/web -- vite build
+rm -f package-lock.json; npm install; VITE_API_BASE_URL=https://<api>.onrender.com npm exec --workspace apps/web -- vite build
 ```
 
 Replace `<api>` with the API hostname from step 1. No trailing slash.
@@ -94,10 +96,9 @@ Why this command is not `npm run build:web`:
   Lightningcss, Tailwind Oxide). `npm ci` on Linux will not compile Vite.
   Deleting `package-lock.json` in the **build environment only** lets npm
   fetch Linux binaries. Do not commit that deletion.
-- `./scripts/fetch-basemap.sh` writes
-  `apps/web/public/basemap/kantipur.pmtiles` (~18 MB). Vite copies `public/`
-  into `dist`. If the fetch fails, the dashboard still boots and falls back
-  to the schematic map.
+- Do not run `./scripts/fetch-basemap.sh` in this command. The archive is in
+  git; extracting from the Protomaps planet is slow and is what left
+  production on the schematic map when the fetch failed.
 
 Redirects / rewrites (Static Site → Redirects/Rewrites):
 
@@ -136,9 +137,10 @@ THE_ARK_CORS_ORIGINS=https://<web>.onrender.com,https://yourdomain.com,https://w
 5. Optional: Reports → run a simulation. It may work for the session and then
    vanish after sleep; that is expected on Free.
 
-If the map is a schematic with a “basemap unavailable” notice, the PMTiles
-fetch failed. The scenario is still demoable. Re-run the static build after
-checking `scripts/fetch-basemap.sh` output in the Render build logs.
+If the map is a schematic with a “basemap unavailable” notice, the static
+build did not include `apps/web/public/basemap/kantipur.pmtiles`. Confirm that
+file is in the branch Render deploys, then rebuild. The production Vite build
+now fails if the archive is missing.
 
 ## 5. Optional GoDaddy domain
 
@@ -172,7 +174,7 @@ nothing else unless you also want the frontend to call a custom API host.
 | Dashboard loads, every API call fails | `VITE_API_BASE_URL` missing, wrong, or trailing slash. Rebuild the static site. |
 | Browser CORS error | `THE_ARK_CORS_ORIGINS` does not exactly match the dashboard origin. |
 | `/command-center` 404 | Missing rewrite to `/index.html`. |
-| Schematic map only | PMTiles fetch failed; non-blocking for the demo. |
+| Schematic map only | `kantipur.pmtiles` not in the deployed branch, or the static-site build command still runs `fetch-basemap.sh` and ignores a failure. |
 | First load hangs ~60s then works | Free web service cold start. Warm it before judging. |
 | Reports empty after a wait | Free disk is ephemeral. Do not demo report history as durable. |
 
