@@ -11,6 +11,8 @@ interface TimelineProps {
   worldState: WorldStateSnapshot;
   busy: boolean;
   playing: boolean;
+  seriesComplete: boolean;
+  loadedFrameIds: string[];
   activeEventIds: string[];
   onSelectFrame: (frameId: string) => void;
   onTogglePlay: () => void;
@@ -23,6 +25,8 @@ export function Timeline({
   worldState,
   busy,
   playing,
+  seriesComplete,
+  loadedFrameIds,
   activeEventIds,
   onSelectFrame,
   onTogglePlay,
@@ -30,6 +34,7 @@ export function Timeline({
   onClearEvent,
 }: TimelineProps) {
   const horizon = bootstrap.evaluation_horizon_hours || 1;
+  const loadedFrames = new Set(loadedFrameIds);
   const event = bootstrap.events[0];
   const eventHeld = event ? activeEventIds.includes(event.event_id) : false;
   const eventInForce = worldState.active_event_ids.length > 0;
@@ -56,7 +61,7 @@ export function Timeline({
           type="button"
           aria-label={playing ? "Pause frame playback" : "Play through modeled frames"}
           onClick={onTogglePlay}
-          disabled={busy}
+          disabled={busy || !seriesComplete}
         >
           <ShellIcon name={playing ? "pause" : "play"} size={17} />
         </button>
@@ -80,12 +85,13 @@ export function Timeline({
           {bootstrap.available_frames.map((frame) => {
             const active = frame.frame_id === worldState.frame_id;
             const passed = frame.simulation_time_hours <= worldState.simulation_time_hours;
+            const loaded = loadedFrames.has(frame.frame_id);
             return (
               <button
                 aria-current={active ? "true" : undefined}
                 aria-label={`Show modeled frame ${formatHours(frame.simulation_time_hours)}`}
                 className={`frame-stop ${active ? "active" : ""} ${passed ? "passed" : ""}`}
-                disabled={busy}
+                disabled={busy || !loaded}
                 key={frame.frame_id}
                 onClick={() => onSelectFrame(frame.frame_id)}
                 style={{ left: `${(frame.simulation_time_hours / horizon) * 100}%` }}

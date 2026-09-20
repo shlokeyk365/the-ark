@@ -129,6 +129,12 @@ Open **`http://127.0.0.1:5173`**. Vite proxies `/api` to FastAPI on port `8000`.
 
 </details>
 
+## Deploy (hackathon)
+
+For a public demo on Render’s free Hobby plan, follow
+`docs/render-deploy-handoff.md`. Use a GoDaddy promo for a domain only, not for
+hosting.
+
 The basemap archive is fetched automatically on a fresh clone — or on demand with `npm run basemap`. If it's missing or MapLibre fails to start, the dashboard falls back to a self-contained SVG schematic of the *same derived state* and says why, so the scenario stays inspectable offline and in CI.
 
 <br/>

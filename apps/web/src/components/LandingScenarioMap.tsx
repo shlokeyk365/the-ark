@@ -5,7 +5,7 @@ import type {
   WorldStateSnapshot,
 } from "@the-ark/shared-types";
 
-import { getBootstrap, getFrame } from "../api";
+import { getBaseline, getBootstrap, getFrame } from "../api";
 import type { MapSelection } from "../map/selection";
 import { ScenarioMap } from "./ScenarioMap";
 
@@ -22,21 +22,23 @@ export function LandingScenarioMap() {
 
   useEffect(() => {
     const controller = new AbortController();
+    void import("../map/MapLibreScenarioMap");
 
     (async () => {
       try {
-        const loaded = await getBootstrap(controller.signal);
-        const lastFrame = loaded.available_frames.at(-1);
-        const [now, horizon] = await Promise.all([
-          getFrame(loaded.initial_frame_id, [], controller.signal),
-          lastFrame
-            ? getFrame(lastFrame.frame_id, [], controller.signal)
-            : Promise.resolve(undefined),
+        const [loaded, now] = await Promise.all([
+          getBootstrap(controller.signal),
+          getBaseline(controller.signal),
         ]);
         if (controller.signal.aborted) return;
         setBootstrap(loaded);
         setWorldState(now);
-        setHorizonState(horizon);
+        const lastFrame = loaded.available_frames.at(-1);
+        if (lastFrame && lastFrame.frame_id !== now.frame_id) {
+          const horizon = await getFrame(lastFrame.frame_id, [], controller.signal);
+          if (controller.signal.aborted) return;
+          setHorizonState(horizon);
+        }
       } catch (loadError) {
         if (controller.signal.aborted) return;
         setError(
