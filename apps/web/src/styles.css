@@ -2477,6 +2477,15 @@ input:focus-visible,
   pointer-events: none;
 }
 
+/*
+ * The overlay now lives inside `.app-frame` so it survives native fullscreen.
+ * Span every grid track so an out-of-flow child cannot sit in a leftover row.
+ */
+.app-frame > .command-chat-root {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+}
+
 .command-chat-backdrop {
   position: absolute;
   inset: 0;

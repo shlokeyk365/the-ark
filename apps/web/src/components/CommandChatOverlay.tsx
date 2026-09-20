@@ -36,6 +36,17 @@ const SUGGESTIONS = [
   "Nakkhu East Bridge is blocked",
 ];
 
+/**
+ * Native fullscreen only paints descendants of the fullscreen element.
+ * The F shortcut promotes `.app-frame`, so a body-level portal disappears
+ * the moment the map goes fullscreen. Keep the overlay inside that shell.
+ */
+function overlayPortalHost(): HTMLElement {
+  const fullscreen = document.fullscreenElement;
+  if (fullscreen instanceof HTMLElement) return fullscreen;
+  return document.querySelector(".app-frame") ?? document.body;
+}
+
 function impactSummary(
   baseline: WorldStateSnapshot,
   tentative: WorldStateSnapshot | null,
@@ -62,6 +73,7 @@ export function CommandChatOverlay({ open, onClose, session }: CommandChatOverla
   const threadRef = useRef<HTMLOListElement>(null);
   const [prompt, setPrompt] = useState("");
   const [configured, setConfigured] = useState<boolean | null>(null);
+  const [portalHost, setPortalHost] = useState<HTMLElement | null>(null);
 
   const replies = session?.replies ?? [];
   const reports = session?.reports ?? [];
@@ -93,7 +105,7 @@ export function CommandChatOverlay({ open, onClose, session }: CommandChatOverla
       window.removeEventListener("keydown", onKeyDown);
       if (previous instanceof HTMLElement) previous.focus();
     };
-  }, [open, onClose]);
+  }, [open, onClose, portalHost]);
 
   useEffect(() => {
     if (!open) return;
@@ -118,7 +130,14 @@ export function CommandChatOverlay({ open, onClose, session }: CommandChatOverla
     threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight });
   }, [replies, busy, open]);
 
-  if (!open) return null;
+  useEffect(() => {
+    const syncHost = () => setPortalHost(overlayPortalHost());
+    syncHost();
+    document.addEventListener("fullscreenchange", syncHost);
+    return () => document.removeEventListener("fullscreenchange", syncHost);
+  }, []);
+
+  if (!open || !portalHost) return null;
 
   const submitPrompt = (message: string) => {
     const trimmed = message.trim();
@@ -297,6 +316,6 @@ export function CommandChatOverlay({ open, onClose, session }: CommandChatOverla
         </footer>
       </div>
     </div>,
-    document.body,
+    portalHost,
   );
 }
