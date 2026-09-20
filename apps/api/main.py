@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Annotated, List, Literal, Optional
 
 from apps.api.models import (
+    CopilotRequest,
+    CopilotResponse,
     EventRecomputeResponse,
     HealthResponse,
     IntelligenceDecisionRequest,
@@ -23,6 +25,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from services.intelligence import FieldIntelligenceService, ReportNotFoundError
+from services.intelligence.copilot import CopilotService
+from services.intelligence.config import claude_settings
 from services.reports import ReportRepository, SimulationReportService
 from services.scenarios import ScenarioService
 
@@ -58,6 +62,23 @@ simulation_report_service = SimulationReportService(
     scenario_service, report_repository
 )
 intelligence_service = FieldIntelligenceService(scenario_service)
+copilot_service = CopilotService(scenario_service, intelligence_service, report_repository)
+
+
+@app.get("/intelligence/status", tags=["field-intelligence"])
+def copilot_status() -> dict:
+    key, _ = claude_settings()
+    return {"assistant_configured": bool(key)}
+
+
+@app.post("/intelligence/chat", response_model=CopilotResponse, tags=["field-intelligence"])
+def chat(request: CopilotRequest) -> dict:
+    try:
+        return copilot_service.ask(request)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @app.get("/health", response_model=HealthResponse, tags=["system"])
@@ -201,6 +222,8 @@ def decide_intelligence_report(
         ) from error
     except KeyError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @app.post(

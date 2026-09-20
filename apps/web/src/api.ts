@@ -1,4 +1,6 @@
 import type {
+  CopilotRequest,
+  CopilotResponse,
   EventRecomputeResponse,
   IntelligenceDecisionResponse,
   IntelligenceMessageResponse,
@@ -10,6 +12,18 @@ import type {
 } from "@the-ark/shared-types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
+
+export function askCopilot(request: CopilotRequest) {
+  return fetchJson<CopilotResponse>("/intelligence/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+}
+
+export function getCopilotStatus() {
+  return fetchJson<{ assistant_configured: boolean }>("/intelligence/status");
+}
 
 /**
  * Keep the UI usable while a previously started API process is still serving

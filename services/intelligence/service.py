@@ -18,6 +18,8 @@ _FLOOD = re.compile(
     re.IGNORECASE,
 )
 _RISING = re.compile(r"\b(rising|getting higher|increasing)\b", re.IGNORECASE)
+_OPEN = re.compile(r"\b(open|reopened|clear|cleared|passable)\b", re.IGNORECASE)
+_QUESTION = re.compile(r"^(is|are|was|were|why|what|which|how|can|could|would|should|do|does|will|tell|explain|show|list|compare|describe|summarize)\b", re.IGNORECASE)
 _DEPTH = re.compile(
     r"(?P<value>\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)"
     r"\s*(?P<unit>feet|foot|ft|meters?|metres?|m)\b",
@@ -140,14 +142,14 @@ class FieldIntelligenceService:
         labels = {}
         for feature in self.scenario_service.network["features"]:
             edge = feature["properties"]
-            labels[edge["id"]] = assets_by_edge.get(edge["id"], edge["id"])
+            labels[edge["id"]] = assets_by_edge.get(edge["id"], edge.get("name", edge["id"]))
         return labels
 
     def _match_edge(self, message: str) -> tuple[Optional[str], Optional[str], float]:
         lowered = message.lower()
         candidates = []
         for edge_id, label in self._edge_labels().items():
-            if edge_id.lower() in lowered:
+            if re.search(r"(?<![\w-])" + re.escape(edge_id.lower()) + r"(?![\w-])", lowered):
                 candidates.append((1.0, edge_id, label))
             elif label.lower() in lowered:
                 candidates.append((0.96, edge_id, label))
@@ -157,6 +159,20 @@ class FieldIntelligenceService:
         best = candidates[0]
         confidence = best[0] if len(candidates) == 1 else 0.55
         return best[1], best[2], confidence
+
+    def classify(self, message: str) -> str:
+        """Questions never become reports; ambiguous/negated commands need clarification."""
+        message = message.strip()
+        if "?" in message or _QUESTION.search(message):
+            return "question"
+        if not (_BLOCKED.search(message) or _FLOOD.search(message) or _OPEN.search(message)):
+            return "question"
+        edge_id, _, confidence = self._match_edge(message)
+        if (not edge_id or confidence < 0.7
+                or re.search(r"\b(not|never|maybe|might|if|unless|possibly|don't|do not|no longer|isn't|isnt|wasn't|wasnt)\b", message, re.I)
+                or (_BLOCKED.search(message) and _OPEN.search(message))):
+            return "clarify"
+        return "report"
 
     @staticmethod
     def _depth(message: str) -> Optional[float]:
@@ -179,7 +195,13 @@ class FieldIntelligenceService:
         edge_id, edge_label, location_confidence = self._match_edge(message)
         blocked = bool(_BLOCKED.search(message))
         flooded = bool(_FLOOD.search(message))
-        if edge_id and blocked:
+        intent = self.classify(message)
+        if intent != "report":
+            change_type = "none"
+            extraction_confidence = 0.0
+            summary = "Specify one road or bridge by its map name or ID and an unambiguous status. Questions do not change the map."
+            operational_impact = 0.0
+        elif edge_id and blocked:
             change_type = "close_edge"
             extraction_confidence = 0.94
             summary = f"Reported blockage at {edge_label}."
@@ -189,6 +211,11 @@ class FieldIntelligenceService:
             extraction_confidence = 0.86
             summary = f"Reported flooding at {edge_label}."
             operational_impact = 0.70
+        elif edge_id and _OPEN.search(message):
+            change_type = "open_edge"
+            extraction_confidence = 0.94
+            summary = f"Reported reopening at {edge_label}; only prior field restrictions can be cleared. Flood and infrastructure constraints still apply."
+            operational_impact = 0.7
         else:
             change_type = "none"
             extraction_confidence = 0.35
@@ -253,6 +280,8 @@ class FieldIntelligenceService:
         self, report_id: str, decision: str, note: Optional[str]
     ) -> StoredReport:
         report = self.get(report_id)
+        if decision == "confirm" and (report.change_type == "none" or report.scores["location_confidence"] < 0.7):
+            raise ValueError("Resolve the asset and proposed change before confirmation.")
         status = {
             "confirm": "confirmed",
             "reject": "rejected",
@@ -286,11 +315,11 @@ class FieldIntelligenceService:
                     "description": report.summary,
                     "changes": [
                         {
-                            "change_type": (
-                                "force_close_edge"
-                                if report.change_type == "close_edge"
-                                else "force_restrict_edge"
-                            ),
+                            "change_type": {
+                                "close_edge": "force_close_edge",
+                                "restrict_edge": "force_restrict_edge",
+                                "open_edge": "clear_field_restriction",
+                            }[report.change_type],
                             "edge_id": report.edge_id,
                             "reason": report.summary,
                         }

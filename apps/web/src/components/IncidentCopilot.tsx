@@ -1,17 +1,15 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import type { IntelligenceReport, WorldStateSnapshot } from "@the-ark/shared-types";
+import type { CopilotResponse, IntelligenceReport, WorldStateSnapshot } from "@the-ark/shared-types";
+import { getCopilotStatus } from "../api";
 
 interface IncidentCopilotProps {
   busy: boolean;
   reports: IntelligenceReport[];
+  replies: CopilotResponse[];
   baseline: WorldStateSnapshot;
   tentative: WorldStateSnapshot | null;
-  onSubmit: (
-    message: string,
-    sourceType: IntelligenceReport["source"]["type"],
-    sourceName: string,
-  ) => Promise<void>;
+  onSubmit: (message: string) => Promise<void>;
   onDecision: (
     reportId: string,
     decision: "confirm" | "keep_tentative" | "reject",
@@ -41,15 +39,25 @@ function impactSummary(
 export function IncidentCopilot({
   busy,
   reports,
+  replies,
   baseline,
   tentative,
   onSubmit,
   onDecision,
 }: IncidentCopilotProps) {
   const [message, setMessage] = useState("");
-  const [sourceType, setSourceType] =
-    useState<IntelligenceReport["source"]["type"]>("field_responder");
-  const [sourceName, setSourceName] = useState("Field Team");
+  const [configured, setConfigured] = useState<boolean | null>(null);
+  const feed = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = () => void getCopilotStatus().then((status) => {
+      if (!cancelled) setConfigured(status.assistant_configured);
+    }).catch(() => { if (!cancelled) setConfigured(null); });
+    refresh();
+    const timer = window.setInterval(refresh, 15000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, []);
+  useEffect(() => { feed.current?.scrollTo({ top: feed.current.scrollHeight }); }, [replies, busy]);
   const impact = useMemo(
     () => impactSummary(baseline, tentative),
     [baseline, tentative],
@@ -60,40 +68,37 @@ export function IncidentCopilot({
     <section className="copilot-card" aria-label="Incident Copilot">
       <header className="copilot-header">
         <div>
-          <span className="eyebrow">Field intelligence</span>
+          <span className="eyebrow">Map-grounded assistant</span>
           <h2>Incident Copilot</h2>
         </div>
-        <span className="copilot-live">AUDITABLE</span>
+        <span className="copilot-live">{configured ? "LIVE" : configured === false ? "SETUP NEEDED" : "CONNECTING"}</span>
       </header>
 
-      <div className="copilot-feed" aria-live="polite">
-        {reports.length === 0 ? (
+      <div className="copilot-feed" aria-live="polite" ref={feed}>
+        {replies.length === 0 ? (
           <div className="copilot-empty">
-            Paste a radio call, responder message, or public report. Ark will
-            propose a map change without altering the baseline.
+            Ask about the map, compare plan results, or report a road or bridge
+            status. Changes appear as previews until you confirm them.
+            {configured === false ? <p>Complete the private server assistant setup to enable questions. Status commands work now.</p> : null}
           </div>
         ) : (
-          reports.slice(0, 3).map((report) => (
-            <article className="intel-message" key={report.report_id}>
+          replies.map((reply, index) => (
+            <article className="intel-message" key={`${reply.context_digest}-${index}`}>
               <div className="intel-message-meta">
-                <span>{report.source.name}</span>
-                <b data-status={report.status}>{report.status}</b>
+                <span>You</span>
+                <b>Incident briefing</b>
               </div>
-              <p>{report.message}</p>
+              <p>{reply.message}</p>
               <div className="intel-interpretation">
-                <strong>Ark interpretation</strong>
-                <span>{report.claim.summary}</span>
-                <small>
-                  {report.asset_match
-                    ? `${report.asset_match.display_name} · location match ${Math.round(
-                        report.asset_match.confidence * 100,
-                      )}%`
-                    : "No map asset resolved"}
-                </small>
+                <strong>Ark</strong>
+                <span style={{ whiteSpace: "pre-wrap" }}>{reply.answer}</span>
+                <small>{reply.frame_id} · {reply.world_state_version}</small>
+                {reply.world_state_version !== baseline.world_state_version ? <small>Earlier snapshot — ask again for the current map.</small> : null}
               </div>
             </article>
           ))
         )}
+        {busy ? <p className="copilot-empty">Reading the current state…</p> : null}
       </div>
 
       {latest && latest.status !== "rejected" && latest.status !== "confirmed" ? (
@@ -134,37 +139,18 @@ export function IncidentCopilot({
           event.preventDefault();
           const trimmed = message.trim();
           if (!trimmed || busy) return;
-          void onSubmit(trimmed, sourceType, sourceName.trim() || "Unknown source");
+          void onSubmit(trimmed);
           setMessage("");
         }}
       >
         <textarea
-          aria-label="Field communication"
-          placeholder="Rescue 4 reports ktp-bridge-02 is underwater and vehicles cannot pass."
+          aria-label="Message Incident Copilot"
+          placeholder="Ask about this map, or try: ktp-bridge-02 is blocked"
+          maxLength={4000}
           value={message}
           onChange={(event) => setMessage(event.target.value)}
         />
-        <div className="copilot-source-row">
-          <select
-            aria-label="Source type"
-            value={sourceType}
-            onChange={(event) =>
-              setSourceType(event.target.value as IntelligenceReport["source"]["type"])
-            }
-          >
-            <option value="field_responder">Field responder</option>
-            <option value="official">Official source</option>
-            <option value="operator">Operator</option>
-            <option value="public">Public report</option>
-            <option value="unknown">Unknown source</option>
-          </select>
-          <input
-            aria-label="Source name"
-            value={sourceName}
-            onChange={(event) => setSourceName(event.target.value)}
-          />
-          <button type="submit" disabled={busy || !message.trim()}>Analyze</button>
-        </div>
+        <button type="submit" disabled={busy || !message.trim()}>Send</button>
       </form>
     </section>
   );

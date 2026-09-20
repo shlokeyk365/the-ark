@@ -20,13 +20,19 @@ def _conditions_by_edge(frame: Mapping[str, Any]) -> Dict[str, float]:
 
 def _forced_changes(events: Iterable[Mapping[str, Any]]) -> Dict[str, JsonObject]:
     changes: Dict[str, JsonObject] = {}
+    field_changes: Dict[str, JsonObject] = {}
     for event in events:
         for change in event["changes"]:
+            is_field = event.get("event_type") == "field_intelligence"
+            if change["change_type"] == "clear_field_restriction" and is_field:
+                field_changes.pop(change["edge_id"], None)
+                continue
             if change["change_type"] in {
                 "force_close_edge",
                 "force_restrict_edge",
             }:
-                changes[change["edge_id"]] = {
+                target = field_changes if is_field else changes
+                target[change["edge_id"]] = {
                     "event_id": event["event_id"],
                     "reason": change["reason"],
                     "status": (
@@ -35,6 +41,9 @@ def _forced_changes(events: Iterable[Mapping[str, Any]]) -> Dict[str, JsonObject
                         else "restricted"
                     ),
                 }
+    for edge_id, change in field_changes.items():
+        if edge_id not in changes or changes[edge_id]["status"] != "closed":
+            changes[edge_id] = change
     return changes
 
 
@@ -55,7 +64,7 @@ def derive_edge_states(
         depth = conditions[edge_id]
         event = forced_changes.get(edge_id)
 
-        if event is not None:
+        if event is not None and (event["status"] == "closed" or depth < float(edge["closure_depth_m"])):
             status = event["status"]
             closure_reason = event["reason"]
             travel_minutes = (

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
+  CopilotResponse,
   IntelligenceReport,
   PlanMetrics,
   ScenarioBootstrapResponse,
@@ -9,10 +10,10 @@ import type {
 
 import {
   applyEvent,
+  askCopilot,
   decideIntelligenceReport,
   getBootstrap,
   getFrame,
-  ingestIntelligenceMessage,
 } from "./api";
 import { eventsActiveAt, formatHours, type FrameSeriesEntry } from "./derive";
 import type { MapSelection } from "./map/selection";
@@ -85,6 +86,7 @@ export function App() {
   const [intelligenceReports, setIntelligenceReports] = useState<
     IntelligenceReport[]
   >([]);
+  const [chatReplies, setChatReplies] = useState<CopilotResponse[]>([]);
   const [confirmedIntelligenceIds, setConfirmedIntelligenceIds] = useState<
     string[]
   >([]);
@@ -328,35 +330,28 @@ export function App() {
   }, [bootstrap, confirmedIntelligenceIds, pushLog, selectedFrameId]);
 
   const onSubmitIntelligence = useCallback(
-    async (
-      message: string,
-      sourceType: IntelligenceReport["source"]["type"],
-      sourceName: string,
-    ) => {
+    async (message: string) => {
       if (!worldState) return;
       setBusy(true);
       setError(null);
       try {
-        const response = await ingestIntelligenceMessage(
+        const response = await askCopilot({
           message,
-          sourceType,
-          sourceName,
-          worldState.frame_id,
-          activeEventIds,
-          confirmedIntelligenceIds,
-        );
-        setIntelligenceReports((current) => [
-          response.report,
-          ...current.filter(
-            (report) => report.report_id !== response.report.report_id,
-          ),
-        ]);
-        setTentativeWorldState(response.tentative_world_state);
+          frame_id: worldState.frame_id,
+          event_ids: activeEventIds,
+          intelligence_report_ids: confirmedIntelligenceIds,
+        });
+        setChatReplies((current) => [...current.slice(-19), response]);
+        const report = response.report;
+        if (report) {
+          setIntelligenceReports((current) => [report, ...current.filter((item) => item.report_id !== report.report_id)]);
+          setTentativeWorldState(response.tentative_world_state);
+        }
         pushLog(
           logEntry(
             "intelligence",
-            `${response.report.status} field report received`,
-            response.report.claim.summary,
+            report ? `${report.status} field report received` : "Copilot answered",
+            response.answer,
             worldState.world_state_version,
           ),
         );
@@ -542,6 +537,7 @@ export function App() {
           />
           <div className="operations-right-stack">
             <IncidentCopilot
+              replies={chatReplies}
               baseline={worldState}
               busy={busy}
               onDecision={onIntelligenceDecision}

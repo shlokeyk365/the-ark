@@ -21,6 +21,7 @@ export type IntelligenceReportStatus =
 export type IntelligenceChangeType =
   | "close_edge"
   | "restrict_edge"
+  | "open_edge"
   | "none";
 
 export interface IntelligenceEvidenceScores {
@@ -69,6 +70,24 @@ export interface IntelligenceMessageResponse {
   report: IntelligenceReport;
   baseline_changed: false;
   tentative_world_state: WorldStateSnapshot | null;
+}
+
+export interface CopilotRequest {
+  message: string;
+  frame_id: string;
+  event_ids: string[];
+  intelligence_report_ids: string[];
+}
+
+export interface CopilotResponse {
+  message: string;
+  answer: string;
+  world_state_version: string;
+  frame_id: string;
+  context_digest: string;
+  report: IntelligenceReport | null;
+  tentative_world_state: WorldStateSnapshot | null;
+  baseline_changed: false;
 }
 
 export interface IntelligenceDecisionResponse {

@@ -46,7 +46,7 @@ class IntelligenceClaim(WireModel):
 
 
 class IntelligenceProposedChange(WireModel):
-    change_type: Literal["close_edge", "restrict_edge", "none"]
+    change_type: Literal["close_edge", "restrict_edge", "open_edge", "none"]
     edge_id: Optional[str]
     reason: str
 
@@ -87,6 +87,24 @@ class IntelligenceMessageResponse(WireModel):
     report: IntelligenceReport
     baseline_changed: Literal[False]
     tentative_world_state: Optional["WorldStateSnapshot"]
+
+
+class CopilotRequest(WireModel):
+    message: str = Field(min_length=1, max_length=4000)
+    frame_id: str
+    event_ids: List[str] = Field(default_factory=list, max_length=50)
+    intelligence_report_ids: List[str] = Field(default_factory=list, max_length=100)
+
+
+class CopilotResponse(WireModel):
+    message: str
+    answer: str
+    world_state_version: str
+    frame_id: str
+    context_digest: str
+    report: Optional[IntelligenceReport] = None
+    tentative_world_state: Optional["WorldStateSnapshot"] = None
+    baseline_changed: Literal[False] = False
 
 
 class IntelligenceDecisionRequest(WireModel):
