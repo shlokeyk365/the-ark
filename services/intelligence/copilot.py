@@ -7,7 +7,7 @@ import re
 
 import httpx
 
-from .config import claude_settings, claude_workspace
+from .config import claude_provider, claude_settings
 from .responder_context import responder_demo
 
 logger = logging.getLogger(__name__)
@@ -99,6 +99,77 @@ def evidence_rows(value, source, path=""):
             for index, item in enumerate(value):
                 label = item.get("id", item.get("edge_id", item.get("plan_id", index))) if isinstance(item, dict) else index
                 yield from evidence_rows(item, source, f"{path}/{label}")
+
+
+BRIEFING_SCHEMA = {
+    "status": {"type": "string"},
+    "threat": {"type": "string"},
+    "action": {"type": "string"},
+    "action_metric": {"type": "string"},
+    "detail_topics": {"type": "array", "items": {"type": "string"}},
+    "evidence_ids": {"type": "array", "items": {"type": "string"}},
+}
+BRIEFING_REQUIRED = ["status", "threat", "action", "action_metric", "detail_topics", "evidence_ids"]
+GEMINI_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "status": {"type": "STRING"},
+        "threat": {"type": "STRING"},
+        "action": {"type": "STRING"},
+        "action_metric": {"type": "STRING"},
+        "detail_topics": {"type": "ARRAY", "items": {"type": "STRING"}},
+        "evidence_ids": {"type": "ARRAY", "items": {"type": "STRING"}},
+    },
+    "required": BRIEFING_REQUIRED,
+}
+
+
+def _model_payload(provider: str, model: str, content: str) -> dict:
+    if provider == "gemini":
+        return {
+            "system_instruction": {"parts": [{"text": SYSTEM}]},
+            "contents": [{"role": "user", "parts": [{"text": content}]}],
+            "generationConfig": {
+                "maxOutputTokens": 4096,
+                "responseMimeType": "application/json",
+                "responseSchema": GEMINI_SCHEMA,
+            },
+        }
+    return {
+        "model": model,
+        "max_tokens": 4096,
+        "system": SYSTEM,
+        "messages": [{"role": "user", "content": content}],
+        "output_config": {
+            "format": {
+                "type": "json_schema",
+                "schema": {
+                    "type": "object",
+                    "properties": BRIEFING_SCHEMA,
+                    "required": BRIEFING_REQUIRED,
+                    "additionalProperties": False,
+                },
+            }
+        },
+    }
+
+
+def _model_json(provider: str, body: dict) -> dict:
+    if provider == "gemini":
+        candidate = (body.get("candidates") or [{}])[0]
+        if candidate.get("finishReason") != "STOP":
+            logger.warning("Copilot incomplete response: %s", candidate.get("finishReason"))
+            raise ValueError("Incomplete response")
+        text = "".join(
+            part.get("text", "")
+            for part in candidate.get("content", {}).get("parts", [])
+            if part.get("text")
+        )
+        return json.loads(text)
+    if body.get("stop_reason") != "end_turn":
+        logger.warning("Copilot incomplete response: %s", body.get("stop_reason"))
+        raise ValueError("Incomplete response")
+    return json.loads("".join(block["text"] for block in body["content"] if block["type"] == "text"))
 
 
 class CopilotService:
@@ -201,33 +272,12 @@ class CopilotService:
             ))
             return response
         try:
-            headers = {"x-api-key": key, "anthropic-version": "2023-06-01"}
-            workspace = claude_workspace()
-            if workspace:
-                headers["anthropic-workspace-id"] = workspace
+            url, headers, model, provider = claude_provider(key, model)
             with httpx.Client(timeout=httpx.Timeout(45, connect=10), transport=self.transport) as client:
-                result = client.post("https://api.anthropic.com/v1/messages", headers=headers, json={
-                    "model": model, "max_tokens": 4096, "system": SYSTEM,
-                    "messages": [{"role": "user", "content": content}],
-                    "output_config": {"format": {"type": "json_schema", "schema": {
-                        "type": "object", "properties": {
-                            "status": {"type": "string"},
-                            "threat": {"type": "string"},
-                            "action": {"type": "string"},
-                            "action_metric": {"type": "string"},
-                            "detail_topics": {"type": "array", "items": {"type": "string"}},
-                            "evidence_ids": {"type": "array", "items": {"type": "string"}},
-                        },
-                        "required": ["status", "threat", "action", "action_metric", "detail_topics", "evidence_ids"],
-                        "additionalProperties": False,
-                    }}},
-                })
+                result = client.post(url, headers=headers, json=_model_payload(provider, model, content))
                 result.raise_for_status()
                 body = result.json()
-            if body.get("stop_reason") != "end_turn":
-                logger.warning("Copilot incomplete response: %s", body.get("stop_reason"))
-                raise ValueError("Incomplete response")
-            selection = json.loads("".join(b["text"] for b in body["content"] if b["type"] == "text"))
+            selection = _model_json(provider, body)
             ids = selection.get("evidence_ids")
             required = {"status", "threat", "action", "action_metric", "detail_topics", "evidence_ids"}
             fields = [selection.get(name) for name in ("status", "threat", "action")]

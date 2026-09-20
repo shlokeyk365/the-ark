@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { WorldStateSnapshot } from "@the-ark/shared-types";
 
-import { CommandChatOverlay } from "./CommandChatOverlay";
+import {
+  CommandChatOverlay,
+  type CommandChatSession,
+} from "./CommandChatOverlay";
 import { ShellIcon } from "./ShellIcon";
 
 interface TopBarProps {
@@ -10,6 +13,7 @@ interface TopBarProps {
   worldState?: WorldStateSnapshot;
   activeView?: "operations" | "reports";
   onNavigate?: (view: "operations" | "reports") => void;
+  chat?: CommandChatSession;
 }
 
 export function TopBar({
@@ -17,6 +21,7 @@ export function TopBar({
   worldState,
   activeView = "operations",
   onNavigate,
+  chat,
 }: TopBarProps) {
   const [chatOpen, setChatOpen] = useState(false);
   const closeChat = useCallback(() => setChatOpen(false), []);
@@ -100,7 +105,7 @@ export function TopBar({
         </div>
       </div>
 
-      <CommandChatOverlay open={chatOpen} onClose={closeChat} />
+      <CommandChatOverlay open={chatOpen} onClose={closeChat} session={chat} />
     </header>
   );
 }

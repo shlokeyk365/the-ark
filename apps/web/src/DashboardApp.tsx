@@ -19,7 +19,6 @@ import { eventsActiveAt, formatHours, type FrameSeriesEntry } from "./derive";
 import type { MapSelection } from "./map/selection";
 import { logEntry, type LogEntry } from "./session";
 import { RightRail } from "./components/RightRail";
-import { IncidentCopilot } from "./components/IncidentCopilot";
 import { ReportsPage } from "./components/ReportsPage";
 import { ScenarioMap } from "./components/ScenarioMap";
 import { SelectedAssetPanel } from "./components/SelectedAssetPanel";
@@ -500,6 +499,15 @@ export function App() {
       <TopBar
         activeView={activeView}
         alertCount={worldState.hazards.length}
+        chat={{
+          baseline: worldState,
+          busy,
+          onDecision: onIntelligenceDecision,
+          onSubmit: onSubmitIntelligence,
+          replies: chatReplies,
+          reports: intelligenceReports,
+          tentative: tentativeWorldState,
+        }}
         onNavigate={setActiveView}
         worldState={worldState}
       />
@@ -536,15 +544,6 @@ export function App() {
             worldState={worldState}
           />
           <div className="operations-right-stack">
-            <IncidentCopilot
-              replies={chatReplies}
-              baseline={worldState}
-              busy={busy}
-              onDecision={onIntelligenceDecision}
-              onSubmit={onSubmitIntelligence}
-              reports={intelligenceReports}
-              tentative={tentativeWorldState}
-            />
             <SelectedAssetPanel
               activeEventIds={activeEventIds}
               bootstrap={bootstrap}
